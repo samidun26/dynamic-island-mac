@@ -1,0 +1,85 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+          swift --version
+
+      - name: Build (debug, warnings visible)
+        run: swift build 2>&1 | tee build.log
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build app bundle (universal, ad-hoc signed)
+        run: UNIVERSAL=1 ./build.sh
+
+      - name: Inspect bundle
+        run: |
+          find build/Notchy.app -maxdepth 4 | sort
+          lipo -info build/Notchy.app/Contents/MacOS/Notchy
+          lipo -info build/Notchy.app/Contents/Frameworks/MediaRemoteAdapter.framework/MediaRemoteAdapter
+          codesign -dv build/Notchy.app 2>&1 | head -5
+
+      - name: Now Playing adapter smoke test
+        run: |
+          R=build/Notchy.app/Contents
+          set +e
+          OUT=$(/usr/bin/perl "$R/Resources/mediaremote-adapter.pl" "$PWD/$R/Frameworks/MediaRemoteAdapter.framework" get --no-artwork 2>&1)
+          echo "exit=$? output=$OUT"
+
+      - name: Render snapshots (ImageRenderer)
+        run: build/Notchy.app/Contents/MacOS/Notchy --snapshot "$PWD/snapshots"
+
+      - name: Live window capture
+        continue-on-error: true
+        run: |
+          for s in idle compact expanded; do
+            build/Notchy.app/Contents/MacOS/Notchy --demo $s --print-window > win.txt 2>&1 &
+            PID=$!
+            sleep 3
+            cat win.txt
+            WID=$(sed -n 's/^NOTCHY_WINDOW_ID=//p' win.txt | head -1)
+            [ -n "$WID" ] && screencapture -x -o -l "$WID" "snapshots/live-$s.png" || echo "no window id"
+            kill $PID || true
+            sleep 1
+          done
+          screencapture -x -R 0,0,1200,240 snapshots/live-screen-top.png || true
+          ls -la snapshots
+
+      - name: Process stats (idle CPU / memory)
+        continue-on-error: true
+        run: |
+          build/Notchy.app/Contents/MacOS/Notchy --demo idle > /dev/null 2>&1 &
+          PID=$!
+          sleep 6
+          ps -o pid,%cpu,rss,command -p $PID
+          top -l 3 -s 2 -pid $PID -stats pid,cpu,mem,idlew,power | tail -4
+          kill $PID || true
+
+      - name: Package
+        run: ditto -c -k --keepParent build/Notchy.app Notchy.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: snapshots/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Notchy-app
+          path: Notchy.zip
