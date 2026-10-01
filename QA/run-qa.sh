@@ -488,6 +488,7 @@ menu_press() { # $1 = screenshot name; the same menu, opened through Accessibili
     r=$(wait_menu)
     [ -n "$ix" ] && lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/$1.png"
     "$D" key escape; sleep 0.6
+    menu_open && { "$D" key escape; sleep 0.6; }   # never leave a menu open for the next case
     echo "$r"
 }
 if [ "$INPUT" = yes ]; then

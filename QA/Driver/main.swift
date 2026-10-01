@@ -224,7 +224,11 @@ case "key":
     let code: CGKeyCode = arg(1) == "return" ? 36 : arg(1) == "cmd-w" ? 13 : 53
     let down = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true)
     let up = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false)
-    if arg(1).hasPrefix("cmd-") { down?.flags = .maskCommand; up?.flags = .maskCommand }
+    // Always set the flags: an event from this source otherwise inherits modifiers from earlier
+    // ones (an Escape after ⌘W arrived as ⌘Escape, which does not close a menu).
+    let flags: CGEventFlags = arg(1).hasPrefix("cmd-") ? .maskCommand : []
+    down?.flags = flags
+    up?.flags = flags
     post(down)
     post(up)
 case "windows":

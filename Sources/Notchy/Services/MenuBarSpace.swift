@@ -77,10 +77,13 @@ final class MenuBarSpace {
         timer = nil
         guard on else { return }
         measure()
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.measure() }
         }
-        timer?.tolerance = 0.5
+        t.tolerance = 0.5
+        // Common modes: keep checking while a menu is open (menus run the loop in tracking mode).
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func measure(after delay: TimeInterval) {
