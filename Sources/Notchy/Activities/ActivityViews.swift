@@ -217,9 +217,9 @@ struct NowPlayingPage: View {
                     Scrubber(info: info, tint: np.tint) { np.seek(toFraction: $0) }
                     Spacer(minLength: 2)
                     HStack(spacing: 2) {
-                        IconButton(symbol: "backward.fill", size: 15) { np.send(.previous) }
-                        IconButton(symbol: info.isPlaying ? "pause.fill" : "play.fill", size: 21, box: 34) { np.send(.togglePlayPause) }
-                        IconButton(symbol: "forward.fill", size: 15) { np.send(.next) }
+                        IconButton(symbol: "backward.fill", label: "Previous track", size: 15) { np.send(.previous) }
+                        IconButton(symbol: info.isPlaying ? "pause.fill" : "play.fill", label: info.isPlaying ? "Pause" : "Play", size: 21, box: 34) { np.send(.togglePlayPause) }
+                        IconButton(symbol: "forward.fill", label: "Next track", size: 15) { np.send(.next) }
                         Spacer(minLength: 12)
                         VolumeControl(hud: model.hud)
                             .frame(width: 112)
@@ -278,11 +278,11 @@ struct TimerPage: View {
                     PillButton(title: "Dismiss", tint: .orange) { timer.cancel() }
                 } else {
                     PillButton(title: "+1 min", tint: .orange) { timer.add(60) }
-                    IconButton(symbol: timer.isPaused ? "play.fill" : "pause.fill", size: 14, box: 32, tint: .orange) {
+                    IconButton(symbol: timer.isPaused ? "play.fill" : "pause.fill", label: timer.isPaused ? "Resume timer" : "Pause timer", size: 14, box: 32, tint: .orange) {
                         if timer.isPaused { timer.resume() } else { timer.pause() }
                     }
                     .background(Circle().fill(.orange.opacity(0.16)))
-                    IconButton(symbol: "xmark", size: 12, box: 32, tint: .white.opacity(0.8)) { timer.cancel() }
+                    IconButton(symbol: "xmark", label: "Cancel timer", size: 12, box: 32, tint: .white.opacity(0.8)) { timer.cancel() }
                         .background(Circle().fill(.white.opacity(0.1)))
                 }
             }

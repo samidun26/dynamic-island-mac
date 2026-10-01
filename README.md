@@ -1,6 +1,8 @@
 # Notchy
 
-A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no network, no telemetry.
+A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry, no network use of its own.
+
+**Docs:** [Install & user guide](docs/USER_GUIDE.md) · [Requirements](docs/REQUIREMENTS.md) · [Product requirements (PRD)](docs/PRD.md)
 
 ![Expanded Now Playing](docs/screenshots/notch-expanded.png)
 
@@ -33,24 +35,19 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 
 ## Install
 
-### Build it (recommended)
+Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-step instructions, first launch and troubleshooting: [user guide](docs/USER_GUIDE.md).
 
-Needs macOS 14 or later and Xcode 16 or later (the Command Line Tools are enough for a single-architecture build).
+- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
+- **Build:** needs Xcode 16 or later (the Command Line Tools are enough for a single-architecture build).
 
-```sh
-git clone https://github.com/samidun26/dynamic-island-mac.git
-cd dynamic-island-mac
-./build.sh                # or UNIVERSAL=1 ./build.sh for arm64 + x86_64
-open build/Notchy.app     # or move it to /Applications first
-```
+  ```sh
+  git clone https://github.com/samidun26/dynamic-island-mac.git
+  cd dynamic-island-mac
+  ./build.sh                # or UNIVERSAL=1 ./build.sh for arm64 + x86_64
+  open build/Notchy.app     # or copy it to /Applications first
+  ```
 
-### Or download a CI build
-
-Every push builds a universal, ad-hoc signed `Notchy.app` (the **Notchy-app** artifact on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)). Because it is not notarized, macOS quarantines it when downloaded. After unzipping:
-
-```sh
-xattr -dr com.apple.quarantine Notchy.app
-```
+- **Release (maintainers):** push a tag such as `v1.0.0`; CI builds the universal app and attaches `Notchy.zip` to a GitHub Release.
 
 ## Using it
 

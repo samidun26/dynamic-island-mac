@@ -38,7 +38,7 @@ struct IslandCanvas: View {
         ZStack(alignment: .top) {
             IslandStateContent(model: model, state: state)
                 .id(contentID)
-                .transition(.islandContent)
+                .transition(model.reduceMotion ? .opacity : .islandContent)
         }
     }
 
@@ -115,7 +115,7 @@ struct ExpandedContent: View {
             ZStack {
                 pageView
                     .id(page)
-                    .transition(.page(model.pageDirection))
+                    .transition(model.reduceMotion ? .opacity : .page(model.pageDirection))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 22)

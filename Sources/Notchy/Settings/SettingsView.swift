@@ -213,7 +213,7 @@ private struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Text("A Dynamic Island for the Mac notch. No accounts, no network, no telemetry.")
+            Text("A Dynamic Island for the Mac notch. No accounts, no telemetry, and no network use of its own.")
             Divider()
             Text("Includes mediaremote-adapter").font(.headline)
             Text("Copyright (c) 2025 Jonas van den Berg and contributors. BSD 3-Clause License. github.com/ungive/mediaremote-adapter")

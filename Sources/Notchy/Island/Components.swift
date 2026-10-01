@@ -49,6 +49,8 @@ struct IslandButtonStyle: ButtonStyle {
 
 struct IconButton: View {
     let symbol: String
+    /// Spoken by VoiceOver.
+    var label: String = ""
     var size: CGFloat = 15
     var box: CGFloat = 30
     var tint: Color = .white
@@ -64,6 +66,7 @@ struct IconButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(IslandButtonStyle())
+        .accessibilityLabel(label.isEmpty ? symbol : label)
     }
 }
 

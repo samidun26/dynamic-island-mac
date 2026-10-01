@@ -65,8 +65,14 @@ final class IslandModel {
         var pages: [Page]
     }
 
-    var openSpring: Animation { .spring(response: settings.openResponse, dampingFraction: settings.openDamping) }
-    var closeSpring: Animation { .spring(response: settings.closeResponse, dampingFraction: settings.closeDamping) }
+    /// System Settings > Accessibility > Display > Reduce motion: crossfades instead of springs.
+    var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    var openSpring: Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: settings.openResponse, dampingFraction: settings.openDamping)
+    }
+    var closeSpring: Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: settings.closeResponse, dampingFraction: settings.closeDamping)
+    }
 
     func refresh() {
         generation += 1
