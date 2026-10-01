@@ -15,6 +15,7 @@ struct LaunchOptions {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private var keyTrace: Any?
     private let options: LaunchOptions
     private let settings: AppSettings
     private var model: IslandModel!
@@ -54,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.mainMenu = Self.mainMenu()
         if QALog.enabled {
             // Test trace: which key presses reach the app, and which window they go to.
-            _ = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+            keyTrace = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
                 let chars = e.charactersIgnoringModifiers ?? "?", cmd = e.modifierFlags.contains(.command)
                 MainActor.assumeIsolated {
                     QALog.log("KEY \(chars) cmd=\(cmd) keyWindow=\(NSApp.keyWindow?.title ?? "none") active=\(NSApp.isActive)")
@@ -111,6 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
+    func menuDidClose(_ menu: NSMenu) { QALog.log("MENU closed") }
 
 
 

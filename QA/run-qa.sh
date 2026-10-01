@@ -478,7 +478,8 @@ menu_click() { # $1 = label for the evidence; prints yes/no and what was under t
     r=$(wait_menu)
     lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
     "$D" key escape; sleep 0.4
-    echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '))"
+    local closed=yes; menu_open && closed=no
+    echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '); closed by Escape: $closed)"
 }
 menu_press() { # $1 = screenshot name; the same menu, opened through Accessibility instead of a click
     local r ix
@@ -514,13 +515,14 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
         CLOSED=untested
         FOCUSED=$(grep -o 'SETTINGS focused=[a-z]*' "$LOG" | tail -1 | cut -d= -f2)
         if [ "$INPUT" = yes ]; then
+            MENU_AT_W=no; menu_open && MENU_AT_W=yes
             "$D" key cmd-w; sleep 0.8
             "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID" && CLOSED=no || CLOSED=yes
         fi
         if [ "$CLOSED" != no ]; then
             pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown and focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
         else
-            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENUBAR' | sed -E 's/^QA [0-9.]+ //' | tail -4 | tr '\n' ';')"
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it; a menu was open: ${MENU_AT_W:-?}; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENU' | sed -E 's/^QA [0-9.]+ //' | tail -6 | tr '\n' ';')"
         fi
     else
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
