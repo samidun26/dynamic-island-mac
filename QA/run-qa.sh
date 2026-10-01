@@ -477,10 +477,12 @@ menu_click() { # $1 = label for the evidence; prints yes/no and what was under t
     "$D" key escape; sleep 0.4
     echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '))"
 }
-menu_press() { # the same menu, opened through Accessibility instead of a click
-    local r
+menu_press() { # $1 = screenshot name; the same menu, opened through Accessibility instead of a click
+    local r ix
+    ix=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1 | sed -E 's/.* x=([0-9]+).*/\1/')
     ( lim 4 "$D" status-press $BID >/dev/null 2>&1 & )
     r=$(wait_menu)
+    [ -n "$ix" ] && lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/$1.png"
     "$D" key escape; sleep 0.6
     echo "$r"
 }
@@ -524,12 +526,19 @@ else
     fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
 fi
 
-# Diagnostic D1: the same click after Notchy has been the active app (Settings focused, closed).
-DIAG=""
-if [ "$INPUT" = yes ]; then
+# The menu still opens after Settings was used (Notchy has been the active app). Opened through
+# Accessibility, as VoiceOver would: on the CI machine only the first synthetic click on a menu bar
+# item in a session opens its menu, for a fresh Notchy that was never active too, so a second click
+# proves nothing either way.
+if [ "$AX" = yes ]; then
     open -a Finder; sleep 1
-    DIAG="D1 click after Settings was focused and closed: $(menu_click d1-after-settings)"
-    [ "$AX" = yes ] && DIAG="$DIAG; D1b the same, opened through Accessibility: $(menu_press)"
+    if [ "$(menu_press qa32-menu-after-settings)" = yes ]; then
+        pass QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "menu window on screen ([shot](shots/qa32-menu-after-settings.png))"
+    else
+        fail QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "no menu window ([shot](shots/qa32-menu-after-settings.png))"
+    fi
+else
+    skip QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "driver has no Accessibility permission"
 fi
 
 # ---------------------------------------------------------------- resilience
@@ -597,13 +606,49 @@ else
     quit_notchy
 fi
 
-# Diagnostic D3: a fresh Notchy that has never been active, second menu click of the session.
-if [ "$INPUT" = yes ]; then
-    defaults write "$BID" nonNotchMode whenActive
-    launch_notchy; sleep 2; open -a Finder; sleep 1.5
-    DIAG="$DIAG; D3 fresh launch, never active: $(menu_click d3-fresh)"
-    quit_notchy
+# ---------------------------------------------------------------- security
+# Another program running as the user must not be able to borrow Notchy's permissions
+# (Accessibility, Calendars, Automation) by starting it with an environment that loads its code:
+# DYLD_INSERT_LIBRARIES into Notchy, or PERL5OPT/PERL5LIB into its Now Playing helper (perl).
+# Each attack is first shown to work on an unprotected program, then tried on Notchy.
+echo "== security: code injection through the launch environment"
+SEC="$OUT/sec"; rm -rf "$SEC"; mkdir -p "$SEC/perl"
+printf '#include <stdio.h>\n__attribute__((constructor)) static void injected(void) { FILE *f = fopen("%s", "a"); if (f) { fputs("injected\\n", f); fclose(f); } }\n' "$SEC/marker-dylib" > "$SEC/inject.c"
+printf 'int main(void) { return 0; }\n' > "$SEC/plain.c"
+printf 'package QAInject;\nif (open(my $o, ">>", "%s")) { print $o "injected\\n"; close $o; }\n1;\n' "$SEC/marker-perl" > "$SEC/perl/QAInject.pm"
+clang -dynamiclib -o "$SEC/inject.dylib" "$SEC/inject.c" 2>> "$OUT/harness-build.log"
+clang -o "$SEC/plain" "$SEC/plain.c" 2>> "$OUT/harness-build.log"
+DYLD_INSERT_LIBRARIES="$SEC/inject.dylib" "$SEC/plain"
+PERL5LIB="$SEC/perl" PERL5OPT=-MQAInject /usr/bin/perl -e 1
+CTRL_DYLIB=no; [ -s "$SEC/marker-dylib" ] && CTRL_DYLIB=yes
+CTRL_PERL=no; [ -s "$SEC/marker-perl" ] && CTRL_PERL=yes
+rm -f "$SEC/marker-dylib" "$SEC/marker-perl"
+note "attacks work on unprotected programs: dylib $CTRL_DYLIB, perl $CTRL_PERL"
+
+defaults write "$BID" nonNotchMode whenActive
+mark "$LOG"
+DYLD_INSERT_LIBRARIES="$SEC/inject.dylib" PERL5LIB="$SEC/perl" PERL5OPT=-MQAInject NOTCHY_QA_LOG=1 \
+    "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 &
+NOTCHY_PID=$!
+STARTED=no; wait_for "$LOG" "LAUNCH" 15 && STARTED=yes
+ADAPTER=no; wait_for "$LOG" "NOWPLAYING title=QA" 10 && ADAPTER=yes
+sleep 1
+FLAGS=$(codesign -dv "$APP" 2>&1 | grep -o 'flags=[^ ]*')
+if [ $CTRL_DYLIB = no ]; then
+    skip QA-33 "Libraries injected at launch are refused (NFR-10)" "the injection does not work here even on an unprotected program"
+elif [ $STARTED = yes ] && [ ! -e "$SEC/marker-dylib" ] && echo "$FLAGS" | grep -q runtime; then
+    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "hardened runtime ($FLAGS); DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy"
+else
+    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected=$([ -e "$SEC/marker-dylib" ] && echo yes || echo no), $FLAGS"
 fi
+if [ $CTRL_PERL = no ]; then
+    skip QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT has no effect here even on plain perl"
+elif [ $ADAPTER = yes ] && [ ! -e "$SEC/marker-perl" ]; then
+    pass QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT/PERL5LIB ran code in plain perl, not in the helper; Now Playing still works"
+else
+    fail QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "adapter running=$ADAPTER, injected=$([ -e "$SEC/marker-perl" ] && echo yes || echo no)"
+fi
+quit_notchy
 
 # ---------------------------------------------------------------- downloaded copy (Gatekeeper)
 # Last, because the system dialog it triggers stays on screen.
@@ -644,7 +689,6 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
     echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, notch: $([ "${HASNOTCH:-no}" = yes ] && echo "${NW}×${NH} pt" || echo none)."
-    [ -n "${DIAG:-}" ] && { echo; echo "Diagnostics (status menu): ${DIAG}"; }
 } >> "$REPORT"
 echo "== $PASS passed, $FAIL failed, $SKIP skipped"
 [ "$FAIL" -eq 0 ]

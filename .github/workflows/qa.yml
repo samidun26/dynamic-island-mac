@@ -36,11 +36,12 @@ jobs:
           xcodebuild -version | head -1
 
       - name: Get the app to test (git clone, as in the user guide)
+        env:
+          REF: ${{ inputs.ref }}   # through the environment, never pasted into the script
         run: |
-          REF="${{ inputs.ref }}"
           [ -z "$REF" ] && REF="$GITHUB_REF_NAME"
           git clone --quiet "https://github.com/$GITHUB_REPOSITORY.git" app
-          git -C app checkout --quiet "$REF"
+          git -C app checkout --quiet "$REF" --
           git -C app log -1 --format='Testing %h %s'
 
       - name: Run QA

@@ -52,6 +52,16 @@ public enum MeetingLink {
     }
 }
 
+/// Spotify's AppleScript reports album art as a URL. It is fetched only over HTTPS from Spotify's
+/// image CDN; anything else (plain HTTP, file URLs, other hosts) is ignored.
+public enum SpotifyArtwork {
+    public static func url(_ s: String) -> URL? {
+        guard let url = URL(string: s), url.scheme?.lowercased() == "https", let host = url.host?.lowercased(),
+              host == "i.scdn.co" || host.hasSuffix(".scdn.co") || host.hasSuffix(".spotifycdn.com") else { return nil }
+        return url
+    }
+}
+
 /// The step response of a damped spring with SwiftUI's `response`/`dampingFraction`
 /// parameters. Used for the snapshot filmstrips and to know when an animation has settled.
 public struct SpringCurve: Equatable, Sendable {

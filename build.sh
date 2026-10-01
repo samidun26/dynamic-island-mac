@@ -76,9 +76,12 @@ ln -sfn Versions/Current/Resources "$FW/Resources"
 cp "$MRA/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/mediaremote-adapter.pl"
 
 echo "==> codesign ($SIGN_IDENTITY)"
+# Hardened runtime in both cases: without it, another process could start Notchy with
+# DYLD_INSERT_LIBRARIES and run its code with the permissions granted to Notchy
+# (Accessibility, Calendars, Automation).
 if [ "$SIGN_IDENTITY" = "-" ]; then
   codesign --force --sign - "$FW"
-  codesign --force --sign - "$APP"
+  codesign --force --options runtime --entitlements Resources/Notchy.entitlements --sign - "$APP"
 else
   codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$FW"
   codesign --force --timestamp --options runtime --entitlements Resources/Notchy.entitlements --sign "$SIGN_IDENTITY" "$APP"

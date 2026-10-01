@@ -43,7 +43,14 @@ A build you made yourself is not quarantined, so it opens without the Gatekeeper
 
 ### Allow it to open (downloads only)
 
-Downloaded builds are signed but not notarized, so macOS blocks the first launch. Do **one** of these:
+Downloaded builds are signed but not notarized, so macOS blocks the first launch. Allowing it tells macOS to trust that copy, so first check it is the file CI built. Each release lists its SHA-256 checksum and has a `Notchy.zip.sha256` file next to the zip:
+
+```sh
+cd ~/Downloads
+shasum -a 256 -c Notchy.zip.sha256    # must print "Notchy.zip: OK"
+```
+
+Then do **one** of these:
 
 - **System Settings:** try to open Notchy, dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to *"Notchy" was blocked…* and click **Open Anyway**.
 - **Terminal:**
