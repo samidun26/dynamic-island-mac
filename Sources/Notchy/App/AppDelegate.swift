@@ -14,7 +14,7 @@ struct LaunchOptions {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let options: LaunchOptions
     private let settings: AppSettings
     private var model: IslandModel!
@@ -91,12 +91,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.button?.image = Self.statusIcon()
             item.button?.toolTip = "Notchy"
             item.menu = buildMenu()
+            item.menu?.delegate = self
             statusItem = item
         } else if !visible, let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
         }
     }
+
+    func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()

@@ -71,6 +71,7 @@ final class NowPlayingModel {
     @ObservationIgnored var onTrackChange: ((NowPlayingInfo) -> Void)?
     @ObservationIgnored private var backend: (any NowPlayingBackend)?
     @ObservationIgnored private var pauseGrace: Task<Void, Never>?
+    @ObservationIgnored private var clearTask: Task<Void, Never>?
     @ObservationIgnored private var artCache: [String: (NSImage, Color)] = [:]
     @ObservationIgnored private var artCacheOrder: [String] = []
     @ObservationIgnored private let createdAt = Date()
@@ -92,7 +93,7 @@ final class NowPlayingModel {
         backend?.stop()
         backend = nil
         source = .none
-        receive(nil, artwork: .cleared)
+        receive(nil, artwork: .cleared, immediately: true)
     }
 
     /// The adapter could not run (missing files, or MediaRemote refused it): Music and Spotify only.
@@ -105,7 +106,23 @@ final class NowPlayingModel {
         legacy.start()
     }
 
-    func receive(_ new: NowPlayingInfo?, artwork update: ArtworkUpdate) {
+    /// A restarting stream, or a player switching tracks, can report "nothing playing" for an
+    /// instant. Hold a nil for a moment so the island does not flash idle and then re-announce
+    /// the same track.
+    func receive(_ new: NowPlayingInfo?, artwork update: ArtworkUpdate, immediately: Bool = false) {
+        clearTask?.cancel()
+        if new == nil, info != nil, !immediately {
+            clearTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard !Task.isCancelled else { return }
+                self?.apply(nil, artwork: .cleared)
+            }
+            return
+        }
+        apply(new, artwork: update)
+    }
+
+    private func apply(_ new: NowPlayingInfo?, artwork update: ArtworkUpdate) {
         let old = info
         let trackChanged = new?.trackKey != old?.trackKey
         info = new

@@ -237,6 +237,9 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     else
         fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide, expected ${WANT}"
     fi
+    "$D" jump "$CX" 500 >/dev/null; sleep 2
+    CPU_COMPACT=$(top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | grep -E '^[0-9.]+$' | tail -3 | awk '{s+=$1} END {printf "%.1f", s/NR}')
+    note "CPU, compact with the equaliser animating: ${CPU_COMPACT}%"
     grep -q "ARTWORK received" "$LOG" && pass QA-10 "Artwork arrives and is shown (FR-N6)" "artwork decoded" \
         || fail QA-10 "Artwork arrives and is shown (FR-N6)" "no artwork received"
 else
@@ -263,6 +266,8 @@ else
         else
             fail QA-11 "Resting the pointer opens it (FR-I1)" "logged ${SIZE}, on screen ${W} pt wide, bottom ${BOTTOM_IN}/${BOTTOM_OUT}"
         fi
+        CPU_EXPANDED=$(top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | grep -E '^[0-9.]+$' | tail -3 | awk '{s+=$1} END {printf "%.1f", s/NR}')
+        note "CPU, expanded Now Playing: ${CPU_EXPANDED}%"
         lim 30 "$D" ax-dump $BID > "$OUT/ax-dump.txt" 2>&1
         for y in 60 100 125; do echo "at $CX,$y: $(lim 8 "$D" ax-at "$CX" "$y")"; done >> "$OUT/ax-dump.txt"
     else
@@ -471,14 +476,15 @@ if [ "$INPUT" = yes ]; then
     ITEM=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
     if [ -n "$ITEM" ]; then
         IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
-        "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.8
-        screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu.png"
-        MENU=$("$D" windows Notchy | awk '{split($2,l,"="); if (l[2]>=101) f=1} END {print f+0}')
+        mark "$LOG"
+        "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
+        lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu.png"
+        MENU=0; wait_for "$LOG" "MENU opened" 2 && MENU=1
         "$D" key escape; sleep 0.3
         if [ "$MENU" = 1 ]; then
             pass QA-26 "Menu bar menu opens (FR-S1)" "menu shown ([shot](shots/qa26-menu.png))"
         else
-            fail QA-26 "Menu bar menu opens (FR-S1)" "no menu window after clicking the icon"
+            fail QA-26 "Menu bar menu opens (FR-S1)" "menu did not open; clicked $((IX + IW / 2)),$((MB / 2)) on item ($ITEM); trace: $(after "$LOG" | sed -E 's/^QA [0-9.]+ //' | head -4 | tr '\n' ';')"
         fi
     else
         fail QA-26 "Menu bar menu opens (FR-S1)" "no status item"
@@ -491,15 +497,19 @@ fi
 echo "== resilience"
 ADP=$(pgrep -f "mediaremote-adapter.pl.*stream" | head -1)
 if [ -n "$ADP" ]; then
+    mark "$LOG"
     kill -9 "$ADP"; sleep 3
     NEW=$(pgrep -f "mediaremote-adapter.pl.*stream" | head -1)
-    if [ -n "$NEW" ] && [ "$NEW" != "$ADP" ]; then
-        pass QA-27 "Now Playing stream restarts after a crash (FR-N2)" "killed pid $ADP, restarted as $NEW"
+    FLICKER=$(after "$LOG" | grep -cE "STATE (idle|peek)")
+    if [ -n "$NEW" ] && [ "$NEW" != "$ADP" ] && [ "$FLICKER" = 0 ]; then
+        pass QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "killed pid $ADP, restarted as $NEW; island stayed on the track"
+    elif [ -n "$NEW" ] && [ "$NEW" != "$ADP" ]; then
+        fail QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "restarted as $NEW, but the island flickered ($(after "$LOG" | grep -oE 'STATE (idle|peek)[^ ]*' | tr '\n' ' '))"
     else
-        fail QA-27 "Now Playing stream restarts after a crash (FR-N2)" "not restarted"
+        fail QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "not restarted"
     fi
 else
-    skip QA-27 "Now Playing stream restarts after a crash (FR-N2)" "adapter not running (fallback mode)"
+    skip QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "adapter not running (fallback mode)"
 fi
 
 PLAYING_CPU=$(top -l 3 -s 2 -pid "$NOTCHY_PID" -stats cpu | tail -1 | tr -d ' ')
@@ -555,7 +565,9 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
 # ---------------------------------------------------------------- summary
 {
     echo
-    echo "**$PASS passed, $FAIL failed, $SKIP skipped.** CPU while music plays and the equaliser animates: ${PLAYING_CPU}%."
+    echo "**$PASS passed, $FAIL failed, $SKIP skipped.**"
+    echo
+    echo "CPU (average of 3 × 2 s samples): idle ${CPU}% · compact with music and equaliser ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, no notch."
 } >> "$REPORT"
