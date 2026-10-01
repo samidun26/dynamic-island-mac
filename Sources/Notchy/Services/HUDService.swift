@@ -191,27 +191,44 @@ final class MediaKeyTap {
         source = nil
     }
 
-    fileprivate func process(_ type: CGEventType, _ event: CGEvent) -> Bool {
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+    fileprivate func process(_ e: MediaKeyEvent) -> Bool {
+        if e.tapDisabled {
             if let port { CGEvent.tapEnable(tap: port, enable: true) }
             return false
         }
-        guard type.rawValue == 14, let ns = NSEvent(cgEvent: event), ns.subtype.rawValue == 8 else { return false }
-        let data1 = ns.data1
-        let code = Int32((data1 & 0xFFFF_0000) >> 16)
-        let flags = data1 & 0x0000_FFFF
-        let down = ((flags & 0xFF00) >> 8) == 0xA
-        let isRepeat = (flags & 0x1) == 1
-        return handler(code, down, isRepeat, ns.modifierFlags)
+        return handler(e.code, e.down, e.isRepeat, e.modifiers)
     }
+}
+
+/// What the tap needs from an event, extracted before hopping onto the main actor
+/// (CGEvent itself is not Sendable).
+struct MediaKeyEvent: Sendable {
+    var tapDisabled = false
+    var code: Int32 = -1
+    var down = false
+    var isRepeat = false
+    var modifiers = NSEvent.ModifierFlags()
 }
 
 /// C callback (must not capture or carry actor isolation). The tap's run loop source is on the
 /// main run loop, so it runs on the main thread.
 private func mediaKeyTapCallback(_ proxy: CGEventTapProxy, _ type: CGEventType, _ event: CGEvent, _ refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
     guard let refcon else { return Unmanaged.passUnretained(event) }
+    var info = MediaKeyEvent()
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        info.tapDisabled = true
+    } else if type.rawValue == 14, let ns = NSEvent(cgEvent: event), ns.subtype.rawValue == 8 {
+        let data1 = ns.data1
+        let flags = data1 & 0x0000_FFFF
+        info.code = Int32((data1 & 0xFFFF_0000) >> 16)
+        info.down = ((flags & 0xFF00) >> 8) == 0xA
+        info.isRepeat = (flags & 0x1) == 1
+        info.modifiers = ns.modifierFlags
+    } else {
+        return Unmanaged.passUnretained(event)
+    }
     let tap = Unmanaged<MediaKeyTap>.fromOpaque(refcon).takeUnretainedValue()
-    let consume = MainActor.assumeIsolated { tap.process(type, event) }
+    let consume = MainActor.assumeIsolated { tap.process(info) }
     return consume ? nil : Unmanaged.passUnretained(event)
 }
 

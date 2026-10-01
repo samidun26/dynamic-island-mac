@@ -247,17 +247,17 @@ final class IslandModel {
     /// Starts and stops the activity sources to follow the settings.
     func startServices() {
         let s = settings
-        observe({ s.nowPlayingEnabled }) { [weak self] on in
+        observeChanges({ s.nowPlayingEnabled }) { [weak self] on in
             if on { self?.nowPlaying.start() } else { self?.nowPlaying.stop() }
         }
-        observe({ s.batteryEnabled }) { [weak self] on in
+        observeChanges({ s.batteryEnabled }) { [weak self] on in
             if on { self?.battery.start() } else { self?.battery.stop() }
         }
-        observe({ s.calendarEnabled }) { [weak self] on in
+        observeChanges({ s.calendarEnabled }) { [weak self] on in
             if on { self?.calendar.start() } else { self?.calendar.stop() }
         }
-        observe({ s.timerSound }) { [weak self] on in self?.timer.playSound = on }
-        observe({ (s.hudEnabled, s.hudBrightnessExperimental) }) { [weak self] v in
+        observeChanges({ s.timerSound }) { [weak self] on in self?.timer.playSound = on }
+        observeChanges({ (s.hudEnabled, s.hudBrightnessExperimental) }) { [weak self] v in
             if v.0 { self?.hud.enableKeys(brightness: v.1) } else { self?.hud.disableKeys() }
         }
         hud.startVolumeMirror()
@@ -267,9 +267,9 @@ final class IslandModel {
 /// Calls `apply` with the current value of `read`, and again whenever an observed property that
 /// `read` touched changes. Side effects stay out of the tracked closure.
 @MainActor
-func observe<T>(_ read: @escaping @MainActor @Sendable () -> T, _ apply: @escaping @MainActor @Sendable (T) -> Void) {
+func observeChanges<T>(_ read: @escaping @MainActor @Sendable () -> T, _ apply: @escaping @MainActor @Sendable (T) -> Void) {
     let value = withObservationTracking { read() } onChange: {
-        Task { @MainActor in observe(read, apply) }
+        Task { @MainActor in observeChanges(read, apply) }
     }
     apply(value)
 }

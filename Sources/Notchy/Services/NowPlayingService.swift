@@ -321,12 +321,14 @@ final class AdapterStream: @unchecked Sendable {
                 handle.readabilityHandler = nil
                 return
             }
-            self?.queue.async { self?.feed(data) }
+            guard let self else { return }
+            self.queue.async { self.feed(data) }
         }
         p.terminationHandler = { [weak self] proc in
             let status = proc.terminationStatus
             let reason = proc.terminationReason
-            self?.queue.async { self?.exited(status: status, reason: reason) }
+            guard let self else { return }
+            self.queue.async { self.exited(status: status, reason: reason) }
         }
         do {
             try p.run()

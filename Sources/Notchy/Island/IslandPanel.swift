@@ -78,14 +78,14 @@ final class IslandController {
         installMonitors()
         installObservers()
 
-        observe({ [settings] in settings.hideFromScreenSharing }) { [weak self] hide in
+        observeChanges({ [settings] in settings.hideFromScreenSharing }) { [weak self] hide in
             guard let self else { return }
             self.panel.sharingType = hide && !self.demo ? .none : .readOnly
         }
-        observe({ [settings] in (settings.screenChoice, settings.nonNotchMode) }) { [weak self] _ in
+        observeChanges({ [settings] in (settings.screenChoice, settings.nonNotchMode) }) { [weak self] _ in
             self?.relocate()
         }
-        observe({ [settings] in settings.hoverDelay }) { [weak self] d in
+        observeChanges({ [settings] in settings.hoverDelay }) { [weak self] d in
             self?.intent.openDelay = d
         }
     }

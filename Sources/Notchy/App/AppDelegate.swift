@@ -41,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("NOTCHY_WINDOW_ID=\(controller.panel.windowNumber)")
             fflush(stdout)
         }
-        observe({ [settings] in settings.showMenuBarIcon }) { [weak self] show in
+        observeChanges({ [settings] in settings.showMenuBarIcon }) { [weak self] show in
             self?.setStatusItem(visible: show)
         }
     }
