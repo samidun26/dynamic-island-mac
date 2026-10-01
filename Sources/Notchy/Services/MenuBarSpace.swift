@@ -5,10 +5,13 @@ import Observation
 
 /// How much of the menu bar beside the notch is free, so the compact wings never cover a menu
 /// title or a menu bar icon.
-///  - Right: menu bar icons are ordinary windows at the status level; their frames are public.
+///  - Right: menu bar icons are ordinary windows at the status level. Their frames come from the
+///    window list, which is quick and never waits on another app, so this side is read directly.
 ///  - Left: the app menus belong to the frontmost app; seeing where they end needs Accessibility.
-/// Measured off the main thread when the frontmost app or the screen changes, and every two
-/// seconds while a compact activity is on screen (icons come and go, menus change).
+///    Asking another app can be slow when it is busy, so this side is read off the main thread
+///    with short timeouts, and the right side never waits for it.
+/// Measured when the frontmost app or the screen changes, and every two seconds while a compact
+/// activity is on screen (icons come and go, menus change).
 @MainActor @Observable
 final class MenuBarSpace {
     private(set) var clearance = MenuBarClearance.unlimited
@@ -18,8 +21,11 @@ final class MenuBarSpace {
     @ObservationIgnored private var metrics: NotchMetrics?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var timer: Timer?
-    @ObservationIgnored private var measuring = false
-    @ObservationIgnored private var again = false
+    @ObservationIgnored private var right: CGFloat?
+    @ObservationIgnored private var left: CGFloat?
+    @ObservationIgnored private var leftMeasured = false
+    @ObservationIgnored private var readingMenus = false
+    @ObservationIgnored private var readAgain = false
     @ObservationIgnored private let queue = DispatchQueue(label: "notchy.menubar", qos: .utility)
 
     func start(metrics: NotchMetrics) {
@@ -52,6 +58,9 @@ final class MenuBarSpace {
         observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
         observers.removeAll()
         setWatching(false)
+        right = nil
+        left = nil
+        leftMeasured = false
         clearance = .unlimited
     }
 
@@ -83,32 +92,44 @@ final class MenuBarSpace {
 
     func measure() {
         guard let m = metrics else { return }
-        guard !measuring else { again = true; return }
-        measuring = true
         let input = Input(notch: m.notchRect, screen: m.screenFrame, hasNotch: m.hasNotch,
                           primaryHeight: NSScreen.screens.first?.frame.height ?? m.screenFrame.maxY,
                           screens: NSScreen.screens.map(\.frame),
                           menuOwner: NSWorkspace.shared.menuBarOwningApplication?.processIdentifier,
-                          previousLeft: clearance == .unlimited ? nil : clearance.left)
+                          previousLeft: left)
+        right = Self.measureIcons(input)
+        publish()
+        let trusted = AXIsProcessTrusted()
+        if seesMenus != trusted { seesMenus = trusted }
+        guard !readingMenus else { readAgain = true; return }
+        readingMenus = true
         queue.async { [weak self] in
-            let result = Self.measure(input)
+            let menus = Self.measureMenus(input)
             Task { @MainActor in
                 guard let self else { return }
-                self.measuring = false
-                self.seesMenus = result.left != nil
-                if result != self.clearance {
-                    self.clearance = result
-                    QALog.log("MENUBAR left=\(result.left.map { "\(Int($0))" } ?? "unknown") right=\(Int(result.right))")
-                }
-                if self.again {
-                    self.again = false
+                self.readingMenus = false
+                self.left = menus
+                self.leftMeasured = true
+                self.publish()
+                if self.readAgain {
+                    self.readAgain = false
                     self.measure()
                 }
             }
         }
     }
 
-    // MARK: Measuring (off the main thread)
+    /// Publishes once both sides have been looked at, and only when something changed.
+    private func publish() {
+        guard leftMeasured, let right else { return }
+        let c = metrics?.hasNotch == false ? MenuBarClearance(left: left, right: right)
+                                           : MenuBarClearance(left: left.map { max(0, $0) }, right: max(0, right))
+        guard c != clearance else { return }
+        clearance = c
+        QALog.log("MENUBAR left=\(c.left.map { "\(Int($0))" } ?? "unknown") right=\(Int(c.right))")
+    }
+
+    // MARK: Measuring
 
     struct Input: Sendable {
         var notch: CGRect           // AppKit coordinates
@@ -120,12 +141,13 @@ final class MenuBarSpace {
         var previousLeft: CGFloat?
     }
 
-    nonisolated static func measure(_ i: Input) -> MenuBarClearance {
-        // Window and accessibility frames use a top-left origin on the primary display.
+    /// Free width from the notch to the first menu bar icon on its right. Negative without a
+    /// notch when an icon sits where the fake notch would be drawn.
+    nonisolated static func measureIcons(_ i: Input) -> CGFloat {
+        // Window frames use a top-left origin on the primary display.
         let top = i.primaryHeight - i.screen.maxY
         let band = (top - 1)...(top + max(i.notch.height, 24) + 4)
-
-        // Right: menu bar icons, whoever owns them (Control Center, other apps, Notchy's own).
+        // Menu bar icons, whoever owns them (Control Center, other apps, Notchy's own).
         var right = i.screen.maxX - i.notch.maxX
         let statusLevel = Int(CGWindowLevelForKey(.statusWindow))
         let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
@@ -138,39 +160,38 @@ final class MenuBarSpace {
             guard i.hasNotch ? r.minX >= i.notch.maxX - 2 : r.maxX > i.notch.minX else { continue }
             right = min(right, r.minX - i.notch.maxX)
         }
+        return right
+    }
 
-        // Left: where the frontmost app's menus end. Menus are laid out from the left edge of each
-        // display, so measure relative to the display they are on.
-        var left: CGFloat?
+    /// Free width from the end of the frontmost app's menus to the notch, or nil when it can't
+    /// be seen (no Accessibility). Runs off the main thread: the app may be slow to answer.
+    nonisolated static func measureMenus(_ i: Input) -> CGFloat? {
+        guard AXIsProcessTrusted() else { return nil }
         // Notchy never shows menus of its own (the menu bar keeps the previous app's), so it is
         // never asked about itself.
-        if AXIsProcessTrusted(), let pid = i.menuOwner, pid != getpid() {
-            let app = AXUIElementCreateApplication(pid)
-            AXUIElementSetMessagingTimeout(app, 0.25)
-            let notchStart = i.notch.minX - i.screen.minX
-            var end: CGFloat = 0
-            var found = false
-            for item in children(attribute(app, kAXMenuBarAttribute)) {
-                guard let r = frame(item), r.width > 0,
-                      let display = i.screens.first(where: { $0.minX <= r.minX && r.minX < $0.maxX }) else { continue }
-                let start = r.minX - display.minX
-                if i.hasNotch {
-                    // Menus that don't fit before the notch are hidden by macOS; they don't count.
-                    guard start < notchStart else { continue }
-                    end = max(end, min(r.maxX - display.minX, notchStart))
-                } else {
-                    end = max(end, r.maxX - display.minX)
-                }
-                found = true
+        guard let pid = i.menuOwner, pid != getpid() else { return i.previousLeft }
+        // A busy app must not hold this up: every call below gives up after a quarter second.
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 0.25)
+        let app = AXUIElementCreateApplication(pid)
+        let notchStart = i.notch.minX - i.screen.minX
+        var end: CGFloat = 0
+        var found = false
+        // Menus are laid out from the left edge of each display: measure relative to theirs.
+        for item in children(attribute(app, kAXMenuBarAttribute)) {
+            guard let r = frame(item), r.width > 0,
+                  let display = i.screens.first(where: { $0.minX <= r.minX && r.minX < $0.maxX }) else { continue }
+            let start = r.minX - display.minX
+            if i.hasNotch {
+                // Menus that don't fit before the notch are hidden by macOS; they don't count.
+                guard start < notchStart else { continue }
+                end = max(end, min(r.maxX - display.minX, notchStart))
+            } else {
+                end = max(end, r.maxX - display.minX)
             }
-            // No menus yet (an app that is still activating): keep what was there.
-            left = found ? notchStart - end : i.previousLeft
-        } else if AXIsProcessTrusted() {
-            left = i.previousLeft
+            found = true
         }
-        // Negative only without a notch: something sits where the fake notch would be drawn.
-        return i.hasNotch ? MenuBarClearance(left: left.map { max(0, $0) }, right: max(0, right))
-                          : MenuBarClearance(left: left, right: right)
+        // No menus yet (an app that is still activating): keep what was there.
+        return found ? notchStart - end : i.previousLeft
     }
 
     private nonisolated static func attribute(_ e: AXUIElement, _ name: String) -> AXUIElement? {
