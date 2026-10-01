@@ -145,7 +145,7 @@ final class IslandController {
     // MARK: Mouse
 
     private func installMonitors() {
-        let moved: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
+        let moved: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .leftMouseUp]
         if let g = NSEvent.addGlobalMonitorForEvents(matching: moved, handler: { [weak self] _ in
             MainActor.assumeIsolated { self?.mouseMoved() }
         }) { monitors.append(g) }
@@ -182,18 +182,22 @@ final class IslandController {
 
     private func updateMouse(_ p: NSPoint) {
         let m = model.metrics
-        let onIsland = m.hitRect(model.geometry).contains(p)
-        // Fast exit far from the island: nothing to do.
-        if !onIsland && !intent.isInside && !model.hovering && panel.ignoresMouseEvents { return }
+        let g = model.geometry
+        // Only the visible body takes clicks. A hidden island (no notch, idle) never blocks the
+        // menu bar, but resting on its spot still counts as hovering.
+        let body = m.islandRect(g)
+        let overBody = g.size.height > 0.5 && CGRect(x: body.minX, y: body.minY, width: body.width, height: body.height + 4).contains(p)
+        let overZone = m.hitRect(g).contains(p)
+        // Far from the island with nothing pending: nothing to do.
+        if !overZone && !intent.isInside && !model.hovering && panel.ignoresMouseEvents { return }
 
-        if panel.ignoresMouseEvents == onIsland { panel.ignoresMouseEvents = !onIsland }
-        model.setHovering(onIsland)
+        if panel.ignoresMouseEvents == overBody { panel.ignoresMouseEvents = !overBody }
+        model.setHovering(overZone)
 
         let open = model.state.isOpen
-        let inside = open ? m.hitRect(model.geometry, grace: NotchMetrics.hoverGrace).contains(p) : onIsland
+        let inside = open ? m.hitRect(g, grace: NotchMetrics.hoverGrace).contains(p) : overZone
         let held = !NSEvent.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty || NSEvent.pressedMouseButtons != 0
-        let now = ProcessInfo.processInfo.systemUptime
-        intent.track(p, at: now, inside: inside, suppressed: held && !open)
+        intent.track(p, at: ProcessInfo.processInfo.systemUptime, inside: inside, suppressed: held && !open)
         scheduleHoverChecks()
     }
 
@@ -206,7 +210,8 @@ final class IslandController {
                 self.model.setHoverOpen(true)
             }
         }
-        if model.hoverOpen, let deadline = intent.closeDeadline {
+        // Never close under a drag (scrubbing, volume) that wandered outside; re-checked on mouse up.
+        if model.hoverOpen, NSEvent.pressedMouseButtons == 0, let deadline = intent.closeDeadline {
             closeCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldClose(at: ProcessInfo.processInfo.systemUptime) else { return }
                 self.model.setHoverOpen(false)
