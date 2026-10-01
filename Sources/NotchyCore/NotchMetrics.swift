@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// Everything the island shape animates: size plus corner radii.
 /// `earRadius` is the small concave flare at the top corners that fuses the

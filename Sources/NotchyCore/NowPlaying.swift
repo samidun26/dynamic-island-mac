@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 public struct NowPlayingInfo: Equatable, Sendable {
     public var bundleID: String

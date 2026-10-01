@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 public enum ActivityKind: String, CaseIterable, Sendable, Hashable {
     case hud, battery, timer, calendar, nowPlaying

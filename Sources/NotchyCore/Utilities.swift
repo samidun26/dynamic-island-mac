@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// `notchy://` URLs, usable from Shortcuts ("Open URL"), Terminal (`open notchy://…`) or scripts.
 public enum DeepLink: Equatable, Sendable {
