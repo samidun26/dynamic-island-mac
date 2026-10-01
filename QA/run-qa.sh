@@ -173,7 +173,12 @@ LAUNCH=$(grep LAUNCH "$LOG" | tail -1)
 note "$LAUNCH"
 
 # Window: one panel, top-centre, above the menu bar, plus a menu bar item.
-WINS=$("$D" windows Notchy)
+WINS=""
+for _ in $(seq 1 15); do
+    WINS=$("$D" windows Notchy)
+    echo "$WINS" | awk '{split($5,w,"="); if (w[2]>300) a=1; split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) b=1} END {exit !(a && b)}' && break
+    sleep 0.2
+done
 echo "$WINS" | sed 's/^/   · /'
 PANEL=$(echo "$WINS" | awk '{split($4,y,"="); split($5,w,"="); if (y[2]==0 && w[2]>300) print}' | head -1)
 if [ -n "$PANEL" ]; then
@@ -475,22 +480,26 @@ else
     fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
 fi
 
-if [ "$INPUT" = yes ]; then
+menu_click() { # $1 = label for the evidence
     ITEM=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
-    if [ -n "$ITEM" ]; then
-        IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
-        mark "$LOG"
-        "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
-        lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu.png"
-        MENU=0; wait_for "$LOG" "MENU opened" 2 && MENU=1
-        "$D" key escape; sleep 0.3
-        if [ "$MENU" = 1 ]; then
-            pass QA-26 "Menu bar menu opens (FR-S1)" "menu shown ([shot](shots/qa26-menu.png))"
-        else
-            fail QA-26 "Menu bar menu opens (FR-S1)" "menu did not open; clicked $((IX + IW / 2)),$((MB / 2)) on item ($ITEM); trace: $(after "$LOG" | sed -E 's/^QA [0-9.]+ //' | head -4 | tr '\n' ';')"
-        fi
+    [ -z "$ITEM" ] && { echo "no-item"; return; }
+    IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
+    mark "$LOG"
+    "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
+    lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
+    if wait_for "$LOG" "MENU opened" 2; then echo yes; else echo no; fi
+    "$D" key escape; sleep 0.4
+}
+if [ "$INPUT" = yes ]; then
+    open -a Finder; sleep 1                       # the usual case: another app in front
+    M1=$(menu_click other-app)
+    lim 8 open "notchy://settings"; sleep 1.2      # Notchy itself in front (Settings open)
+    M2=$(menu_click notchy-active)
+    "$D" key cmd-w; sleep 0.5
+    if [ "$M1" = yes ] && [ "$M2" = yes ]; then
+        pass QA-26 "Menu bar menu opens (FR-S1)" "with another app in front ([shot](shots/qa26-menu-other-app.png)) and with Notchy's Settings in front ([shot](shots/qa26-menu-notchy-active.png))"
     else
-        fail QA-26 "Menu bar menu opens (FR-S1)" "no status item"
+        fail QA-26 "Menu bar menu opens (FR-S1)" "another app in front: $M1; Notchy in front: $M2"
     fi
 else
     skip QA-26 "Menu bar menu opens (FR-S1)" "cannot synthesise input"
@@ -515,8 +524,31 @@ else
     skip QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "adapter not running (fallback mode)"
 fi
 
-PLAYING_CPU=$(cpu_avg)
-note "CPU while music plays (compact, equaliser animating): ${PLAYING_CPU}%"
+# Controlled CPU: music playing in the compact island (measured twice), then paused in the player.
+"$D" jump "$CX" 500 >/dev/null 2>&1; sleep 3
+if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
+    A1=$(cpu_avg); A2=$(cpu_avg)
+    mark "$LOG"; kill -USR2 "$FP_PID"
+    COLLAPSED=no
+    wait_for "$LOG" "NOWPLAYING .*playing=false" 3 && wait_for "$LOG" "STATE idle" 5 && COLLAPSED=yes
+    WAITED=$(after "$LOG" | awk '/playing=false/ {a=$2} / STATE idle/ {b=$2} END {if (a && b) printf "%.1f", b - a}')
+    sleep 2; B=$(cpu_avg)
+    if [ $COLLAPSED = yes ]; then
+        pass QA-30 "Pausing in the player: wings collapse after the grace period (FR-N3)" "collapsed ${WAITED} s after the pause (grace 2.5 s)"
+    else
+        fail QA-30 "Pausing in the player: wings collapse after the grace period (FR-N3)" "state $(last_state)"
+    fi
+    CPU_COMPACT="$A1 / $A2"; CPU_PAUSED=$B
+    if awk "BEGIN {exit !($B < 1.0)}"; then
+        pass QA-31 "CPU with music paused and the island idle (NFR-1)" "${B}% (music playing in the wings: ${A1}% and ${A2}%)"
+    else
+        fail QA-31 "CPU with music paused and the island idle (NFR-1)" "${B}% (music playing in the wings: ${A1}% and ${A2}%)"
+    fi
+    kill -USR2 "$FP_PID"; sleep 1
+else
+    skip QA-30 "Pausing in the player: wings collapse after the grace period (FR-N3)" "not in compact:nowPlaying ($(last_state))"
+    skip QA-31 "CPU with music paused and the island idle (NFR-1)" "precondition not met"
+fi
 
 quit_notchy; sleep 1
 if pgrep -f "mediaremote-adapter.pl" >/dev/null; then
@@ -570,7 +602,7 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
     echo
     echo "**$PASS passed, $FAIL failed, $SKIP skipped.**"
     echo
-    echo "CPU (average of 3 × 2 s samples): idle ${CPU}% · compact with music and equaliser ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}%."
+    echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, no notch."
 } >> "$REPORT"

@@ -120,6 +120,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
     let player = Player()
     var window: NSWindow!
     var nextSignal: DispatchSourceSignal?
+    var toggleSignal: DispatchSourceSignal?
 
     func applicationDidFinishLaunching(_ n: Notification) {
         let screen = NSScreen.screens[0]
@@ -141,6 +142,15 @@ final class Delegate: NSObject, NSApplicationDelegate {
         }
         s.resume()
         nextSignal = s
+        // SIGUSR2: pause/resume from the test script (the user pressing pause in the player).
+        signal(SIGUSR2, SIG_IGN)
+        let p = DispatchSource.makeSignalSource(signal: SIGUSR2, queue: .main)
+        p.setEventHandler { [unowned self] in
+            log("SIGNAL toggle")
+            player.setPlaying(!player.playing)
+        }
+        p.resume()
+        toggleSignal = p
         log("READY")
     }
 }

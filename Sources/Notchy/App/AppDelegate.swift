@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var model: IslandModel!
     private var controller: IslandController!
     private var statusItem: NSStatusItem?
+    private var statusMenu: NSMenu?
     private let settingsWindow = SettingsWindowController()
     private var sigterm: DispatchSourceSignal?
 
@@ -90,8 +91,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.button?.image = Self.statusIcon()
             item.button?.toolTip = "Notchy"
-            item.menu = buildMenu()
-            item.menu?.delegate = self
+            // Open the menu ourselves on mouse-down. With `item.menu`, QA found the menu would not
+            // open while Notchy itself was the active app (e.g. Settings in front).
+            item.button?.target = self
+            item.button?.action = #selector(statusItemClicked(_:))
+            item.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
+            let menu = buildMenu()
+            menu.delegate = self
+            statusMenu = menu
             statusItem = item
         } else if !visible, let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
@@ -100,6 +107,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        guard let statusMenu else { return }
+        sender.highlight(true)
+        statusMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 5), in: sender)
+        sender.highlight(false)
+    }
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
