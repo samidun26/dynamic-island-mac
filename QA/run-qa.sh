@@ -634,7 +634,8 @@ if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
                 fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "${C2}; back when removed: ${BACK} ([shot](shots/qa36-crowded.png))"
             fi
         else
-            fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "no re-fit after a ${ROOM} pt icon appeared; $(last_state); $(grep -E 'MENUBAR|CROWD' "$LOG" "$FPLOG" | tail -3 | sed -E 's/^.*(MENUBAR|CROWD)/\1/' | tr '\n' ';')"
+            shot qa36-crowded
+            fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "no re-fit after a ${ROOM} pt icon appeared; $(last_state); $(grep -hE 'CROWD' "$FPLOG" | tail -2 | sed -E 's/^.*CROWD/CROWD/' | tr '\n' ';') icons: $("$D" status-items | tr '\n' ',') ([shot](shots/qa36-crowded.png))"
             kill -HUP "$FP_PID"
         fi
     else

@@ -88,7 +88,8 @@ final class MenuBarSpace {
         let input = Input(notch: m.notchRect, screen: m.screenFrame,
                           primaryHeight: NSScreen.screens.first?.frame.height ?? m.screenFrame.maxY,
                           screens: NSScreen.screens.map(\.frame),
-                          menuOwner: NSWorkspace.shared.menuBarOwningApplication?.processIdentifier)
+                          menuOwner: NSWorkspace.shared.menuBarOwningApplication?.processIdentifier,
+                          previousLeft: clearance == .unlimited ? nil : clearance.left)
         queue.async { [weak self] in
             let result = Self.measure(input)
             Task { @MainActor in
@@ -115,6 +116,7 @@ final class MenuBarSpace {
         var primaryHeight: CGFloat
         var screens: [CGRect]
         var menuOwner: pid_t?
+        var previousLeft: CGFloat?
     }
 
     nonisolated static func measure(_ i: Input) -> MenuBarClearance {
@@ -137,11 +139,14 @@ final class MenuBarSpace {
         // Left: where the frontmost app's menus end. Menus are laid out from the left edge of each
         // display, so measure relative to the display they are on.
         var left: CGFloat?
-        if AXIsProcessTrusted(), let pid = i.menuOwner {
+        // Notchy never shows menus of its own (the menu bar keeps the previous app's), so it is
+        // never asked about itself.
+        if AXIsProcessTrusted(), let pid = i.menuOwner, pid != getpid() {
             let app = AXUIElementCreateApplication(pid)
             AXUIElementSetMessagingTimeout(app, 0.25)
             let notchStart = i.notch.minX - i.screen.minX
             var end: CGFloat = 0
+            var found = false
             for item in children(attribute(app, kAXMenuBarAttribute)) {
                 guard let r = frame(item), r.width > 0,
                       let display = i.screens.first(where: { $0.minX <= r.minX && r.minX < $0.maxX }) else { continue }
@@ -149,8 +154,12 @@ final class MenuBarSpace {
                 // Menus that don't fit before the notch are hidden by macOS; they don't count.
                 guard start < notchStart else { continue }
                 end = max(end, min(r.maxX - display.minX, notchStart))
+                found = true
             }
-            left = notchStart - end
+            // No menus yet (an app that is still activating): keep what was there.
+            left = found ? notchStart - end : i.previousLeft
+        } else if AXIsProcessTrusted() {
+            left = i.previousLeft
         }
         return MenuBarClearance(left: left.map { max(0, $0) }, right: max(0, right))
     }

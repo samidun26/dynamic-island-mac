@@ -90,9 +90,11 @@ private struct GeneralTab: View {
             } header: {
                 Text("Display")
             } footer: {
-                Text(settings.keepClearOfMenuBar
-                     ? "Live activities fit into the free space beside the notch. When one side is taken they move to the other, and with no room at all they show as a thin line under the notch. Menu bar icons are always avoided; seeing where the app menus end needs Accessibility, and until then activities stay right of the notch."
-                     : "Live activities always use both sides of the notch and may cover menus and menu bar icons next to it.")
+                Text(!settings.keepClearOfMenuBar
+                     ? "Live activities use both sides of the notch and may cover menus and icons next to it."
+                     : model.menuBar.seesMenus
+                     ? "Live activities use only free menu bar space, or show as a thin line under the notch."
+                     : "Live activities use only free menu bar space. To use the space left of the notch, Notchy needs to see where app menus end.")
             }
             Section("App") {
                 Toggle("Launch at login", isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }))

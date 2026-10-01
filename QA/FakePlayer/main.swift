@@ -169,6 +169,10 @@ final class Delegate: NSObject, NSApplicationDelegate {
                 c.button?.title = "QA crowding the menu bar"
                 crowd = c
                 log("CROWD added width=\(Int(width))")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    let f = c.button?.window?.frame ?? .zero
+                    log("CROWD placed x=\(Int(f.minX)) w=\(Int(f.width)) visible=\(c.button?.window?.isVisible ?? false)")
+                }
             }
         }
         h.resume()
