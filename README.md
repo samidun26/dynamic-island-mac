@@ -37,7 +37,7 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 
 Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-step instructions, first launch and troubleshooting: [user guide](docs/USER_GUIDE.md).
 
-- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
+- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), check it with `shasum -a 256 -c Notchy.zip.sha256`, unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
 - **Build:** needs Xcode 16 or later (the Command Line Tools are enough for a single-architecture build).
 
   ```sh
@@ -118,12 +118,14 @@ Built and checked on GitHub's macOS runners (see `.github/workflows/build.yml`):
 - Every state renders (the screenshots above are produced by `Notchy --snapshot` on CI).
 - Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: Notchy at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
 - The real panel renders on screen, centred and flush with the top edge over the menu bar ([window](docs/screenshots/live-expanded.png), [compact on the runner's screen](docs/screenshots/live-screen-compact.png), [expanded](docs/screenshots/live-screen-expanded.png)).
+- **End-to-end QA** ([report](docs/QA_REPORT.md), [latest results](docs/qa/results.md)): installed from this repository as the user guide says, then used with real mouse, click, key and trackpad events and a test music app that publishes to the system Now Playing. Covered: hover and fast sweeps, click-through, pin and dismiss, swipes, Now Playing detection, artwork, play/pause, next and seek reaching the player, timers, Settings, the menu bar menu, helper restart and shutdown, Gatekeeper on a downloaded copy, CPU.
+- **Security review** ([report](docs/SECURITY_REVIEW.md)): no high or critical issues and no secrets in the repository or its history; the issues found are fixed, and the two attack tests (library and Perl injection) run in every QA run.
 
 Not verified, because it needs real hardware and a person:
 
 - Pixel alignment over a real notch. The geometry comes from `NSScreen.safeAreaInsets` and `auxiliaryTopLeftArea/RightArea`, and the CI screenshots use 14" MacBook Pro values, but the runners have no notch.
-- Hover, click, swipe and haptics feel; the springs were tuned by reasoning and rendered frames, not by hand on a trackpad.
-- Real playback through the adapter (no audio on CI), the Music/Spotify fallback, calendar permission prompts, the Accessibility flow and media keys, charging events.
+- How hover, click, swipe and haptics *feel*; the springs were tuned by reasoning and rendered frames, not by hand on a trackpad. (The mechanics are covered by QA.)
+- Real players (Music, Spotify, browsers), the Music/Spotify fallback, calendar permission prompts, the Accessibility flow and media keys, charging events. The [QA report](docs/QA_REPORT.md#manual-checklist-macbook-with-a-notch) has a checklist for these.
 - Multi-display hot-plug and full-screen Spaces.
 
 Not possible or deliberately not done:
