@@ -54,6 +54,8 @@ shot() { lim 10 screencapture -x -R "0,0,$SW,${2:-220}" "$OUT/shots/$1.png" 2>/d
 # Width of the black island along its top edge (3 pt down: below any content, above the menu text).
 island_width() { "$D" dark-run "$OUT/shots/$1.png" 3 | awk '{print $2}'; }
 logged_size() { last_state | awk '{print $2}'; }
+# Average %CPU of Notchy over the last three of four 2-second top samples.
+cpu_avg() { top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | awk '{gsub(/ /,"")} /^[0-9.]+$/ {v[n++]=$0} END {s=0; for (i=n-3; i<n; i++) s+=v[i]; printf "%.1f", s/3}'; }
 near() { [ "$1" -ge $(($2 - $3)) ] && [ "$1" -le $(($2 + $3)) ]; }
 
 launch_notchy() {
@@ -200,7 +202,7 @@ else
 fi
 
 sleep 4
-CPU=$(top -l 3 -s 2 -pid "$NOTCHY_PID" -stats cpu | tail -1 | tr -d ' ')
+CPU=$(cpu_avg)
 MEM=$(top -l 1 -pid "$NOTCHY_PID" -stats mem | tail -1 | tr -d ' ')
 if awk "BEGIN {exit !($CPU < 1.0)}"; then
     pass QA-06 "Idle CPU and memory (NFR-1, NFR-2)" "${CPU}% CPU, ${MEM}"
@@ -238,7 +240,7 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
         fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide, expected ${WANT}"
     fi
     "$D" jump "$CX" 500 >/dev/null; sleep 2
-    CPU_COMPACT=$(top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | grep -E '^[0-9.]+$' | tail -3 | awk '{s+=$1} END {printf "%.1f", s/NR}')
+    CPU_COMPACT=$(cpu_avg)
     note "CPU, compact with the equaliser animating: ${CPU_COMPACT}%"
     grep -q "ARTWORK received" "$LOG" && pass QA-10 "Artwork arrives and is shown (FR-N6)" "artwork decoded" \
         || fail QA-10 "Artwork arrives and is shown (FR-N6)" "no artwork received"
@@ -266,7 +268,7 @@ else
         else
             fail QA-11 "Resting the pointer opens it (FR-I1)" "logged ${SIZE}, on screen ${W} pt wide, bottom ${BOTTOM_IN}/${BOTTOM_OUT}"
         fi
-        CPU_EXPANDED=$(top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | grep -E '^[0-9.]+$' | tail -3 | awk '{s+=$1} END {printf "%.1f", s/NR}')
+        CPU_EXPANDED=$(cpu_avg)
         note "CPU, expanded Now Playing: ${CPU_EXPANDED}%"
         lim 30 "$D" ax-dump $BID > "$OUT/ax-dump.txt" 2>&1
         for y in 60 100 125; do echo "at $CX,$y: $(lim 8 "$D" ax-at "$CX" "$y")"; done >> "$OUT/ax-dump.txt"
@@ -456,14 +458,15 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
     if [ -n "$SW_ID" ]; then
         lim 10 screencapture -x -o -l "$SW_ID" "$OUT/shots/qa24-settings.png"
         CLOSED=untested
+        FOCUSED=$(grep -o 'SETTINGS focused=[a-z]*' "$LOG" | tail -1 | cut -d= -f2)
         if [ "$INPUT" = yes ]; then
             "$D" key cmd-w; sleep 0.8
             "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID" && CLOSED=no || CLOSED=yes
         fi
         if [ "$CLOSED" != no ]; then
-            pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
+            pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown and focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
         else
-            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown ([shot](shots/qa24-settings.png)) but ⌘W did not close it"
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it"
         fi
     else
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
@@ -512,7 +515,7 @@ else
     skip QA-27 "Now Playing stream restarts after a crash, without flicker (FR-N2)" "adapter not running (fallback mode)"
 fi
 
-PLAYING_CPU=$(top -l 3 -s 2 -pid "$NOTCHY_PID" -stats cpu | tail -1 | tr -d ' ')
+PLAYING_CPU=$(cpu_avg)
 note "CPU while music plays (compact, equaliser animating): ${PLAYING_CPU}%"
 
 quit_notchy; sleep 1
