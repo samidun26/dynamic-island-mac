@@ -10,7 +10,7 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 |---|---|---|
 | ![](docs/screenshots/notch-compact.png) | ![](docs/screenshots/notch-multi.png) | ![](docs/screenshots/notch-home.png) |
 
-All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
+All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
 
 <sub>Screenshots are rendered by the app itself on CI (`Notchy --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 
@@ -21,7 +21,7 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 - **One priority queue, like iOS.** The most important activity owns the wings; others shrink to a small glyph next to it. Swipe sideways on the island to bring another one to the front.
 - **Expands on hover, click or swipe down.** Album art, title, a scrubbable progress bar, previous / play-pause / next, and a volume slider. Swipe sideways between pages: Now Playing, Timer, Up Next, and Home (clock, next event, one-click timers).
 - **Moves like the iPhone island.** The shape is one animatable outline (width, height, bottom corners and the small concave "ears" that fuse it into the bezel) driven by springs. Content fades in with a blur a beat after the shape starts, and leaves before it shrinks. Reversing mid-animation never snaps.
-- **Stays out of the way.** The window never takes focus, clicks outside the island go straight through to the menu bar and other apps, sweeping the pointer across the notch to reach the menu bar does not open it, and it is hidden from screen sharing by default.
+- **Stays out of the way.** Live activities only use free menu bar space: they never cover an app's menus or the icons next to the notch, moving to the free side or shrinking to a thin line under the notch when there's no room ([see how](docs/screenshots/sheet-menubar.png)). The window never takes focus, clicks outside the island go straight through to the menu bar and other apps, sweeping the pointer across the notch to reach the menu bar does not open it, and it is hidden from screen sharing by default.
 
 ### Activities
 

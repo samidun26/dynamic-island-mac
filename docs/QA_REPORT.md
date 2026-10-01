@@ -3,7 +3,7 @@
 End-to-end QA of Notchy, installed from this repository the way the [user guide](USER_GUIDE.md) describes and then used on a real macOS session: a script moves the pointer, clicks, scrolls and swipes like a person would, plays music from a test app, and checks what happens on screen, in the accessibility tree, and in the music app.
 
 - **Latest run:** [docs/qa/results.md](qa/results.md), with [screenshots](qa/shots/), Notchy's [test trace](qa/notchy-trace.log) and the [test player's log](qa/fakeplayer.log).
-- **Result:** **34 of 34 cases pass** (macOS 15.7.9, commit `184c367`). Eight bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
+- **Result:** **36 of 36 cases pass** (macOS 15.7.9, commit `e1a7173`). Nine bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
 - **Re-run it:** see [How to run it](#how-to-run-it). It runs on every push to a working branch, and on demand from the Actions tab.
 
 ## Environment
