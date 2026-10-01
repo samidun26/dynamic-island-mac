@@ -1,95 +1,94 @@
-QA 173.497 SOURCE adapter
-QA 174.002 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=25
-QA 174.285 URL notchy://timer?seconds=30
-QA 174.285 STATE compact:timer 312x33 secondaries=[] pages=2
-QA 175.643 SOURCE adapter
-QA 175.763 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
-QA 186.508 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 186.508 ARTWORK received
-QA 186.513 STATE peek:nowPlaying 484x161 secondaries=[] pages=2
-QA 189.570 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 201.684 CLICKTHROUGH false
-QA 201.829 HOVER open
-QA 201.830 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 209.805 MENU opened
-QA 210.929 MENU opened
-QA 212.310 MOUSEDOWN island at 431,640
-QA 212.459 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
-QA 212.836 MENU opened
-QA 214.063 MOUSEDOWN island at 431,640
-QA 214.189 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 214.445 MENU opened
-QA 215.854 MOUSEDOWN island at 465,640
-QA 216.174 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 216.174 ARTWORK received
-QA 216.316 MENU opened
-QA 217.745 MOUSEDOWN island at 558,674
-QA 219.857 CLICKTHROUGH true
-QA 220.152 HOVER close
-QA 220.152 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 221.459 CLICKTHROUGH false
-QA 221.534 CLICKTHROUGH true
-QA 223.827 MOUSEDOWN elsewhere at 722,648
-QA 224.538 CLICKTHROUGH false
-QA 224.672 HOVER open
-QA 224.672 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 225.061 MOUSEDOWN island at 512,756
-QA 225.062 PIN
-QA 225.461 CLICKTHROUGH true
-QA 225.787 HOVER close
-QA 227.723 MOUSEDOWN elsewhere at 512,248
-QA 227.723 DISMISS
-QA 227.724 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 228.532 CLICKTHROUGH false
-QA 228.558 SCROLL began on island
-QA 228.725 HOVER open
-QA 228.726 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 228.741 SWIPE down
-QA 229.593 SCROLL began on island
-QA 229.806 SWIPE up
-QA 229.806 DISMISS
-QA 229.806 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 231.116 SCROLL began on island
-QA 231.360 SWIPE down
-QA 231.360 PIN
-QA 231.361 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 232.139 SCROLL began on island
-QA 232.429 SWIPE left
-QA 232.429 STATE expanded:home 484x161 secondaries=[] pages=2
-QA 233.605 CLICKTHROUGH true
-QA 234.674 MOUSEDOWN elsewhere at 512,248
-QA 234.675 DISMISS
-QA 234.675 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 235.965 URL notchy://timer?seconds=8
-QA 235.966 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
-QA 244.219 TIMER done
-QA 244.227 STATE peek:timer 484x161 secondaries=[] pages=3
-QA 250.428 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
-QA 252.586 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 252.921 URL notchy://timer?minutes=5
-QA 252.921 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
-QA 255.704 CLICKTHROUGH false
-QA 255.834 HOVER open
-QA 255.834 STATE expanded:timer 484x161 secondaries=[] pages=3
-QA 256.742 MENU opened
-QA 258.026 MOUSEDOWN island at 623,675
-QA 258.757 MENU opened
-QA 260.046 MOUSEDOWN island at 676,675
-QA 260.829 MENU opened
-QA 262.086 MENU opened
-QA 263.300 MOUSEDOWN island at 716,675
-QA 263.459 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 263.759 CLICKTHROUGH true
-QA 264.013 HOVER close
-QA 264.014 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 265.237 URL notchy://settings
-QA 265.237 SETTINGS shown
-QA 268.400 MENU opened
-QA 270.734 ARTWORK received
-QA 276.865 NOWPLAYING title=- artist=- playing=false app=-
-QA 278.160 SOURCE adapter
-QA 278.281 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=38
-QA 278.359 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 278.359 ARTWORK received
-QA 278.377 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
-QA 279.957 NOWPLAYING title=- artist=- playing=false app=-
+QA 151.269 SOURCE adapter
+QA 151.869 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=24
+QA 152.155 URL notchy://timer?seconds=30
+QA 152.156 STATE compact:timer 312x33 secondaries=[] pages=2
+QA 153.733 SOURCE adapter
+QA 153.891 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
+QA 167.156 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 167.156 ARTWORK received
+QA 167.173 STATE peek:nowPlaying 484x161 secondaries=[] pages=2
+QA 170.241 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 182.570 CLICKTHROUGH false
+QA 182.701 HOVER open
+QA 182.701 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 190.614 MENU opened
+QA 192.916 MOUSEDOWN island at 431,640
+QA 193.064 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
+QA 193.410 MENU opened
+QA 194.738 MOUSEDOWN island at 431,640
+QA 194.820 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 195.184 MENU opened
+QA 196.427 MOUSEDOWN island at 465,640
+QA 196.743 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 196.743 ARTWORK received
+QA 196.838 MENU opened
+QA 198.168 MOUSEDOWN island at 558,674
+QA 200.143 CLICKTHROUGH true
+QA 200.467 HOVER close
+QA 200.468 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 201.710 CLICKTHROUGH false
+QA 201.738 CLICKTHROUGH true
+QA 204.082 MOUSEDOWN elsewhere at 722,648
+QA 204.767 CLICKTHROUGH false
+QA 204.904 HOVER open
+QA 204.904 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 205.396 MOUSEDOWN island at 512,756
+QA 205.396 PIN
+QA 205.754 CLICKTHROUGH true
+QA 206.055 HOVER close
+QA 207.869 MOUSEDOWN elsewhere at 512,248
+QA 207.869 DISMISS
+QA 207.870 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 208.722 CLICKTHROUGH false
+QA 208.744 SCROLL began on island
+QA 208.918 HOVER open
+QA 208.918 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 208.993 SWIPE down
+QA 209.820 SCROLL began on island
+QA 210.038 SWIPE up
+QA 210.039 DISMISS
+QA 210.039 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 211.197 SCROLL began on island
+QA 211.393 SWIPE down
+QA 211.393 PIN
+QA 211.394 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 212.131 SCROLL began on island
+QA 212.338 SWIPE left
+QA 212.338 STATE expanded:home 484x161 secondaries=[] pages=2
+QA 213.454 CLICKTHROUGH true
+QA 214.404 MOUSEDOWN elsewhere at 512,248
+QA 214.404 DISMISS
+QA 214.404 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 215.575 URL notchy://timer?seconds=8
+QA 215.575 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 224.267 TIMER done
+QA 224.276 STATE peek:timer 484x161 secondaries=[] pages=3
+QA 230.466 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 232.621 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 232.796 URL notchy://timer?minutes=5
+QA 232.798 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 235.669 CLICKTHROUGH false
+QA 235.792 HOVER open
+QA 235.792 STATE expanded:timer 484x161 secondaries=[] pages=3
+QA 236.577 MENU opened
+QA 237.796 MOUSEDOWN island at 623,675
+QA 238.542 MENU opened
+QA 239.740 MOUSEDOWN island at 676,675
+QA 240.512 MENU opened
+QA 241.566 MENU opened
+QA 242.560 MOUSEDOWN island at 716,675
+QA 242.699 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 242.891 CLICKTHROUGH true
+QA 243.189 HOVER close
+QA 243.192 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 244.471 URL notchy://settings
+QA 244.472 SETTINGS shown
+QA 245.058 SETTINGS focused=true
+QA 253.111 ARTWORK received
+QA 261.326 NOWPLAYING title=- artist=- playing=false app=-
+QA 262.566 SOURCE adapter
+QA 262.648 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=38
+QA 262.707 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 262.707 ARTWORK received
+QA 262.717 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 264.283 NOWPLAYING title=- artist=- playing=false app=-
