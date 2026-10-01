@@ -142,8 +142,6 @@ else
 fi
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
-
 # ---------------------------------------------------------------- privacy default
 echo "== screen-sharing privacy (default settings)"
 defaults delete "$BID" >/dev/null 2>&1
@@ -171,6 +169,9 @@ defaults write "$BID" calendarEnabled -bool false
 launch_notchy
 LAUNCH=$(grep LAUNCH "$LOG" | tail -1)
 note "$LAUNCH"
+NOTCH=$(echo "$LAUNCH" | sed -E 's/.*notchSize=([0-9]+)x([0-9]+).*/\1 \2/')
+NW=${NOTCH%% *}; NH=${NOTCH##* }
+HASNOTCH=$(echo "$LAUNCH" | grep -q 'hasNotch=true' && echo yes || echo no)
 
 # Window: one panel, top-centre, above the menu bar, plus a menu bar item.
 WINS=""
@@ -200,7 +201,14 @@ fi
 
 mark "$LOG"; sleep 1; shot qa05-idle
 W=$(island_width qa05-idle)
-if [ "$(state_since | cut -d' ' -f1)" = idle ] && [ "${W:-0}" -lt 40 ]; then
+if [ "$HASNOTCH" = yes ]; then
+    # On a notched display the idle island is drawn over the notch: it must match it exactly.
+    if [ "$(state_since | cut -d' ' -f1)" = idle ] && near "${W:-0}" "$NW" 3; then
+        pass QA-05 "Idle island covers exactly the notch (FR-W4)" "${W} pt wide, notch ${NW} pt ([shot](shots/qa05-idle.png))"
+    else
+        fail QA-05 "Idle island covers exactly the notch (FR-W4)" "state $(state_since), dark run ${W} pt, notch ${NW} pt"
+    fi
+elif [ "$(state_since | cut -d' ' -f1)" = idle ] && [ "${W:-0}" -lt 40 ]; then
     pass QA-05 "Idle island is hidden on a display without a notch (FR-W5)" "state idle, nothing drawn over the menu bar ([shot](shots/qa05-idle.png))"
 else
     fail QA-05 "Idle island is hidden on a display without a notch (FR-W5)" "state $(state_since), dark run ${W} pt"
@@ -236,8 +244,6 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     fi
     sleep 1; shot qa09-compact
     W=$(island_width qa09-compact)
-    NOTCH=$(grep LAUNCH "$LOG" | tail -1 | sed -E 's/.*notchSize=([0-9]+)x([0-9]+).*/\1 \2/')
-    NW=${NOTCH%% *}; NH=${NOTCH##* }
     WANT=$((NW + 2 * (NH + 12)))   # notch + two wings of (notch height + 12)
     if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "$WANT" 6; then
         pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide, expected ${WANT} ([shot](shots/qa09-compact.png))"
@@ -454,23 +460,37 @@ fi
 
 # ---------------------------------------------------------------- settings & menu
 echo "== menu bar menu (before Notchy has ever been active)"
-menu_click() { # $1 = label for the evidence
-    ITEM=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
-    [ -z "$ITEM" ] && { echo "no-item"; return; }
-    IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
+# The menu is open when Notchy owns a window at the pop-up menu level (101). (The menu delegate's
+# "MENU opened" is not proof: it also fires whenever an accessibility client reads the menu.)
+menu_open() { "$D" windows Notchy | awk '{split($2,l,"="); if (l[2]>=100) f=1} END {exit !f}'; }
+wait_menu() { for _ in 1 2 3 4 5 6 7 8 9 10; do menu_open && { echo yes; return; }; sleep 0.2; done; echo no; }
+front_app() { lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null | sed -E 's/.*=//; s/"//g'; }
+menu_click() { # $1 = label for the evidence; prints yes/no and what was under the pointer
+    local item ix iw r
+    item=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
+    [ -z "$item" ] && { echo "no-item"; return; }
+    ix=$(echo "$item" | sed -E 's/.* x=([0-9]+).*/\1/'); iw=$(echo "$item" | sed -E 's/.* w=([0-9]+).*/\1/')
     mark "$LOG"
-    "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
-    lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
-    if wait_for "$LOG" "MENU opened" 2; then echo yes; else echo no; fi
+    "$D" click $((ix + iw / 2)) $((MB / 2))
+    r=$(wait_menu)
+    lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
     "$D" key escape; sleep 0.4
+    echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '))"
+}
+menu_press() { # the same menu, opened through Accessibility instead of a click
+    local r
+    ( lim 4 "$D" status-press $BID >/dev/null 2>&1 & )
+    r=$(wait_menu)
+    "$D" key escape; sleep 0.6
+    echo "$r"
 }
 if [ "$INPUT" = yes ]; then
     open -a Finder; sleep 1                       # the usual case: another app in front
     M1=$(menu_click other-app)
-    if [ "$M1" = yes ]; then
-        pass QA-26 "Menu bar menu opens (FR-S1)" "with another app in front ([shot](shots/qa26-menu-other-app.png))"
+    if [ "${M1%% *}" = yes ]; then
+        pass QA-26 "Menu bar menu opens (FR-S1)" "menu window on screen, ${M1#yes } ([shot](shots/qa26-menu-other-app.png))"
     else
-        fail QA-26 "Menu bar menu opens (FR-S1)" "another app in front: $M1; trace: $(grep -E 'MOUSEDOWN|MENU' "$LOG" | tail -3 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+        fail QA-26 "Menu bar menu opens (FR-S1)" "no menu window: $M1 ([shot](shots/qa26-menu-other-app.png))"
     fi
 else
     skip QA-26 "Menu bar menu opens (FR-S1)" "cannot synthesise input"
@@ -508,7 +528,8 @@ fi
 DIAG=""
 if [ "$INPUT" = yes ]; then
     open -a Finder; sleep 1
-    DIAG="D1 after Settings was focused and closed: $(menu_click d1-after-settings)"
+    DIAG="D1 click after Settings was focused and closed: $(menu_click d1-after-settings)"
+    [ "$AX" = yes ] && DIAG="$DIAG; D1b the same, opened through Accessibility: $(menu_press)"
 fi
 
 # ---------------------------------------------------------------- resilience
@@ -563,26 +584,24 @@ else
     pass QA-28 "Quitting stops the Now Playing helper (NFR-4)" "no adapter process left"
 fi
 
-defaults write "$BID" nonNotchMode never
-launch_notchy; sleep 1.5
-if "$D" windows Notchy | awk '{split($5,w,"="); if (w[2]>300) f=1} END {exit f}'; then
-    pass QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "no panel window on screen"
+if [ "$HASNOTCH" = yes ]; then
+    skip QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "this display has a notch"
 else
-    fail QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "panel still on screen"
+    defaults write "$BID" nonNotchMode never
+    launch_notchy; sleep 1.5
+    if "$D" windows Notchy | awk '{split($5,w,"="); if (w[2]>300) f=1} END {exit f}'; then
+        pass QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "no panel window on screen"
+    else
+        fail QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "panel still on screen"
+    fi
+    quit_notchy
 fi
-quit_notchy
 
-# Diagnostics D2/D3 (relaunches): is the hidden main menu what breaks the status menu?
+# Diagnostic D3: a fresh Notchy that has never been active, second menu click of the session.
 if [ "$INPUT" = yes ]; then
     defaults write "$BID" nonNotchMode whenActive
-    mark "$LOG"; NOTCHY_QA_LOG=1 NOTCHY_QA_NO_MAINMENU=1 "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 & NOTCHY_PID=$!
-    wait_for "$LOG" "LAUNCH" 15; sleep 1
-    lim 8 open "notchy://settings"; sleep 1.5; open -a Finder; sleep 1
-    DIAG="$DIAG; D2 no main menu, after Settings was focused: $(menu_click d2-no-mainmenu)"
-    quit_notchy
-    mark "$LOG"; NOTCHY_QA_LOG=1 "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 & NOTCHY_PID=$!
-    wait_for "$LOG" "LAUNCH" 15; sleep 1; open -a Finder; sleep 1
-    DIAG="$DIAG; D3 main menu, Settings never opened: $(menu_click d3-fresh)"
+    launch_notchy; sleep 2; open -a Finder; sleep 1.5
+    DIAG="$DIAG; D3 fresh launch, never active: $(menu_click d3-fresh)"
     quit_notchy
 fi
 
@@ -624,7 +643,7 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
     echo
     echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
-    echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, no notch."
+    echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, notch: $([ "${HASNOTCH:-no}" = yes ] && echo "${NW}×${NH} pt" || echo none)."
     [ -n "${DIAG:-}" ] && { echo; echo "Diagnostics (status menu): ${DIAG}"; }
 } >> "$REPORT"
 echo "== $PASS passed, $FAIL failed, $SKIP skipped"

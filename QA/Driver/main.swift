@@ -268,6 +268,12 @@ case "ax-frame":
 case "ax-press":
     guard let e = find(arg(1), arg(2), region(at: 3)) else { fail("not found: \(arg(2))") }
     print(AXUIElementPerformAction(e, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
+case "status-press":
+    // Press the app's menu bar item the way VoiceOver would (AXExtrasMenuBar → first item).
+    // The call can block while the menu is open, so callers run it under a time limit.
+    guard let bar = attr(appElement(arg(1)), "AXExtrasMenuBar"),
+          let item = (attr(bar as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement])?.first else { fail("no menu bar item") }
+    print(AXUIElementPerformAction(item, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
 case "ax-texts":
     var seen = Set<String>()
     func emit(_ e: AXUIElement) {
