@@ -8,7 +8,9 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 |---|---|---|
 | ![](docs/screenshots/notch-compact.png) | ![](docs/screenshots/notch-multi.png) | ![](docs/screenshots/notch-home.png) |
 
-All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png)
+All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
+
+<sub>Screenshots are rendered by the app itself on CI (`Notchy --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 
 ## What it does
 
@@ -105,6 +107,7 @@ Design rules the code follows:
 
 - **The window never moves or resizes while animating.** One transparent panel, sized once for the largest state, pinned to the top centre of the screen. Only the SwiftUI shape inside it animates, so there is no window-resize jank.
 - **Click-through by toggling `ignoresMouseEvents`** from the island's current hit rect on every mouse move (global + local monitors). Hover, clicks and swipes therefore work even though the app is never active.
+- **Activities are data, not views.** Each source (Now Playing, timer, …) is an observable model; `IslandModel.activityEntries()` turns them into `ActivityEntry` values (priority, transient, compact or not), `ActivityQueue` orders them, and the views switch on `ActivityKind` for the compact leading/trailing, minimal and expanded slots. Adding an activity means a model, an entry and four small views.
 - **One source of truth.** Activities and interaction are plain observed inputs; `IslandModel.refresh()` derives the presentation and commits it inside a single `withAnimation(spring)`, so the outline, its clip and the content transitions can never disagree.
 - **No idle work.** No timers run when nothing is shown: countdowns use `Text(timerInterval:)`, the equaliser and progress bar use `TimelineView`s that only exist while visible, the calendar sleeps until the next event boundary, battery and media are push-based.
 
@@ -116,7 +119,8 @@ Built and checked on GitHub's macOS runners (see `.github/workflows/build.yml`):
 - `build.sh` produces a universal, signed `.app`; `codesign --verify --deep --strict` passes.
 - The bundled adapter loads under `/usr/bin/perl` on the runner and answers (`get` returns `null` when nothing plays).
 - Every state renders (the screenshots above are produced by `Notchy --snapshot` on CI).
-- Idle process: 0.0% CPU, about 10 MB memory (`top` on the runner, demo idle state).
+- Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: Notchy at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
+- The real panel renders on screen ([captured live on the runner](docs/screenshots/live-expanded.png)), with click-through and no window shadow.
 
 Not verified, because it needs real hardware and a person:
 

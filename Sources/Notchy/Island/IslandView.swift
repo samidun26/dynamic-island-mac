@@ -151,7 +151,16 @@ struct ExpandedHeader: View {
                 .frame(width: side, alignment: .leading)
             Color.clear.frame(width: m.notchSize.width)
             HStack(spacing: 10) {
-                if model.pages.count > 1 { PageDots(model: model, current: page) }
+                if let hud = model.hud.current, model.settings.hudEnabled {
+                    // A volume/brightness key while open: the system HUD is suppressed, so show it here.
+                    HStack(spacing: 6) {
+                        HUDIcon(hud: hud).font(.system(size: 11))
+                        LevelBar(level: hud.muted ? 0 : hud.level, dimmed: hud.muted).frame(width: 60)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if model.pages.count > 1 {
+                    PageDots(model: model, current: page)
+                }
                 if let level = model.battery.level {
                     HStack(spacing: 4) {
                         Text("\(level)%").font(.system(size: 11, weight: .semibold).monospacedDigit())
@@ -162,6 +171,7 @@ struct ExpandedHeader: View {
             }
             .padding(.trailing, 22)
             .frame(width: side, alignment: .trailing)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: model.hud.current == nil)
         }
         .lineLimit(1)
     }

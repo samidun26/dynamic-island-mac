@@ -62,6 +62,9 @@ final class IslandController {
     private var closeCheck: Task<Void, Never>?
     private var scroll = CGSize.zero
     private var scrollFired = false
+    /// Set when the island closes under the pointer (swipe up, peek ending): hovering must not
+    /// reopen it until the pointer has left once.
+    private var requireExit = false
     private let demo: Bool
 
     init(model: IslandModel, settings: AppSettings, demo: Bool = false) {
@@ -197,6 +200,7 @@ final class IslandController {
         let open = model.state.isOpen
         let inside = open ? m.hitRect(g, grace: NotchMetrics.hoverGrace).contains(p) : overZone
         let held = !NSEvent.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty || NSEvent.pressedMouseButtons != 0
+        if !inside { requireExit = false }
         intent.track(p, at: ProcessInfo.processInfo.systemUptime, inside: inside, suppressed: held && !open)
         scheduleHoverChecks()
     }
@@ -204,7 +208,7 @@ final class IslandController {
     private func scheduleHoverChecks() {
         openCheck?.cancel()
         closeCheck?.cancel()
-        if settings.openOnHover, !model.state.isOpen || model.peekKind != nil, let deadline = intent.openDeadline {
+        if settings.openOnHover, !requireExit, !model.state.isOpen || model.peekKind != nil, let deadline = intent.openDeadline {
             openCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldOpen(at: ProcessInfo.processInfo.systemUptime) else { return }
                 self.model.setHoverOpen(true)
@@ -277,9 +281,12 @@ final class IslandController {
         if new.isOpen && !old.isOpen, settings.haptics, model.hoverOpen || model.pinned {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         }
+        if old.isOpen && !new.isOpen {
+            intent.reset()
+            requireExit = model.metrics.hitRect(model.geometry).contains(NSEvent.mouseLocation)
+        }
         // The island may have grown under a still pointer, or shrunk away from it.
         updateMouse(NSEvent.mouseLocation)
-        if !new.isOpen { intent.reset() }
     }
 
     func tearDown() {
