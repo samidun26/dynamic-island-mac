@@ -387,7 +387,7 @@ else
     if [ -n "$S1" ] && [ -n "$S2" ] && [ "$S1" != "$S2" ] && [ -n "$S3" ]; then
         pass QA-20 "Two-finger swipes on the island (FR-I5)" "vertical: '$S1' then '$S2' (state after: $ST2); horizontal: '$S3' (state: $ST3)"
     else
-        fail QA-20 "Two-finger swipes on the island (FR-I5)" "got '$S1' / '$S2' / '$S3'"
+        fail QA-20 "Two-finger swipes on the island (FR-I5)" "got '$S1' / '$S2' / '$S3'; scroll gestures seen: $(grep -o 'SCROLL began [a-z ]*' "$LOG" | tail -4 | tr '\n' ';')"
     fi
     "$D" move "$CX" 520 150 >/dev/null; "$D" click "$CX" 520; sleep 1
 fi
@@ -449,12 +449,20 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
     # A normal-level (layer 0) window of about 500 pt: titles need Screen Recording to read.
     SW_ID=$("$D" windows Notchy | awk '{split($2,l,"="); split($5,w,"="); if (l[2]==0 && w[2]>=400) {split($1,i,"="); print i[2]}}' | head -1)
     if [ -n "$SW_ID" ]; then
-        screencapture -x -o -l "$SW_ID" "$OUT/shots/qa24-settings.png"
-        pass QA-24 "Settings window opens (FR-S2)" "window \"Notchy Settings\" ([shot](shots/qa24-settings.png))"
+        lim 10 screencapture -x -o -l "$SW_ID" "$OUT/shots/qa24-settings.png"
+        CLOSED=untested
+        if [ "$INPUT" = yes ]; then
+            "$D" key cmd-w; sleep 0.8
+            "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID" && CLOSED=no || CLOSED=yes
+        fi
+        if [ "$CLOSED" != no ]; then
+            pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
+        else
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown ([shot](shots/qa24-settings.png)) but ⌘W did not close it"
+        fi
     else
-        fail QA-24 "Settings window opens (FR-S2)" "no settings window on screen"
+        fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
     fi
-    [ "$INPUT" = yes ] && { "$D" key cmd-w; sleep 0.5; }
 else
     fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
 fi

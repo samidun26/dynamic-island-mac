@@ -125,6 +125,10 @@ struct ArtworkView: View {
 
 /// The iPhone-style equaliser. Driven by time, not audio (reading real levels would need
 /// screen/audio capture permission). Only animates while visible and playing.
+/// The iPhone-style equaliser. Driven by time, not audio (reading real levels would need
+/// screen/audio capture permission). Only animates while visible and playing, at 20 fps, drawn in
+/// one Canvas pass (cheaper than laying out a view per bar every frame). It stays a SwiftUI view
+/// so the island's blur and clip transitions apply to it.
 struct AudioBars: View {
     var playing: Bool
     var tint: Color
@@ -133,18 +137,18 @@ struct AudioBars: View {
     var count = 4
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !playing)) { ctx in
+        let gap = barWidth * 0.8
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: !playing)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: barWidth * 0.8) {
-                ForEach(0..<count, id: \.self) { i in
-                    Capsule()
-                        .fill(tint)
-                        .frame(width: barWidth, height: playing ? max(barWidth, level(i, t) * height) : barWidth)
+            Canvas { gc, size in
+                for i in 0..<count {
+                    let h = playing ? max(barWidth, level(i, t) * size.height) : barWidth
+                    let r = CGRect(x: CGFloat(i) * (barWidth + gap), y: (size.height - h) / 2, width: barWidth, height: h)
+                    gc.fill(Path(roundedRect: r, cornerRadius: barWidth / 2), with: .color(tint))
                 }
             }
-            .frame(height: height)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: playing)
+        .frame(width: CGFloat(count) * barWidth + CGFloat(count - 1) * gap, height: height)
     }
 
     private func level(_ i: Int, _ t: Double) -> CGFloat {

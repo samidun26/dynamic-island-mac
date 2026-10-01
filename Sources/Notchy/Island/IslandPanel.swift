@@ -65,8 +65,6 @@ final class IslandController {
     /// Set when the island closes under the pointer (swipe up, peek ending): hovering must not
     /// reopen it until the pointer has left once.
     private var requireExit = false
-    /// When hover last opened the island (system uptime).
-    private var hoverOpenedAt: TimeInterval = -1
     private let demo: Bool
 
     init(model: IslandModel, settings: AppSettings, demo: Bool = false) {
@@ -167,6 +165,10 @@ final class IslandController {
             }
         }) { monitors.append(g) }
 
+        if QALog.enabled, let g = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel, handler: { e in
+            if e.phase.contains(.began) { QALog.log("SCROLL began elsewhere") }
+        }) { monitors.append(g) }
+
         // Clicks and trackpad swipes on the island itself.
         if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel], handler: { [weak self] e in
             let consumed = MainActor.assumeIsolated { () -> Bool in
@@ -221,7 +223,6 @@ final class IslandController {
             openCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldOpen(at: ProcessInfo.processInfo.systemUptime) else { return }
                 QALog.log("HOVER open")
-                self.hoverOpenedAt = ProcessInfo.processInfo.systemUptime
                 self.model.setHoverOpen(true)
             }
         }
@@ -244,14 +245,16 @@ final class IslandController {
         }
     }
 
-    /// A click on a closed (or peeking) island opens and pins it. So does a click that lands just
-    /// after hover opened it (the user was clicking to open; hover was simply faster). Later
-    /// clicks on controls inside a hover-opened island leave it hover-managed.
+    /// A click on a closed (or peeking) island opens and pins it, and so does a click on the notch
+    /// band of an open one (people click the notch to open it, and hover is often faster).
+    /// Clicks on the controls below the band leave a hover-opened island hover-managed, so it
+    /// still closes when the pointer leaves.
     private func clickedIsland() {
         let p = NSEvent.mouseLocation
-        guard model.metrics.hitRect(model.geometry).contains(p) else { return }
-        let justHoverOpened = model.hoverOpen && ProcessInfo.processInfo.systemUptime - hoverOpenedAt < 0.4
-        guard !model.state.isOpen || model.peekKind != nil || justHoverOpened, !model.pinned else { return }
+        let m = model.metrics
+        guard m.hitRect(model.geometry).contains(p), !model.pinned else { return }
+        let inNotchBand = p.y >= m.screenFrame.maxY - m.notchSize.height - 2
+        guard !model.state.isOpen || model.peekKind != nil || inNotchBand else { return }
         model.click()
     }
 
@@ -263,6 +266,7 @@ final class IslandController {
     /// Two-finger swipes on the island: down opens, up closes, sideways switches activity/page.
     /// Returns true when the event was used.
     private func handleScroll(_ e: NSEvent) -> Bool {
+        if e.phase.contains(.began) { QALog.log("SCROLL began on island") }
         guard e.hasPreciseScrollingDeltas else { return false }
         if !e.momentumPhase.isEmpty { return true }
         if e.phase.contains(.began) || e.phase.contains(.mayBegin) {
