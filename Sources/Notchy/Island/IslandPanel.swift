@@ -159,13 +159,24 @@ final class IslandController {
 
         // A click anywhere else dismisses a pinned island.
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] _ in
-            MainActor.assumeIsolated { self?.clickedOutside() }
+            MainActor.assumeIsolated {
+                QALog.log("MOUSEDOWN elsewhere at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))")
+                self?.clickedOutside()
+            }
+        }) { monitors.append(g) }
+
+        if QALog.enabled, let g = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel, handler: { e in
+            if e.phase.contains(.began) { QALog.log("SCROLL began elsewhere") }
         }) { monitors.append(g) }
 
         // Clicks and trackpad swipes on the island itself.
         if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel], handler: { [weak self] e in
             let consumed = MainActor.assumeIsolated { () -> Bool in
+                if e.type == .leftMouseDown, e.window !== self?.panel {
+                    QALog.log("MOUSEDOWN own window \(e.window.map { String(describing: type(of: $0)) } ?? "none") at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y)) active=\(NSApp.isActive)")
+                }
                 guard let self, e.window === self.panel else { return false }
+                if e.type == .leftMouseDown { QALog.log("MOUSEDOWN island at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))") }
                 if e.type == .scrollWheel { return self.handleScroll(e) }
                 self.clickedIsland()
                 return false
@@ -194,7 +205,10 @@ final class IslandController {
         // Far from the island with nothing pending: nothing to do.
         if !overZone && !intent.isInside && !model.hovering && panel.ignoresMouseEvents { return }
 
-        if panel.ignoresMouseEvents == overBody { panel.ignoresMouseEvents = !overBody }
+        if panel.ignoresMouseEvents == overBody {
+            panel.ignoresMouseEvents = !overBody
+            QALog.log("CLICKTHROUGH \(!overBody)")
+        }
         model.setHovering(overZone)
 
         let open = model.state.isOpen
@@ -211,6 +225,7 @@ final class IslandController {
         if settings.openOnHover, !requireExit, !model.state.isOpen || model.peekKind != nil, let deadline = intent.openDeadline {
             openCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldOpen(at: ProcessInfo.processInfo.systemUptime) else { return }
+                QALog.log("HOVER open")
                 self.model.setHoverOpen(true)
             }
         }
@@ -218,6 +233,7 @@ final class IslandController {
         if model.hoverOpen, NSEvent.pressedMouseButtons == 0, let deadline = intent.closeDeadline {
             closeCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldClose(at: ProcessInfo.processInfo.systemUptime) else { return }
+                QALog.log("HOVER close")
                 self.model.setHoverOpen(false)
             }
         }
@@ -232,11 +248,16 @@ final class IslandController {
         }
     }
 
-    /// A click on a closed (or peeking) island opens and pins it. Clicks on controls inside an
-    /// island that is already open by hover leave it hover-managed.
+    /// A click on a closed (or peeking) island opens and pins it, and so does a click on the notch
+    /// band of an open one (people click the notch to open it, and hover is often faster).
+    /// Clicks on the controls below the band leave a hover-opened island hover-managed, so it
+    /// still closes when the pointer leaves.
     private func clickedIsland() {
         let p = NSEvent.mouseLocation
-        guard model.metrics.hitRect(model.geometry).contains(p), !model.state.isOpen || model.peekKind != nil else { return }
+        let m = model.metrics
+        guard m.hitRect(model.geometry).contains(p), !model.pinned else { return }
+        let inNotchBand = p.y >= m.screenFrame.maxY - m.notchSize.height - 2
+        guard !model.state.isOpen || model.peekKind != nil || inNotchBand else { return }
         model.click()
     }
 
@@ -248,6 +269,7 @@ final class IslandController {
     /// Two-finger swipes on the island: down opens, up closes, sideways switches activity/page.
     /// Returns true when the event was used.
     private func handleScroll(_ e: NSEvent) -> Bool {
+        if e.phase.contains(.began) { QALog.log("SCROLL began on island") }
         guard e.hasPreciseScrollingDeltas else { return false }
         if !e.momentumPhase.isEmpty { return true }
         if e.phase.contains(.began) || e.phase.contains(.mayBegin) {

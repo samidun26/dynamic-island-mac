@@ -51,7 +51,10 @@ final class IslandModel {
             guard let self, self.settings.peekOnTrackChange else { return }
             self.peek(.nowPlaying, seconds: 3)
         }
-        timer.onFinish = { [weak self] in self?.peek(.timer, seconds: 6) }
+        timer.onFinish = { [weak self] in
+            QALog.log("TIMER done")
+            self?.peek(.timer, seconds: 6)
+        }
         calendar.onAlert = { [weak self] _ in self?.peek(.calendar, seconds: 6) }
         refresh()
     }
@@ -99,6 +102,7 @@ final class IslandModel {
             secondaries = next.secondaries
             pages = next.pages
         }
+        QALog.log("STATE \(QALog.describe(next.state)) \(Int(next.geometry.size.width))x\(Int(next.geometry.size.height)) secondaries=\(next.secondaries.map(\.rawValue)) pages=\(next.pages.count)")
         onPresentationChange?(old, next.state)
     }
 
@@ -195,11 +199,13 @@ final class IslandModel {
 
     /// Click on the island: open it and keep it open until a click elsewhere or a swipe up.
     func click() {
+        QALog.log("PIN")
         pinned = true
         peekKind = nil
     }
 
     func dismiss() {
+        QALog.log("DISMISS")
         pinned = false
         hoverOpen = false
         peekKind = nil
@@ -218,6 +224,7 @@ final class IslandModel {
     }
 
     func swipe(_ dir: SwipeDirection) {
+        QALog.log("SWIPE \(dir)")
         switch dir {
         case .down:
             if !state.isOpen || peekKind != nil { click() }

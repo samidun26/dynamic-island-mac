@@ -18,6 +18,17 @@ final class SettingsWindowController {
         }
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)
+        // macOS 14+ activation is cooperative: if the app in front does not yield (Settings opened
+        // from a notchy:// link, a script or Shortcuts), the window would appear unfocused and ⌘W
+        // would go elsewhere. The user asked for Settings, so insist.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            if !NSApp.isActive {
+                NSRunningApplication.current.activate(options: [.activateAllWindows])
+                self?.window?.makeKeyAndOrderFront(nil)
+            }
+            QALog.log("SETTINGS focused=\(NSApp.isActive && self?.window?.isKeyWindow == true)")
+        }
     }
 }
 

@@ -14,7 +14,7 @@ struct LaunchOptions {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let options: LaunchOptions
     private let settings: AppSettings
     private var model: IslandModel!
@@ -45,10 +45,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.startServices()
         }
         controller = IslandController(model: model, settings: settings, demo: options.demo != nil)
+        let m = model.metrics
+        QALog.log("LAUNCH screen=\(Int(m.screenFrame.width))x\(Int(m.screenFrame.height)) hasNotch=\(m.hasNotch) notchSize=\(Int(m.notchSize.width))x\(Int(m.notchSize.height)) panel=\(Int(controller.panel.frame.minX)),\(Int(controller.panel.frame.minY)) \(Int(controller.panel.frame.width))x\(Int(controller.panel.frame.height)) window=\(controller.panel.windowNumber)")
         if options.printWindowID {
             print("NOTCHY_WINDOW_ID=\(controller.panel.windowNumber)")
             fflush(stdout)
         }
+        NSApp.mainMenu = Self.mainMenu()
         observeChanges({ [settings] in settings.showMenuBarIcon }) { [weak self] show in
             self?.setStatusItem(visible: show)
         }
@@ -60,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { QALog.log("URL \(url.absoluteString)") }
         for link in urls.compactMap(DeepLink.init(url:)) { handle(link) }
     }
 
@@ -86,13 +90,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.button?.image = Self.statusIcon()
             item.button?.toolTip = "Notchy"
-            item.menu = buildMenu()
+            let menu = buildMenu()
+            menu.delegate = self
+            item.menu = menu
             statusItem = item
         } else if !visible, let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
         }
     }
+
+    func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
+
+
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
@@ -124,7 +134,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openIsland() { model.click() }
     @objc private func startTimer(_ sender: NSMenuItem) { model.timer.start(TimeInterval(sender.tag * 60)) }
     @objc private func cancelTimer() { model.timer.cancel() }
-    @objc private func openSettings() { settingsWindow.show(settings: settings, model: model) }
+    @objc private func openSettings() {
+        QALog.log("SETTINGS shown")
+        settingsWindow.show(settings: settings, model: model)
+    }
+
+    /// Not shown (Notchy has no menu bar of its own), but it gives the Settings window the standard
+    /// shortcuts while Notchy is in front: ⌘W, ⌘M, ⌘Q, ⌘, and text editing.
+    private static func mainMenu() -> NSMenu {
+        let main = NSMenu()
+        let app = NSMenu()
+        app.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        app.addItem(.separator())
+        app.addItem(withTitle: "Hide Notchy", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: "Quit Notchy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let window = NSMenu(title: "Window")
+        window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        for (title, sub) in [("Notchy", app), ("Edit", edit), ("Window", window)] {
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.submenu = sub
+            main.addItem(item)
+        }
+        return main
+    }
 
     /// A screen outline with the island at the top, as a template image.
     private static func statusIcon() -> NSImage {

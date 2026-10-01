@@ -1,0 +1,76 @@
+name: qa
+
+# End-to-end QA on a real macOS session: installs Notchy from source the way the user guide
+# says, then drives it with synthetic mouse/trackpad input and a fake music app.
+# Runs on pushes to working branches (claude/**), and from the Actions tab ("Run workflow")
+# once this file is on the default branch.
+on:
+  push:
+    branches: ["claude/**"]
+    paths-ignore: ["docs/**", "**.md"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Version of Notchy to install and test (branch, tag or commit). Empty = the branch you run this on.
+        required: false
+        default: ""
+      publish:
+        description: Commit the report and screenshots to docs/qa on this branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version | head -1
+
+      - name: Get the app to test (git clone, as in the user guide)
+        run: |
+          REF="${{ inputs.ref }}"
+          [ -z "$REF" ] && REF="$GITHUB_REF_NAME"
+          git clone --quiet "https://github.com/$GITHUB_REPOSITORY.git" app
+          git -C app checkout --quiet "$REF"
+          git -C app log -1 --format='Testing %h %s'
+
+      - name: Run QA
+        timeout-minutes: 12
+        run: QA/run-qa.sh "$PWD/app" "$PWD/qa-out"
+
+      - name: Show results
+        if: always()
+        run: |
+          cat qa-out/results.md || true
+          echo "--- notchy trace (last 80 lines)"; tail -80 qa-out/notchy.log || true
+          echo "--- fake player"; tail -40 qa-out/fakeplayer.log || true
+
+      - name: Publish report to the branch
+        if: always() && (inputs.publish || github.event_name == 'push')
+        run: |
+          rm -rf docs/qa && mkdir -p docs/qa/shots
+          cp qa-out/results.md docs/qa/results.md
+          cp qa-out/shots/*.png docs/qa/shots/ 2>/dev/null || true
+          cp qa-out/notchy.log docs/qa/notchy-trace.log 2>/dev/null || true
+          cp qa-out/fakeplayer.log docs/qa/fakeplayer.log 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/qa
+          git commit -m "Update QA results [skip ci]" || exit 0
+          git pull --rebase --quiet origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-results
+          path: qa-out/

@@ -125,6 +125,10 @@ struct ArtworkView: View {
 
 /// The iPhone-style equaliser. Driven by time, not audio (reading real levels would need
 /// screen/audio capture permission). Only animates while visible and playing.
+/// The iPhone-style equaliser. Driven by time, not audio (reading real levels would need
+/// screen/audio capture permission). Only animates while visible and playing, at 20 fps, drawn in
+/// one Canvas pass (cheaper than laying out a view per bar every frame). It stays a SwiftUI view
+/// so the island's blur and clip transitions apply to it.
 struct AudioBars: View {
     var playing: Bool
     var tint: Color
@@ -133,18 +137,18 @@ struct AudioBars: View {
     var count = 4
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !playing)) { ctx in
+        let gap = barWidth * 0.8
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: !playing)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: barWidth * 0.8) {
-                ForEach(0..<count, id: \.self) { i in
-                    Capsule()
-                        .fill(tint)
-                        .frame(width: barWidth, height: playing ? max(barWidth, level(i, t) * height) : barWidth)
+            Canvas { gc, size in
+                for i in 0..<count {
+                    let h = playing ? max(barWidth, level(i, t) * size.height) : barWidth
+                    let r = CGRect(x: CGFloat(i) * (barWidth + gap), y: (size.height - h) / 2, width: barWidth, height: h)
+                    gc.fill(Path(roundedRect: r, cornerRadius: barWidth / 2), with: .color(tint))
                 }
             }
-            .frame(height: height)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: playing)
+        .frame(width: CGFloat(count) * barWidth + CGFloat(count - 1) * gap, height: height)
     }
 
     private func level(_ i: Int, _ t: Double) -> CGFloat {
@@ -188,6 +192,18 @@ struct Scrubber: View {
                     .animation(.linear(duration: 0.5), value: drag == nil ? p : nil)
                 }
                 .frame(height: 14)
+                .accessibilityElement()
+                .accessibilityLabel("Playback position")
+                .accessibilityValue("\(formatDuration(elapsed)) of \(formatDuration(duration))")
+                .accessibilityAdjustableAction { dir in
+                    guard duration > 0 else { return }
+                    let step = 10 / duration
+                    switch dir {
+                    case .increment: onSeek(min(1, p + step))
+                    case .decrement: onSeek(max(0, p - step))
+                    @unknown default: break
+                    }
+                }
                 Text("-" + formatDuration(max(0, duration - elapsed))).frame(width: 38, alignment: .leading)
             }
             .font(.system(size: 10, weight: .medium).monospacedDigit())
@@ -200,6 +216,7 @@ struct Scrubber: View {
 /// A draggable level bar (volume).
 struct LevelSlider: View {
     let value: Double
+    var label = "Level"
     var tint: Color = .white
     let onChange: (Double) -> Void
     @State private var drag: Double?
@@ -224,6 +241,16 @@ struct LevelSlider: View {
             .animation(.spring(response: 0.25, dampingFraction: 0.8), value: drag == nil)
         }
         .frame(height: 14)
+        .accessibilityElement()
+        .accessibilityLabel(label)
+        .accessibilityValue("\(Int((value * 100).rounded())) percent")
+        .accessibilityAdjustableAction { dir in
+            switch dir {
+            case .increment: onChange(min(1, value + 0.1))
+            case .decrement: onChange(max(0, value - 0.1))
+            @unknown default: break
+            }
+        }
     }
 }
 
