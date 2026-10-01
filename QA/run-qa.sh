@@ -613,7 +613,7 @@ fi
 # Each attack is first shown to work on an unprotected program, then tried on Notchy.
 echo "== security: code injection through the launch environment"
 SEC="$OUT/sec"; rm -rf "$SEC"; mkdir -p "$SEC/perl"
-printf '#include <stdio.h>\n__attribute__((constructor)) static void injected(void) { FILE *f = fopen("%s", "a"); if (f) { fputs("injected\\n", f); fclose(f); } }\n' "$SEC/marker-dylib" > "$SEC/inject.c"
+printf '#include <stdio.h>\n#include <stdlib.h>\n#include <unistd.h>\n__attribute__((constructor)) static void injected(void) { FILE *f = fopen("%s", "a"); if (f) { fprintf(f, "%%s(%%d) ", getprogname(), getpid()); fclose(f); } }\n' "$SEC/marker-dylib" > "$SEC/inject.c"
 printf 'int main(void) { return 0; }\n' > "$SEC/plain.c"
 printf 'package QAInject;\nif (open(my $o, ">>", "%s")) { print $o "injected\\n"; close $o; }\n1;\n' "$SEC/marker-perl" > "$SEC/perl/QAInject.pm"
 clang -dynamiclib -o "$SEC/inject.dylib" "$SEC/inject.c" 2>> "$OUT/harness-build.log"
@@ -637,9 +637,9 @@ FLAGS=$(codesign -dv "$APP" 2>&1 | grep -o 'flags=[^ ]*')
 if [ $CTRL_DYLIB = no ]; then
     skip QA-33 "Libraries injected at launch are refused (NFR-10)" "the injection does not work here even on an unprotected program"
 elif [ $STARTED = yes ] && [ ! -e "$SEC/marker-dylib" ] && echo "$FLAGS" | grep -q runtime; then
-    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "hardened runtime ($FLAGS); DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy"
+    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy ($FLAGS, __RESTRICT segment)"
 else
-    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected=$([ -e "$SEC/marker-dylib" ] && echo yes || echo no), $FLAGS"
+    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected into: $(cat "$SEC/marker-dylib" 2>/dev/null || echo nothing); $FLAGS; restrict segment: $(otool -l "$APP/Contents/MacOS/Notchy" | grep -c __RESTRICT)"
 fi
 if [ $CTRL_PERL = no ]; then
     skip QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT has no effect here even on plain perl"

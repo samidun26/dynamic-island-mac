@@ -21,6 +21,10 @@ targets.append(.executableTarget(
         .linkedFramework("CoreAudio"),
         .linkedFramework("EventKit"),
         .linkedFramework("ServiceManagement"),
+        // A __RESTRICT segment makes the loader ignore DYLD_* variables, so nothing can be
+        // injected into Notchy at launch (the hardened runtime alone doesn't stop this for
+        // ad-hoc signed builds).
+        .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__RESTRICT", "-Xlinker", "__restrict", "-Xlinker", "/dev/null"]),
     ]
 ))
 products.append(.executable(name: "Notchy", targets: ["Notchy"]))
