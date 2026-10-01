@@ -51,7 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             print("NOTCHY_WINDOW_ID=\(controller.panel.windowNumber)")
             fflush(stdout)
         }
-        NSApp.mainMenu = Self.mainMenu()
+        // (Temporary QA experiment switch: NOTCHY_QA_NO_MAINMENU=1 skips the hidden main menu.)
+        if ProcessInfo.processInfo.environment["NOTCHY_QA_NO_MAINMENU"] != "1" { NSApp.mainMenu = Self.mainMenu() }
         observeChanges({ [settings] in settings.showMenuBarIcon }) { [weak self] show in
             self?.setStatusItem(visible: show)
         }

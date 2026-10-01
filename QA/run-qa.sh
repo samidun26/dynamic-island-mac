@@ -453,6 +453,30 @@ else
 fi
 
 # ---------------------------------------------------------------- settings & menu
+echo "== menu bar menu (before Notchy has ever been active)"
+menu_click() { # $1 = label for the evidence
+    ITEM=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
+    [ -z "$ITEM" ] && { echo "no-item"; return; }
+    IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
+    mark "$LOG"
+    "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
+    lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
+    if wait_for "$LOG" "MENU opened" 2; then echo yes; else echo no; fi
+    "$D" key escape; sleep 0.4
+}
+if [ "$INPUT" = yes ]; then
+    open -a Finder; sleep 1                       # the usual case: another app in front
+    M1=$(menu_click other-app)
+    if [ "$M1" = yes ]; then
+        pass QA-26 "Menu bar menu opens (FR-S1)" "with another app in front ([shot](shots/qa26-menu-other-app.png))"
+    else
+        fail QA-26 "Menu bar menu opens (FR-S1)" "another app in front: $M1; trace: $(grep -E 'MOUSEDOWN|MENU' "$LOG" | tail -3 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+else
+    skip QA-26 "Menu bar menu opens (FR-S1)" "cannot synthesise input"
+fi
+
+
 echo "== settings window and menu"
 mark "$LOG"
 lim 8 open "notchy://settings"
@@ -480,29 +504,11 @@ else
     fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
 fi
 
-menu_click() { # $1 = label for the evidence
-    ITEM=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
-    [ -z "$ITEM" ] && { echo "no-item"; return; }
-    IX=$(echo "$ITEM" | sed -E 's/.* x=([0-9]+).*/\1/'); IW=$(echo "$ITEM" | sed -E 's/.* w=([0-9]+).*/\1/')
-    mark "$LOG"
-    "$D" click $((IX + IW / 2)) $((MB / 2)); sleep 0.6
-    lim 10 screencapture -x -R "$((IX - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
-    if wait_for "$LOG" "MENU opened" 2; then echo yes; else echo no; fi
-    "$D" key escape; sleep 0.4
-}
+# Diagnostic D1: the same click after Notchy has been the active app (Settings focused, closed).
+DIAG=""
 if [ "$INPUT" = yes ]; then
-    open -a Finder; sleep 1                       # the usual case: another app in front
-    M1=$(menu_click other-app)
-    lim 8 open "notchy://settings"; sleep 1.2      # Notchy itself in front (Settings open)
-    M2=$(menu_click notchy-active)
-    "$D" key cmd-w; sleep 0.5
-    if [ "$M1" = yes ]; then
-        pass QA-26 "Menu bar menu opens (FR-S1)" "with another app in front ([shot](shots/qa26-menu-other-app.png)). Observation: with Notchy's own Settings window in front a synthetic click opened it: $M2"
-    else
-        fail QA-26 "Menu bar menu opens (FR-S1)" "another app in front: $M1; Notchy in front: $M2; trace: $(grep -E 'MOUSEDOWN|MENU' "$LOG" | tail -3 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
-    fi
-else
-    skip QA-26 "Menu bar menu opens (FR-S1)" "cannot synthesise input"
+    open -a Finder; sleep 1
+    DIAG="D1 after Settings was focused and closed: $(menu_click d1-after-settings)"
 fi
 
 # ---------------------------------------------------------------- resilience
@@ -566,6 +572,20 @@ else
 fi
 quit_notchy
 
+# Diagnostics D2/D3 (relaunches): is the hidden main menu what breaks the status menu?
+if [ "$INPUT" = yes ]; then
+    defaults write "$BID" nonNotchMode whenActive
+    mark "$LOG"; NOTCHY_QA_LOG=1 NOTCHY_QA_NO_MAINMENU=1 "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 & NOTCHY_PID=$!
+    wait_for "$LOG" "LAUNCH" 15; sleep 1
+    lim 8 open "notchy://settings"; sleep 1.5; open -a Finder; sleep 1
+    DIAG="$DIAG; D2 no main menu, after Settings was focused: $(menu_click d2-no-mainmenu)"
+    quit_notchy
+    mark "$LOG"; NOTCHY_QA_LOG=1 "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 & NOTCHY_PID=$!
+    wait_for "$LOG" "LAUNCH" 15; sleep 1; open -a Finder; sleep 1
+    DIAG="$DIAG; D3 main menu, Settings never opened: $(menu_click d3-fresh)"
+    quit_notchy
+fi
+
 # ---------------------------------------------------------------- downloaded copy (Gatekeeper)
 # Last, because the system dialog it triggers stays on screen.
 echo "== downloaded copy"
@@ -605,6 +625,7 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
     echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, no notch."
+    [ -n "${DIAG:-}" ] && { echo; echo "Diagnostics (status menu): ${DIAG}"; }
 } >> "$REPORT"
 echo "== $PASS passed, $FAIL failed, $SKIP skipped"
 [ "$FAIL" -eq 0 ]
