@@ -113,12 +113,15 @@ struct TimerText: View {
     }
 }
 
-/// "in 4m", "in 1h 5m", "now"; refreshed once a minute while visible.
+/// "in 4m", "in 1h 5m", "now". Ticks once a minute on the event's own second (not the wall
+/// clock's), so "in 4m" changes to "in 3m" exactly when 3 minutes remain.
 struct RelativeTime: View {
     let date: Date
 
     var body: some View {
-        TimelineView(.everyMinute) { ctx in
+        let ahead = date.timeIntervalSinceNow
+        let anchor = date.addingTimeInterval(-60 * (ahead / 60).rounded(.up))
+        TimelineView(.periodic(from: anchor, by: 60)) { ctx in
             Text(Self.text(date.timeIntervalSince(ctx.date)))
         }
     }

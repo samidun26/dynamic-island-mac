@@ -281,12 +281,33 @@ final class AdapterStream: @unchecked Sendable {
         queue.async { [self] in
             guard stopped else { return }
             stopped = false
+            killOrphans()
             launch()
         }
     }
 
+    /// A stream left behind by a crashed or force-killed Notchy only exits on its next write
+    /// (SIGPIPE). Reap any whose parent is gone before starting a new one.
+    private func killOrphans() {
+        let ps = Process()
+        ps.executableURL = URL(fileURLWithPath: "/bin/ps")
+        ps.arguments = ["-axo", "pid=,ppid=,command="]
+        let pipe = Pipe()
+        ps.standardOutput = pipe
+        ps.standardError = FileHandle.nullDevice
+        guard (try? ps.run()) != nil else { return }
+        let out = pipe.fileHandleForReading.readDataToEndOfFile()
+        ps.waitUntilExit()
+        for line in String(decoding: out, as: UTF8.self).split(separator: "\n") {
+            let f = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+            guard f.count == 3, f[1] == "1", f[2].contains(script), let pid = Int32(f[0]) else { continue }
+            kill(pid, SIGTERM)
+        }
+    }
+
+    /// Synchronous so the child is gone before the app exits.
     func stop() {
-        queue.async { [self] in
+        queue.sync {
             stopped = true
             process?.terminate()
             process = nil

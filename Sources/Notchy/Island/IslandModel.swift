@@ -167,7 +167,7 @@ final class IslandModel {
         case .timer: return 64
         case .calendar: return 66
         case .hud: return 88
-        case .battery: return 92
+        case .battery: return 100
         }
     }
 

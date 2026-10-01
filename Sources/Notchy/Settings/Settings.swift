@@ -29,39 +29,46 @@ final class AppSettings {
     }
 
     @ObservationIgnored private let defaults: UserDefaults
+    /// False for demo/snapshot instances: they must never write to disk.
+    @ObservationIgnored private let persists: Bool
+
+    private func save(_ value: Any, _ key: String) {
+        if persists { defaults.set(value, forKey: key) }
+    }
 
     // General
-    var openOnHover: Bool { didSet { defaults.set(openOnHover, forKey: "openOnHover") } }
-    var hoverDelay: Double { didSet { defaults.set(hoverDelay, forKey: "hoverDelay") } }
-    var haptics: Bool { didSet { defaults.set(haptics, forKey: "haptics") } }
-    var hideFromScreenSharing: Bool { didSet { defaults.set(hideFromScreenSharing, forKey: "hideFromScreenSharing") } }
-    var showMenuBarIcon: Bool { didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") } }
+    var openOnHover: Bool { didSet { save(openOnHover, "openOnHover") } }
+    var hoverDelay: Double { didSet { save(hoverDelay, "hoverDelay") } }
+    var haptics: Bool { didSet { save(haptics, "haptics") } }
+    var hideFromScreenSharing: Bool { didSet { save(hideFromScreenSharing, "hideFromScreenSharing") } }
+    var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, "showMenuBarIcon") } }
 
     // Display
-    var screenChoice: ScreenChoice { didSet { defaults.set(screenChoice.rawValue, forKey: "screenChoice") } }
-    var nonNotchMode: NonNotchMode { didSet { defaults.set(nonNotchMode.rawValue, forKey: "nonNotchMode") } }
+    var screenChoice: ScreenChoice { didSet { save(screenChoice.rawValue, "screenChoice") } }
+    var nonNotchMode: NonNotchMode { didSet { save(nonNotchMode.rawValue, "nonNotchMode") } }
 
     // Activities
-    var nowPlayingEnabled: Bool { didSet { defaults.set(nowPlayingEnabled, forKey: "nowPlayingEnabled") } }
-    var peekOnTrackChange: Bool { didSet { defaults.set(peekOnTrackChange, forKey: "peekOnTrackChange") } }
-    var timerEnabled: Bool { didSet { defaults.set(timerEnabled, forKey: "timerEnabled") } }
-    var timerSound: Bool { didSet { defaults.set(timerSound, forKey: "timerSound") } }
-    var batteryEnabled: Bool { didSet { defaults.set(batteryEnabled, forKey: "batteryEnabled") } }
-    var calendarEnabled: Bool { didSet { defaults.set(calendarEnabled, forKey: "calendarEnabled") } }
-    var hudEnabled: Bool { didSet { defaults.set(hudEnabled, forKey: "hudEnabled") } }
+    var nowPlayingEnabled: Bool { didSet { save(nowPlayingEnabled, "nowPlayingEnabled") } }
+    var peekOnTrackChange: Bool { didSet { save(peekOnTrackChange, "peekOnTrackChange") } }
+    var timerEnabled: Bool { didSet { save(timerEnabled, "timerEnabled") } }
+    var timerSound: Bool { didSet { save(timerSound, "timerSound") } }
+    var batteryEnabled: Bool { didSet { save(batteryEnabled, "batteryEnabled") } }
+    var calendarEnabled: Bool { didSet { save(calendarEnabled, "calendarEnabled") } }
+    var hudEnabled: Bool { didSet { save(hudEnabled, "hudEnabled") } }
     /// Brightness keys need the private DisplayServices framework. Off unless the user opts in.
-    var hudBrightnessExperimental: Bool { didSet { defaults.set(hudBrightnessExperimental, forKey: "hudBrightnessExperimental") } }
+    var hudBrightnessExperimental: Bool { didSet { save(hudBrightnessExperimental, "hudBrightnessExperimental") } }
 
     // Motion (tunable from the Settings window's Motion section)
-    var openResponse: Double { didSet { defaults.set(openResponse, forKey: "openResponse") } }
-    var openDamping: Double { didSet { defaults.set(openDamping, forKey: "openDamping") } }
-    var closeResponse: Double { didSet { defaults.set(closeResponse, forKey: "closeResponse") } }
-    var closeDamping: Double { didSet { defaults.set(closeDamping, forKey: "closeDamping") } }
+    var openResponse: Double { didSet { save(openResponse, "openResponse") } }
+    var openDamping: Double { didSet { save(openDamping, "openDamping") } }
+    var closeResponse: Double { didSet { save(closeResponse, "closeResponse") } }
+    var closeDamping: Double { didSet { save(closeDamping, "closeDamping") } }
 
     static let motionDefaults = (openResponse: 0.42, openDamping: 0.80, closeResponse: 0.36, closeDamping: 0.90)
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, persists: Bool = true) {
         self.defaults = defaults
+        self.persists = persists
         func bool(_ k: String, _ d: Bool) -> Bool { defaults.object(forKey: k) as? Bool ?? d }
         func double(_ k: String, _ d: Double) -> Double { defaults.object(forKey: k) as? Double ?? d }
         openOnHover = bool("openOnHover", true)
@@ -94,8 +101,8 @@ final class AppSettings {
 
     /// A throwaway instance for demos and snapshots, so they never touch the user's defaults.
     static func ephemeral() -> AppSettings {
-        let d = UserDefaults(suiteName: "notchy.ephemeral.\(UUID().uuidString)")!
-        let s = AppSettings(defaults: d)
+        // Reads nothing the user set (an unused suite) and writes nothing.
+        let s = AppSettings(defaults: UserDefaults(suiteName: "notchy.ephemeral") ?? .standard, persists: false)
         s.hideFromScreenSharing = false
         s.hudEnabled = true
         return s

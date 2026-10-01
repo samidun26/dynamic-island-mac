@@ -37,7 +37,8 @@ cp "$BIN_DIR/Notchy" "$APP/Contents/MacOS/Notchy"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" Resources/Info.plist > "$APP/Contents/Info.plist"
 # The icon is drawn by the app itself (SwiftUI), then packed with iconutil.
 rm -rf "$OUT/AppIcon.iconset"
-if "$BIN_DIR/Notchy" --render-icon "$OUT/AppIcon.iconset" && iconutil -c icns "$OUT/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"; then
+# (perl's alarm is a portable timeout: never let the build hang on it)
+if perl -e 'alarm shift; exec @ARGV' 60 "$BIN_DIR/Notchy" --render-icon "$OUT/AppIcon.iconset" && iconutil -c icns "$OUT/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"; then
   echo "    icon ok"
 else
   echo "    (icon skipped)"

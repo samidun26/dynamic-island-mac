@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: IslandController!
     private var statusItem: NSStatusItem?
     private let settingsWindow = SettingsWindowController()
+    private var sigterm: DispatchSourceSignal?
 
     init(options: LaunchOptions) {
         self.options = options
@@ -29,6 +30,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // `kill` / logout: quit normally so the adapter child process is stopped too.
+        signal(SIGTERM, SIG_IGN)
+        let term = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        term.setEventHandler { MainActor.assumeIsolated { NSApp.terminate(nil) } }
+        term.resume()
+        sigterm = term
+
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens[0]
         model = IslandModel(settings: settings, metrics: IslandController.metrics(for: screen))
         if let demo = options.demo {
