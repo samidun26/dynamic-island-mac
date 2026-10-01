@@ -188,6 +188,18 @@ struct Scrubber: View {
                     .animation(.linear(duration: 0.5), value: drag == nil ? p : nil)
                 }
                 .frame(height: 14)
+                .accessibilityElement()
+                .accessibilityLabel("Playback position")
+                .accessibilityValue("\(formatDuration(elapsed)) of \(formatDuration(duration))")
+                .accessibilityAdjustableAction { dir in
+                    guard duration > 0 else { return }
+                    let step = 10 / duration
+                    switch dir {
+                    case .increment: onSeek(min(1, p + step))
+                    case .decrement: onSeek(max(0, p - step))
+                    @unknown default: break
+                    }
+                }
                 Text("-" + formatDuration(max(0, duration - elapsed))).frame(width: 38, alignment: .leading)
             }
             .font(.system(size: 10, weight: .medium).monospacedDigit())
@@ -200,6 +212,7 @@ struct Scrubber: View {
 /// A draggable level bar (volume).
 struct LevelSlider: View {
     let value: Double
+    var label = "Level"
     var tint: Color = .white
     let onChange: (Double) -> Void
     @State private var drag: Double?
@@ -224,6 +237,16 @@ struct LevelSlider: View {
             .animation(.spring(response: 0.25, dampingFraction: 0.8), value: drag == nil)
         }
         .frame(height: 14)
+        .accessibilityElement()
+        .accessibilityLabel(label)
+        .accessibilityValue("\(Int((value * 100).rounded())) percent")
+        .accessibilityAdjustableAction { dir in
+            switch dir {
+            case .increment: onChange(min(1, value + 0.1))
+            case .decrement: onChange(max(0, value - 0.1))
+            @unknown default: break
+            }
+        }
     }
 }
 

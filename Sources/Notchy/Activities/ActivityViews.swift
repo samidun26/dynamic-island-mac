@@ -242,7 +242,7 @@ struct VolumeControl: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.55))
                 .frame(width: 16)
-            LevelSlider(value: hud.muted ? 0 : hud.volume, tint: .white.opacity(0.9)) { hud.setVolume($0) }
+            LevelSlider(value: hud.muted ? 0 : hud.volume, label: "Volume", tint: .white.opacity(0.9)) { hud.setVolume($0) }
         }
     }
 }

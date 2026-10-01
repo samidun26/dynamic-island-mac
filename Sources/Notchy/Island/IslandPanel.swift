@@ -65,6 +65,8 @@ final class IslandController {
     /// Set when the island closes under the pointer (swipe up, peek ending): hovering must not
     /// reopen it until the pointer has left once.
     private var requireExit = false
+    /// When hover last opened the island (system uptime).
+    private var hoverOpenedAt: TimeInterval = -1
     private let demo: Bool
 
     init(model: IslandModel, settings: AppSettings, demo: Bool = false) {
@@ -194,7 +196,10 @@ final class IslandController {
         // Far from the island with nothing pending: nothing to do.
         if !overZone && !intent.isInside && !model.hovering && panel.ignoresMouseEvents { return }
 
-        if panel.ignoresMouseEvents == overBody { panel.ignoresMouseEvents = !overBody }
+        if panel.ignoresMouseEvents == overBody {
+            panel.ignoresMouseEvents = !overBody
+            QALog.log("CLICKTHROUGH \(!overBody)")
+        }
         model.setHovering(overZone)
 
         let open = model.state.isOpen
@@ -211,6 +216,8 @@ final class IslandController {
         if settings.openOnHover, !requireExit, !model.state.isOpen || model.peekKind != nil, let deadline = intent.openDeadline {
             openCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldOpen(at: ProcessInfo.processInfo.systemUptime) else { return }
+                QALog.log("HOVER open")
+                self.hoverOpenedAt = ProcessInfo.processInfo.systemUptime
                 self.model.setHoverOpen(true)
             }
         }
@@ -218,6 +225,7 @@ final class IslandController {
         if model.hoverOpen, NSEvent.pressedMouseButtons == 0, let deadline = intent.closeDeadline {
             closeCheck = after(deadline) { [weak self] in
                 guard let self, self.intent.shouldClose(at: ProcessInfo.processInfo.systemUptime) else { return }
+                QALog.log("HOVER close")
                 self.model.setHoverOpen(false)
             }
         }
@@ -232,11 +240,14 @@ final class IslandController {
         }
     }
 
-    /// A click on a closed (or peeking) island opens and pins it. Clicks on controls inside an
-    /// island that is already open by hover leave it hover-managed.
+    /// A click on a closed (or peeking) island opens and pins it. So does a click that lands just
+    /// after hover opened it (the user was clicking to open; hover was simply faster). Later
+    /// clicks on controls inside a hover-opened island leave it hover-managed.
     private func clickedIsland() {
         let p = NSEvent.mouseLocation
-        guard model.metrics.hitRect(model.geometry).contains(p), !model.state.isOpen || model.peekKind != nil else { return }
+        guard model.metrics.hitRect(model.geometry).contains(p) else { return }
+        let justHoverOpened = model.hoverOpen && ProcessInfo.processInfo.systemUptime - hoverOpenedAt < 0.4
+        guard !model.state.isOpen || model.peekKind != nil || justHoverOpened, !model.pinned else { return }
         model.click()
     }
 

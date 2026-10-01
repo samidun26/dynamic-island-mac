@@ -79,9 +79,11 @@ final class HUDModel {
         if trusted, t.start() {
             tap = t
             tapState = .active
+            QALog.log("HUD tap=active")
             return
         }
         tapState = .needsPermission
+        QALog.log("HUD tap=needsPermission")
         // The Accessibility list posts this when it changes; retry then instead of polling.
         if axObserver == nil {
             axObserver = DistributedNotificationCenter.default().addObserver(

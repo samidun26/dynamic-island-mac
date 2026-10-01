@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.startServices()
         }
         controller = IslandController(model: model, settings: settings, demo: options.demo != nil)
+        let m = model.metrics
+        QALog.log("LAUNCH screen=\(Int(m.screenFrame.width))x\(Int(m.screenFrame.height)) hasNotch=\(m.hasNotch) notchSize=\(Int(m.notchSize.width))x\(Int(m.notchSize.height)) panel=\(Int(controller.panel.frame.minX)),\(Int(controller.panel.frame.minY)) \(Int(controller.panel.frame.width))x\(Int(controller.panel.frame.height)) window=\(controller.panel.windowNumber)")
         if options.printWindowID {
             print("NOTCHY_WINDOW_ID=\(controller.panel.windowNumber)")
             fflush(stdout)
@@ -60,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { QALog.log("URL \(url.absoluteString)") }
         for link in urls.compactMap(DeepLink.init(url:)) { handle(link) }
     }
 
@@ -124,7 +127,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openIsland() { model.click() }
     @objc private func startTimer(_ sender: NSMenuItem) { model.timer.start(TimeInterval(sender.tag * 60)) }
     @objc private func cancelTimer() { model.timer.cancel() }
-    @objc private func openSettings() { settingsWindow.show(settings: settings, model: model) }
+    @objc private func openSettings() {
+        QALog.log("SETTINGS shown")
+        settingsWindow.show(settings: settings, model: model)
+    }
 
     /// A screen outline with the island at the top, as a template image.
     private static func statusIcon() -> NSImage {

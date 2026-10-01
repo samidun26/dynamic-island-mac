@@ -80,6 +80,7 @@ final class NowPlayingModel {
         if let adapter = AdapterBackend.bundled(model: self) {
             backend = adapter
             source = .adapter
+            QALog.log("SOURCE adapter")
         } else {
             useFallback()
             return
@@ -100,6 +101,7 @@ final class NowPlayingModel {
         let legacy = LegacyBackend(model: self)
         backend = legacy
         source = .appleScript
+        QALog.log("SOURCE appleScript")
         legacy.start()
     }
 
@@ -107,6 +109,10 @@ final class NowPlayingModel {
         let old = info
         let trackChanged = new?.trackKey != old?.trackKey
         info = new
+        if trackChanged || new?.isPlaying != old?.isPlaying {
+            QALog.log("NOWPLAYING title=\(new?.title ?? "-") artist=\(new?.artist ?? "-") playing=\(new?.isPlaying ?? false) app=\(new?.sourceBundleID ?? "-")")
+        }
+        if case .image = update { QALog.log("ARTWORK received") }
 
         if new?.sourceBundleID != old?.sourceBundleID { updateApp(new?.sourceBundleID) }
 
