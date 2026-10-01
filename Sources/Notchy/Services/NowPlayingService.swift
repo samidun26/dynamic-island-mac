@@ -607,8 +607,8 @@ final class AppleScriptRunner: @unchecked Sendable {
                 }.resume()
                 return
             }
-            let art = eval("tell application id \"\(bundle)\" to return data of artwork 1 of current track")?.data
-                .flatMap(ArtworkDecoder.decode)
+            let data = eval("tell application id \"\(bundle)\" to return data of artwork 1 of current track")?.data
+            let art = data.flatMap(ArtworkDecoder.decode)
             Task { @MainActor in done(art) }
         }
     }
