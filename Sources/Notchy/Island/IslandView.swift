@@ -102,11 +102,11 @@ struct CompactContent: View {
             case .right:
                 HStack(spacing: 0) {
                     Color.clear.frame(width: notch.width)
-                    together.padding(.horizontal, inset).frame(width: fit.right)
+                    together(nearNotchFirst: true).padding(.horizontal, inset).frame(width: fit.right)
                 }
             case .left:
                 HStack(spacing: 0) {
-                    together.padding(.horizontal, inset).frame(width: fit.left)
+                    together(nearNotchFirst: false).padding(.horizontal, inset).frame(width: fit.left)
                     Color.clear.frame(width: notch.width)
                 }
             case .folded:
@@ -129,12 +129,27 @@ struct CompactContent: View {
         }
     }
 
-    /// Leading and trailing content side by side, for a one-sided island.
-    private var together: some View {
-        HStack(spacing: 8) {
-            CompactLeading(model: model, kind: kind)
-            Spacer(minLength: 0)
-            trailing
+    /// Everything on one side of the notch. With nothing else live, the activity's leading and
+    /// trailing content sit at either end. Otherwise its icon and value stay together next to the
+    /// notch and the other activities' glyphs go to the outer end.
+    @ViewBuilder private func together(nearNotchFirst: Bool) -> some View {
+        if secondaries.isEmpty {
+            HStack(spacing: 8) {
+                CompactLeading(model: model, kind: kind)
+                Spacer(minLength: 0)
+                CompactTrailing(model: model, kind: kind)
+            }
+        } else {
+            let primary = HStack(spacing: 6) {
+                CompactLeading(model: model, kind: kind)
+                CompactTrailing(model: model, kind: kind)
+            }
+            let others = HStack(spacing: 8) {
+                ForEach(secondaries, id: \.self) { MinimalGlyph(model: model, kind: $0) }
+            }
+            HStack(spacing: 8) {
+                if nearNotchFirst { primary; Spacer(minLength: 0); others } else { others; Spacer(minLength: 0); primary }
+            }
         }
     }
 }
