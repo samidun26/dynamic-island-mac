@@ -173,8 +173,12 @@ final class IslandModel {
             if bump { return metrics.bumped(metrics.idle(), widen: widen) }
             return metrics.idle(hidden: hidesWhenIdle)
         case .compact:
-            let g = fit.arrangement == .folded ? metrics.folded() : metrics.compact(left: fit.left, right: fit.right)
-            return bump ? metrics.bumped(g, widen: widen) : g
+            let g = switch fit.arrangement {
+            case .folded: metrics.folded()
+            case .hidden: metrics.idle(hidden: true)
+            case .split, .left, .right: metrics.compact(left: fit.left, right: fit.right)
+            }
+            return bump && fit.arrangement != .hidden ? metrics.bumped(g, widen: widen) : g
         case .expanded, .peek:
             return metrics.expanded()
         }

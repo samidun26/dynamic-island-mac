@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
+    private var closeObserver: NSObjectProtocol?
 
     func show(settings: AppSettings, model: IslandModel) {
         if window == nil {
@@ -15,6 +16,9 @@ final class SettingsWindowController {
             w.isReleasedWhenClosed = false
             w.center()
             window = w
+            closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+                QALog.log("SETTINGS closed")
+            }
         }
         NSApp.activate()
         window?.makeKeyAndOrderFront(nil)

@@ -85,6 +85,9 @@ final class GeometryTests: XCTestCase {
         // No room anywhere: fold into the lip.
         XCTAssertEqual(fit(nil, 30), WingFit(arrangement: .folded, left: 0, right: 0))
         XCTAssertEqual(fit(20, 30).arrangement, .folded)
+        // No notch: an icon under the fake notch's spot. Nothing may be drawn over it.
+        XCTAssertEqual(fit(120, -4).arrangement, .hidden)
+        XCTAssertEqual(fit(-10, 120).arrangement, .hidden)
         // Feature off / not measured.
         XCTAssertEqual(WingFit.fit(wing: 45, minWing: 35, single: 70, clearance: .unlimited).arrangement, .split)
     }

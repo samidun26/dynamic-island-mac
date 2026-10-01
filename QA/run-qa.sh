@@ -520,7 +520,7 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
         if [ "$CLOSED" != no ]; then
             pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown and focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
         else
-            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it"
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENUBAR' | sed -E 's/^QA [0-9.]+ //' | tail -4 | tr '\n' ';')"
         fi
     else
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
@@ -601,6 +601,7 @@ clear_check() { # $1 = screenshot; prints "ok|overlap" and the evidence
     span=$(island_span "$1"); a=${span% *}; b=${span#* }
     icon=$(first_icon); menus=$(menus_end)
     fit=$(grep -E 'STATE compact' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
+    if [ $((b - a)) -lt 20 ]; then echo "ok nothing drawn over the menu bar, first icon at ${icon:-none}, ${fit}"; return; fi
     [ -n "$icon" ] && [ "${b:-0}" -gt $((icon - 1)) ] && verdict=overlap
     [ -n "$menus" ] && [ "${menus:-0}" -gt 0 ] && [ "${a:-0}" -lt $((menus + 1)) ] && verdict=overlap
     echo "$verdict island ${a}–${b} pt, app menus end at ${menus:-?}, first icon at ${icon:-none}, ${fit}"
@@ -623,7 +624,7 @@ if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
     if [ -n "$ICON0" ] && [ "$ROOM" -gt 30 ] && ! echo "$FIT0" | grep -qE 'folded|left'; then
         echo "$ROOM" > "$OUT/crowd-width"
         mark "$LOG"; kill -HUP "$FP_PID"
-        if wait_for "$LOG" "STATE compact:nowPlaying .*fit=(folded|left)" 6; then
+        if wait_for "$LOG" "STATE compact:nowPlaying .*fit=(folded|left|hidden)" 6; then
             sleep 1; shot qa36-crowded
             C2=$(clear_check qa36-crowded)
             mark "$LOG"; kill -HUP "$FP_PID"

@@ -4,7 +4,8 @@ import CoreGraphics
 #endif
 
 /// Free menu bar width on each side of the notch: from the notch's edge to the nearest app menu
-/// (left) or menu bar icon (right).
+/// (left) or menu bar icon (right). Negative on a display without a notch when a menu or an icon
+/// sits where the fake notch would be drawn.
 public struct MenuBarClearance: Equatable, Sendable {
     /// `nil` when it can't be seen: reading where another app's menus end needs Accessibility.
     public var left: CGFloat?
@@ -30,6 +31,9 @@ public struct WingFit: Equatable, Sendable {
         case left
         /// No room either side: a slim lip under the notch shows the activity's progress.
         case folded
+        /// Displays without a notch only: something sits where the fake notch would be drawn, so
+        /// nothing is drawn. Hovering there still opens the island.
+        case hidden
     }
 
     public var arrangement: Arrangement
@@ -52,6 +56,9 @@ public struct WingFit: Equatable, Sendable {
     ///   - clearance: free menu bar width each side of the notch. An unknown left side counts
     ///     as taken: the island never covers menus it can't see.
     public static func fit(wing: CGFloat, minWing: CGFloat, single: CGFloat, clearance: MenuBarClearance) -> WingFit {
+        if (clearance.left ?? 0) < 0 || clearance.right < 0 {
+            return WingFit(arrangement: .hidden, left: 0, right: 0)
+        }
         let l = (clearance.left ?? 0) - gap
         let r = clearance.right - gap
         if l >= minWing, r >= minWing {

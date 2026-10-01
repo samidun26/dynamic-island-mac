@@ -85,7 +85,7 @@ final class MenuBarSpace {
         guard let m = metrics else { return }
         guard !measuring else { again = true; return }
         measuring = true
-        let input = Input(notch: m.notchRect, screen: m.screenFrame,
+        let input = Input(notch: m.notchRect, screen: m.screenFrame, hasNotch: m.hasNotch,
                           primaryHeight: NSScreen.screens.first?.frame.height ?? m.screenFrame.maxY,
                           screens: NSScreen.screens.map(\.frame),
                           menuOwner: NSWorkspace.shared.menuBarOwningApplication?.processIdentifier,
@@ -113,6 +113,7 @@ final class MenuBarSpace {
     struct Input: Sendable {
         var notch: CGRect           // AppKit coordinates
         var screen: CGRect
+        var hasNotch: Bool
         var primaryHeight: CGFloat
         var screens: [CGRect]
         var menuOwner: pid_t?
@@ -131,8 +132,10 @@ final class MenuBarSpace {
         for w in windows where (w[kCGWindowLayer as String] as? Int) == statusLevel {
             guard let d = w[kCGWindowBounds as String] as? NSDictionary,
                   let r = CGRect(dictionaryRepresentation: d as CFDictionary),
-                  band.contains(r.midY), r.width < 400,
-                  r.minX >= i.notch.maxX - 2, r.maxX <= i.screen.maxX + 1 else { continue }
+                  band.contains(r.midY), r.width < 400, r.maxX <= i.screen.maxX + 1 else { continue }
+            // Behind a real notch an icon is hidden by macOS, not covered by the island. Without a
+            // notch it is visible wherever it is, even where the fake notch would be drawn.
+            guard i.hasNotch ? r.minX >= i.notch.maxX - 2 : r.maxX > i.notch.minX else { continue }
             right = min(right, r.minX - i.notch.maxX)
         }
 
@@ -151,9 +154,13 @@ final class MenuBarSpace {
                 guard let r = frame(item), r.width > 0,
                       let display = i.screens.first(where: { $0.minX <= r.minX && r.minX < $0.maxX }) else { continue }
                 let start = r.minX - display.minX
-                // Menus that don't fit before the notch are hidden by macOS; they don't count.
-                guard start < notchStart else { continue }
-                end = max(end, min(r.maxX - display.minX, notchStart))
+                if i.hasNotch {
+                    // Menus that don't fit before the notch are hidden by macOS; they don't count.
+                    guard start < notchStart else { continue }
+                    end = max(end, min(r.maxX - display.minX, notchStart))
+                } else {
+                    end = max(end, r.maxX - display.minX)
+                }
                 found = true
             }
             // No menus yet (an app that is still activating): keep what was there.
@@ -161,7 +168,9 @@ final class MenuBarSpace {
         } else if AXIsProcessTrusted() {
             left = i.previousLeft
         }
-        return MenuBarClearance(left: left.map { max(0, $0) }, right: max(0, right))
+        // Negative only without a notch: something sits where the fake notch would be drawn.
+        return i.hasNotch ? MenuBarClearance(left: left.map { max(0, $0) }, right: max(0, right))
+                          : MenuBarClearance(left: left, right: right)
     }
 
     private nonisolated static func attribute(_ e: AXUIElement, _ name: String) -> AXUIElement? {

@@ -52,6 +52,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             fflush(stdout)
         }
         NSApp.mainMenu = Self.mainMenu()
+        if QALog.enabled {
+            // Test trace: which key presses reach the app, and which window they go to.
+            _ = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+                let chars = e.charactersIgnoringModifiers ?? "?", cmd = e.modifierFlags.contains(.command)
+                MainActor.assumeIsolated {
+                    QALog.log("KEY \(chars) cmd=\(cmd) keyWindow=\(NSApp.keyWindow?.title ?? "none") active=\(NSApp.isActive)")
+                }
+                return e
+            }
+        }
         observeChanges({ [settings] in settings.showMenuBarIcon }) { [weak self] show in
             self?.setStatusItem(visible: show)
         }

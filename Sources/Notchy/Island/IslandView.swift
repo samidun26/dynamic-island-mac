@@ -114,6 +114,8 @@ struct CompactContent: View {
                     Color.clear.frame(height: notch.height)
                     CompactLip(model: model, kind: kind).frame(height: NotchMetrics.lipHeight)
                 }
+            case .hidden:
+                Color.clear
             }
         }
         .frame(width: notch.width + fit.left + fit.right, height: notch.height + (folded ? NotchMetrics.lipHeight : 0))
