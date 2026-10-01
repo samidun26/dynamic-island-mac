@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Date | 2026-10-01 17:52 UTC |
+| Date | 2026-10-01 18:03 UTC |
 | macOS | 15.7.9 (24G830), arm64 |
-| App | e5f2ec0 Menu bar fit: read icons directly, menus off the main thread with short timeouts |
+| App | a2c1b67 QA driver: plain keys carry no modifiers; menu bar checks keep running while a menu is open |
 
 | ID | Case | Result | Evidence |
 |---|---|---|---|
-| QA-01 | Build from source and install to /Applications (FR-S5) | ✅ pass | build.sh in 36 s, signature valid |
+| QA-01 | Build from source and install to /Applications (FR-S5) | ✅ pass | build.sh in 38 s, signature valid |
 | QA-25 | Hidden from screen capture by default (FR-W8) | ✅ pass | timer running, island absent from capture ([shot](shots/qa25-hidden.png)) |
 | QA-03 | Panel is top-centre, above the menu bar, fixed size (FR-W1, FR-W7) | ✅ pass | x=234 w=556 layer=27 (menu bar is 24) |
 | QA-04 | Menu bar icon present (FR-S1) | ✅ pass | status item window found |
@@ -30,15 +30,15 @@
 | QA-20 | Two-finger swipes on the island (FR-I5) | ✅ pass | vertical: 'SWIPE down' then 'SWIPE up' (state after: compact:nowPlaying); horizontal: 'SWIPE left' (state: expanded:home) |
 | QA-21 | notchy://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3) | ✅ pass | compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420; 305 pt ([shot](shots/qa21-timer.png)) |
 | QA-22 | Timer ends: peek, then clears itself (FR-T3) | ✅ pass | done → peek → back to music ([shot](shots/qa22-done.png)) |
-| QA-23 | Timer page: +1 min, pause, cancel (FR-T2) | ✅ pass | paused at 5:53 after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png)) |
-| QA-26 | Menu bar menu opens (FR-S1) | ✅ pass | menu window on screen, (front: Finder; MOUSEDOWN own window NSStatusBarWindow active=false ; closed by Escape: no) ([shot](shots/qa26-menu-other-app.png)) |
-| QA-24 | Settings window opens; ⌘W closes it (FR-S2) | ✅ pass | window shown and focused=true ([shot](shots/qa24-settings.png)); closed by ⌘W: yes |
+| QA-23 | Timer page: +1 min, pause, cancel (FR-T2) | ✅ pass | paused at 5:52 after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png)) |
+| QA-26 | Menu bar menu opens (FR-S1) | ✅ pass | menu window on screen, (front: Finder; MOUSEDOWN own window NSStatusBarWindow active=false ; closed by Escape: yes) ([shot](shots/qa26-menu-other-app.png)) |
+| QA-24 | Settings window opens; ⌘W closes it (FR-S2) | ❌ fail | window shown, focused=true ([shot](shots/qa24-settings.png)), but ⌘W did not close it; a menu was open: yes; front: Notchy; trace: SETTINGS shown;SETTINGS focused=true; |
 | QA-32 | Menu bar menu still opens after Settings was used (FR-S1) | ✅ pass | menu window on screen ([shot](shots/qa32-menu-after-settings.png)) |
-| QA-27 | Now Playing stream restarts after a crash, without flicker (FR-N2) | ✅ pass | killed pid 4801, restarted as 7620; island stayed on the track |
+| QA-27 | Now Playing stream restarts after a crash, without flicker (FR-N2) | ✅ pass | killed pid 9441, restarted as 12366; island stayed on the track |
 | QA-30 | Pausing in the player: wings collapse after the grace period (FR-N3) | ✅ pass | collapsed 2.5 s after the pause (grace 2.5 s) |
-| QA-31 | CPU with music paused and the island idle (NFR-1) | ✅ pass | 0.0% (music playing in the wings: 2.5% and 2.8%) |
+| QA-31 | CPU with music paused and the island idle (NFR-1) | ✅ pass | 0.0% (music playing in the wings: 2.0% and 2.0%) |
 | QA-35 | Compact island keeps clear of menus and menu bar icons (FR-W9) | ✅ pass | island 420–674 pt, app menus end at 397, first icon at 745, fit=right:0/70; Notchy measured left=23 right=141 ([shot](shots/qa35-clear.png)) |
-| QA-36 | A crowded menu bar moves or folds the island instead of being covered (FR-W9) | ❌ fail | no re-fit after a 129 pt icon appeared; compact:nowPlaying 254x33; CROWD added width=129;CROWD placed x=600 w=145 visible=true; icons: FakePlayer 600 145,Notchy 745 38,Control_Center 783 33,Spotlight 816 31,Control_Center 847 34,Control_Center 881 143, ([shot](shots/qa36-crowded.png)) |
+| QA-36 | A crowded menu bar moves or folds the island instead of being covered (FR-W9) | ✅ pass | 129 pt icon added: nothing drawn over the menu bar, first icon at 745, fit=hidden:0/0; back to right when it went away ([shot](shots/qa36-crowded.png)) |
 | QA-28 | Quitting stops the Now Playing helper (NFR-4) | ✅ pass | no adapter process left |
 | QA-29 | "Never" on displays without a notch hides the island (FR-W5) | ✅ pass | no panel window on screen |
 | QA-33 | Libraries injected at launch are refused (NFR-10) | ✅ pass | DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy (flags=0x10002(adhoc,runtime), __RESTRICT segment) |
@@ -47,6 +47,6 @@
 
 **35 passed, 1 failed, 0 skipped.**
 
-CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle 0.2% · music playing in the compact wings 2.5 / 2.8% · expanded Now Playing 3.0% · music paused, island idle 0.0%.
+CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle 0.2% · music playing in the compact wings 2.0 / 2.0% · expanded Now Playing 3.8% · music paused, island idle 0.0%.
 
 Input synthesis: yes. Accessibility for the driver: yes. Screen: 1024 pt wide, menu bar 25 pt, notch: none.
