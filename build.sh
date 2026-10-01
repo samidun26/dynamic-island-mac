@@ -40,6 +40,7 @@ cp Vendor/mediaremote-adapter/LICENSE "$APP/Contents/Resources/mediaremote-adapt
 
 echo "==> MediaRemoteAdapter.framework"
 # Upstream builds this with CMake; compiling directly avoids needing CMake installed.
+# adapter/test.m (the `test` command) is skipped: it needs the test client we do not ship.
 FW="$APP/Contents/Frameworks/MediaRemoteAdapter.framework"
 mkdir -p "$FW/Versions/A/Resources"
 # shellcheck disable=SC2086
@@ -48,7 +49,7 @@ clang -dynamiclib -fobjc-arc -fvisibility=default -O2 -w $CLANG_ARCHS -mmacosx-v
   -framework Foundation -framework AppKit -framework ImageIO -framework CoreServices -framework UniformTypeIdentifiers \
   -install_name "@rpath/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter" \
   -current_version 0.1.0 -compatibility_version 0.1.0 \
-  "$MRA"/src/adapter/*.m "$MRA"/src/private/*.m "$MRA"/src/utility/*.m \
+  $(ls "$MRA"/src/adapter/*.m | grep -v '/test\.m$') "$MRA"/src/private/*.m "$MRA"/src/utility/*.m \
   -o "$FW/Versions/A/MediaRemoteAdapter"
 cat > "$FW/Versions/A/Resources/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
