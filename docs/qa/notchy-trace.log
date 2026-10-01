@@ -1,0 +1,67 @@
+QA 146.305 SOURCE adapter
+QA 147.186 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=25
+QA 147.537 URL notchy://timer?seconds=30
+QA 147.539 STATE compact:timer 312x33 secondaries=[] pages=2
+QA 149.118 SOURCE adapter
+QA 149.247 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=30
+QA 160.182 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 160.182 ARTWORK received
+QA 160.188 STATE peek:nowPlaying 484x161 secondaries=[] pages=2
+QA 163.426 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 166.972 CLICKTHROUGH false
+QA 167.106 HOVER open
+QA 167.106 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 168.658 CLICKTHROUGH true
+QA 169.038 HOVER close
+QA 169.038 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 170.293 CLICKTHROUGH false
+QA 170.368 CLICKTHROUGH true
+QA 173.097 CLICKTHROUGH false
+QA 173.226 HOVER open
+QA 173.227 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 176.857 CLICKTHROUGH true
+QA 177.175 HOVER close
+QA 177.178 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 179.756 CLICKTHROUGH false
+QA 179.909 HOVER open
+QA 179.911 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 181.072 SWIPE up
+QA 181.072 DISMISS
+QA 181.072 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 182.622 SWIPE down
+QA 182.622 PIN
+QA 182.623 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 183.494 SWIPE left
+QA 183.495 STATE expanded:home 484x161 secondaries=[] pages=2
+QA 184.635 CLICKTHROUGH true
+QA 185.551 DISMISS
+QA 185.552 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 186.880 URL notchy://timer?seconds=8
+QA 186.881 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 195.355 TIMER done
+QA 195.369 STATE peek:timer 484x161 secondaries=[] pages=3
+QA 201.861 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 204.292 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 204.525 URL notchy://timer?minutes=5
+QA 204.531 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 207.179 CLICKTHROUGH false
+QA 207.301 HOVER open
+QA 207.301 STATE expanded:timer 484x161 secondaries=[] pages=3
+QA 209.769 CLICKTHROUGH true
+QA 210.103 HOVER close
+QA 210.105 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 211.229 URL notchy://settings
+QA 211.229 SETTINGS shown
+QA 216.613 NOWPLAYING title=- artist=- playing=false app=-
+QA 216.619 STATE compact:timer 312x33 secondaries=[] pages=2
+QA 216.624 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 216.624 ARTWORK received
+QA 216.626 STATE peek:nowPlaying 484x161 secondaries=[] pages=3
+QA 219.823 STATE compact:timer 356x33 secondaries=["nowPlaying"] pages=3
+QA 222.778 NOWPLAYING title=- artist=- playing=false app=-
+QA 224.021 SOURCE adapter
+QA 224.135 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=39
+QA 224.225 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 224.225 ARTWORK received
+QA 224.229 STATE compact:nowPlaying 274x33 secondaries=[] pages=2
+QA 225.749 NOWPLAYING title=- artist=- playing=false app=-
