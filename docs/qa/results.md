@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Date | 2026-10-01 14:20 UTC |
+| Date | 2026-10-01 14:26 UTC |
 | macOS | 15.7.9 (24G830), arm64 |
-| App | 2087e33 QA: AX hit-test fallback, exact label matching, pixel checks, Gatekeeper test at the end |
+| App | 9c3ebd0 Fix QA findings: ⌘W/⌘Q in Settings, click-the-notch pins, cheaper equaliser |
 
 | ID | Case | Result | Evidence |
 |---|---|---|---|
-| QA-01 | Build from source and install to /Applications (FR-S5) | ✅ pass | build.sh in 47 s, signature valid |
+| QA-01 | Build from source and install to /Applications (FR-S5) | ✅ pass | build.sh in 36 s, signature valid |
 | QA-25 | Hidden from screen capture by default (FR-W8) | ✅ pass | timer running, island absent from capture ([shot](shots/qa25-hidden.png)) |
 | QA-03 | Panel is top-centre, above the menu bar, fixed size (FR-W1, FR-W7) | ✅ pass | x=234 w=556 layer=27 (menu bar is 24) |
 | QA-04 | Menu bar icon present (FR-S1) | ✅ pass | status item window found |
@@ -26,18 +26,18 @@
 | QA-16 | Moving away closes it (FR-I2) | ✅ pass | compact:nowPlaying 274x33 |
 | QA-17 | Sweeping across the notch does not open it (FR-I1) | ✅ pass | 800 pt in 90 ms: stayed closed |
 | QA-18 | Clicks beside the island pass through (FR-W2) | ✅ pass | click at (722, 120), inside the panel frame, reached the window below |
-| QA-19 | Click pins it open; a click elsewhere closes it (FR-I4) | ❌ fail | pinned=no, after leaving=compact:nowPlaying; clicks seen: elsewhere at 722,648;island at 512,756;elsewhere at 512,248; |
-| QA-20 | Two-finger swipes on the island (FR-I5) | ❌ fail | got '' / 'SWIPE up' / 'SWIPE left' |
+| QA-19 | Click pins it open; a click elsewhere closes it (FR-I4) | ✅ pass | pinned, stayed open after leaving, dismissed by outside click |
+| QA-20 | Two-finger swipes on the island (FR-I5) | ✅ pass | vertical: 'SWIPE down' then 'SWIPE up' (state after: compact:nowPlaying); horizontal: 'SWIPE left' (state: expanded:home) |
 | QA-21 | notchy://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3) | ✅ pass | compact:timer 356x33 secondaries=["nowPlaying"] pages=3; 356 pt ([shot](shots/qa21-timer.png)) |
 | QA-22 | Timer ends: peek, then clears itself (FR-T3) | ✅ pass | done → peek → back to music ([shot](shots/qa22-done.png)) |
-| QA-23 | Timer page: +1 min, pause, cancel (FR-T2) | ✅ pass | paused at 5:52 after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png)) |
-| QA-24 | Settings window opens (FR-S2) | ✅ pass | window "Notchy Settings" ([shot](shots/qa24-settings.png)) |
+| QA-23 | Timer page: +1 min, pause, cancel (FR-T2) | ✅ pass | paused at 5:51 after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png)) |
+| QA-24 | Settings window opens; ⌘W closes it (FR-S2) | ✅ pass | window shown ([shot](shots/qa24-settings.png)); closed by ⌘W: yes |
 | QA-26 | Menu bar menu opens (FR-S1) | ❌ fail | no menu window after clicking the icon |
-| QA-27 | Now Playing stream restarts after a crash (FR-N2) | ✅ pass | killed pid 2094, restarted as 4227 |
+| QA-27 | Now Playing stream restarts after a crash (FR-N2) | ✅ pass | killed pid 3038, restarted as 4997 |
 | QA-28 | Quitting stops the Now Playing helper (NFR-4) | ✅ pass | no adapter process left |
 | QA-29 | "Never" on displays without a notch hides the island (FR-W5) | ✅ pass | no panel window on screen |
 | QA-02 | Downloaded build: blocked while quarantined, opens after the guide's xattr step | ✅ pass | blocked as downloaded ([shot](shots/qa02-gatekeeper.png)); after xattr -dr it opens |
 
-**26 passed, 3 failed, 0 skipped.** CPU while music plays and the equaliser animates: 2.6%.
+**28 passed, 1 failed, 0 skipped.** CPU while music plays and the equaliser animates: 5.7%.
 
 Input synthesis: yes. Accessibility for the driver: yes. Screen: 1024 pt wide, menu bar 25 pt, no notch.
