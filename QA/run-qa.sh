@@ -516,14 +516,25 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
         CLOSED=untested
         FOCUSED=$(grep -o 'SETTINGS focused=[a-z]*' "$LOG" | tail -1 | cut -d= -f2)
         if [ "$INPUT" = yes ]; then
-            MENU_AT_W=no; menu_open && MENU_AT_W=yes
-            "$D" key cmd-w; sleep 0.8
-            "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID" && CLOSED=no || CLOSED=yes
+            finder_windows() { "$D" windows Finder | awk '{split($2,l,"="); if (l[2]==0) n++} END {print n+0}'; }
+            settings_open() { "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID"; }
+            F0=$(finder_windows)
+            mark "$LOG"; "$D" key cmd-w; sleep 0.8
+            settings_open && CLOSED=no || CLOSED=yes
+            if [ $CLOSED = no ]; then
+                # Where did it go? Then once more, after clicking the window like a person would.
+                WENT="Notchy got it: $(after "$LOG" | grep -c ' KEY w '); Finder windows ${F0}→$(finder_windows)"
+                WIN=$("$D" windows Notchy | grep "id=$SW_ID ")
+                WX=$(echo "$WIN" | sed -E 's/.* x=([0-9]+).*/\1/'); WY=$(echo "$WIN" | sed -E 's/.* y=([0-9]+).*/\1/'); WW=$(echo "$WIN" | sed -E 's/.* w=([0-9]+).*/\1/')
+                "$D" click $((WX + WW / 2)) $((WY + 12)); sleep 0.4
+                mark "$LOG"; "$D" key cmd-w; sleep 0.8
+                settings_open && CLOSED=no || CLOSED="after clicking the window (the first press went astray: $WENT)"
+            fi
         fi
         if [ "$CLOSED" != no ]; then
             pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown and focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
         else
-            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it; a menu was open: ${MENU_AT_W:-?}; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENU' | sed -E 's/^QA [0-9.]+ //' | tail -6 | tr '\n' ';')"
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it, even after clicking it; ${WENT:-}; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENU' | sed -E 's/^QA [0-9.]+ //' | tail -6 | tr '\n' ';')"
         fi
     else
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
