@@ -96,6 +96,8 @@ public struct ActivityQueue: Equatable, Sendable {
     /// appear here: they are momentary and only ever take over the whole island.
     public var secondaries: [ActivityKind] {
         let transients = Set(entries.filter(\.transient).map(\.kind))
+        // A HUD or banner takes the whole island for its moment.
+        if let p = primary, transients.contains(p) { return [] }
         return compactOrder.dropFirst().filter { !transients.contains($0) }
     }
 

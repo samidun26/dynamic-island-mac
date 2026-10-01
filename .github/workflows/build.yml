@@ -4,6 +4,14 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_snapshots:
+        description: Commit the rendered snapshots to docs/screenshots on this branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   macos:
@@ -49,7 +57,7 @@ jobs:
       - name: Live window capture
         continue-on-error: true
         run: |
-          for s in idle compact expanded; do
+          for s in compact expanded multi; do
             build/Notchy.app/Contents/MacOS/Notchy --demo $s --print-window > win.txt 2>&1 &
             PID=$!
             sleep 3
@@ -71,6 +79,20 @@ jobs:
           ps -o pid,%cpu,rss,command -p $PID
           top -l 3 -s 2 -pid $PID -stats pid,cpu,mem,idlew,power | tail -4
           kill $PID || true
+
+      - name: Publish snapshots to the branch
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_snapshots
+        run: |
+          mkdir -p docs/screenshots
+          rm -f docs/screenshots/*.png
+          cp snapshots/sheet-*.png snapshots/filmstrip-*.png snapshots/app-icon.png docs/screenshots/
+          cp snapshots/notch-compact.png snapshots/notch-expanded.png snapshots/notch-multi.png snapshots/notch-home.png docs/screenshots/ || true
+          cp snapshots/live-*.png docs/screenshots/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/screenshots
+          git commit -m "Update rendered snapshots [skip ci]" || exit 0
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Package
         run: ditto -c -k --keepParent build/Notchy.app Notchy.zip

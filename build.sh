@@ -35,7 +35,13 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN_DIR/Notchy" "$APP/Contents/MacOS/Notchy"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" Resources/Info.plist > "$APP/Contents/Info.plist"
-cp Resources/AppIcon.icns "$APP/Contents/Resources/" 2>/dev/null || true
+# The icon is drawn by the app itself (SwiftUI), then packed with iconutil.
+rm -rf "$OUT/AppIcon.iconset"
+if "$BIN_DIR/Notchy" --render-icon "$OUT/AppIcon.iconset" && iconutil -c icns "$OUT/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"; then
+  echo "    icon ok"
+else
+  echo "    (icon skipped)"
+fi
 cp Vendor/mediaremote-adapter/LICENSE "$APP/Contents/Resources/mediaremote-adapter-LICENSE.txt"
 
 echo "==> MediaRemoteAdapter.framework"

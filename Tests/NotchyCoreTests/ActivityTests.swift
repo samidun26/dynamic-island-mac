@@ -29,7 +29,7 @@ final class ActivityTests: XCTestCase {
         ])
         q.preferred = .nowPlaying
         XCTAssertEqual(q.primary, .hud)
-        XCTAssertEqual(q.secondaries, [.nowPlaying])
+        XCTAssertEqual(q.secondaries, [], "a HUD takes the whole island")
         XCTAssertEqual(q.pages, [.activity(.nowPlaying), .home])
     }
 
