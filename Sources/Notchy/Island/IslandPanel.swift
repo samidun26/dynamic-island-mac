@@ -172,6 +172,9 @@ final class IslandController {
         // Clicks and trackpad swipes on the island itself.
         if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel], handler: { [weak self] e in
             let consumed = MainActor.assumeIsolated { () -> Bool in
+                if e.type == .leftMouseDown, e.window !== self?.panel {
+                    QALog.log("MOUSEDOWN own window \(e.window.map { String(describing: type(of: $0)) } ?? "none") at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))")
+                }
                 guard let self, e.window === self.panel else { return false }
                 if e.type == .leftMouseDown { QALog.log("MOUSEDOWN island at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))") }
                 if e.type == .scrollWheel { return self.handleScroll(e) }

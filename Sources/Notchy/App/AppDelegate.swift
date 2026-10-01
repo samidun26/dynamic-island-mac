@@ -109,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        QALog.log("STATUS clicked")
         guard let statusMenu else { return }
         sender.highlight(true)
         statusMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 5), in: sender)
