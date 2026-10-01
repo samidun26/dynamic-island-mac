@@ -120,7 +120,7 @@ Built and checked on GitHub's macOS runners (see `.github/workflows/build.yml`):
 - The bundled adapter loads under `/usr/bin/perl` on the runner and answers (`get` returns `null` when nothing plays).
 - Every state renders (the screenshots above are produced by `Notchy --snapshot` on CI).
 - Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: Notchy at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
-- The real panel renders on screen ([captured live on the runner](docs/screenshots/live-expanded.png)), with click-through and no window shadow.
+- The real panel renders on screen, centred and flush with the top edge over the menu bar ([window](docs/screenshots/live-expanded.png), [compact on the runner's screen](docs/screenshots/live-screen-compact.png), [expanded](docs/screenshots/live-screen-expanded.png)).
 
 Not verified, because it needs real hardware and a person:
 
