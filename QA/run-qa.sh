@@ -226,7 +226,7 @@ fi
 # ---------------------------------------------------------------- now playing
 echo "== now playing (FakePlayer)"
 mark "$LOG"
-"$FP_APP/Contents/MacOS/FakePlayer" > "$FPLOG" 2>&1 &
+FP_CROWD_FILE="$OUT/crowd-width" "$FP_APP/Contents/MacOS/FakePlayer" > "$FPLOG" 2>&1 &
 FP_PID=$!
 sleep 0.5
 if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
@@ -244,11 +244,14 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     fi
     sleep 1; shot qa09-compact
     W=$(island_width qa09-compact)
-    WANT=$((NW + 2 * (NH + 12)))   # notch + two wings of (notch height + 12)
-    if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "$WANT" 6; then
-        pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide, expected ${WANT} ([shot](shots/qa09-compact.png))"
+    # The width depends on how much menu bar is free beside the notch (QA-35): check the island on
+    # screen is the size Notchy says it drew.
+    WANT=$(logged_size | cut -dx -f1)
+    FIT=$(grep -E 'STATE compact:nowPlaying' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
+    if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "${WANT:-0}" 6; then
+        pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide as drawn (${FIT}) ([shot](shots/qa09-compact.png))"
     else
-        fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide, expected ${WANT}"
+        fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide on screen, ${WANT} drawn"
     fi
     "$D" jump "$CX" 500 >/dev/null; sleep 2
     CPU_COMPACT=$(cpu_avg)
@@ -584,6 +587,62 @@ if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
 else
     skip QA-30 "Pausing in the player: wings collapse after the grace period (FR-N3)" "not in compact:nowPlaying ($(last_state))"
     skip QA-31 "CPU with music paused and the island idle (NFR-1)" "precondition not met"
+fi
+
+# ---------------------------------------------------------------- menu bar clearance
+# The compact island must never cover an app menu or a menu bar icon next to the notch.
+echo "== menu bar clearance"
+island_span() { "$D" dark-run "$OUT/shots/$1.png" 3 | awk '{print $1, $1 + $2}'; }
+notch_max=$((CX + NW / 2))
+first_icon() { "$D" status-items | awk -v n=$notch_max '$2 >= n - 2 {print $2}' | sort -n | head -1; }
+menus_end() { [ "$AX" = yes ] && lim 8 "$D" menu-extent 2>/dev/null | awk '{print $2}'; }
+clear_check() { # $1 = screenshot; prints "ok|overlap" and the evidence
+    local span a b icon menus fit verdict=ok
+    span=$(island_span "$1"); a=${span% *}; b=${span#* }
+    icon=$(first_icon); menus=$(menus_end)
+    fit=$(grep -E 'STATE compact' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
+    [ -n "$icon" ] && [ "${b:-0}" -gt $((icon - 1)) ] && verdict=overlap
+    [ -n "$menus" ] && [ "${menus:-0}" -gt 0 ] && [ "${a:-0}" -lt $((menus + 1)) ] && verdict=overlap
+    echo "$verdict island ${a}–${b} pt, app menus end at ${menus:-?}, first icon at ${icon:-none}, ${fit}"
+}
+sleep 2.5
+if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
+    shot qa35-clear
+    C=$(clear_check qa35-clear)
+    FIT0=$(echo "$C" | grep -oE 'fit=[a-z]+')
+    SEEN=$(grep MENUBAR "$LOG" | tail -1 | sed -E 's/.*MENUBAR //')
+    if [ "${C%% *}" = ok ]; then
+        pass QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C#ok }; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+    else
+        fail QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C}; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+    fi
+
+    # Crowd the menu bar: a wide icon right next to the notch, like the Wi-Fi icon in the bug report.
+    ICON0=$(first_icon)
+    ROOM=$(( ${ICON0:-0} - notch_max - 12 ))
+    if [ -n "$ICON0" ] && [ "$ROOM" -gt 30 ] && ! echo "$FIT0" | grep -qE 'folded|left'; then
+        echo "$ROOM" > "$OUT/crowd-width"
+        mark "$LOG"; kill -HUP "$FP_PID"
+        if wait_for "$LOG" "STATE compact:nowPlaying .*fit=(folded|left)" 6; then
+            sleep 1; shot qa36-crowded
+            C2=$(clear_check qa36-crowded)
+            mark "$LOG"; kill -HUP "$FP_PID"
+            BACK=no; wait_for "$LOG" "STATE compact:nowPlaying .*${FIT0}" 6 && BACK=yes
+            if [ "${C2%% *}" = ok ] && [ $BACK = yes ]; then
+                pass QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "${ROOM} pt icon added: ${C2#ok }; back to ${FIT0#fit=} when it went away ([shot](shots/qa36-crowded.png))"
+            else
+                fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "${C2}; back when removed: ${BACK} ([shot](shots/qa36-crowded.png))"
+            fi
+        else
+            fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "no re-fit after a ${ROOM} pt icon appeared; $(last_state); $(grep -E 'MENUBAR|CROWD' "$LOG" "$FPLOG" | tail -3 | sed -E 's/^.*(MENUBAR|CROWD)/\1/' | tr '\n' ';')"
+            kill -HUP "$FP_PID"
+        fi
+    else
+        skip QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "the menu bar is already full next to the notch (first icon at ${ICON0:-none}, ${FIT0})"
+    fi
+else
+    skip QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "not in compact:nowPlaying ($(last_state))"
+    skip QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "precondition not met"
 fi
 
 quit_notchy; sleep 1

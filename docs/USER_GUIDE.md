@@ -166,6 +166,7 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Hide from screen sharing and recordings | On |
 | | Show the island on: built-in display (notch) / main display / display with the pointer | Built-in |
 | | On displays without a notch: only when something is happening / always (fake notch) / never | Only when active |
+| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room. Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
 | | Launch at login | Off |
 | | Show menu bar icon | On |
 | Activities | Now Playing, and its track-change preview | On, on |
@@ -186,6 +187,7 @@ If **Reduce motion** is on in *System Settings → Accessibility → Display*, N
 | **"Notchy is damaged" / "can't be opened"** | It's a downloaded build without notarization. Follow *Allow it to open* in §1. |
 | **Nothing shows at all** | It's idle, which is normal. Start a timer from the menu bar icon to check. On a display without a notch, the island only appears while something is happening; change *On displays without a notch* to *Always* to see it all the time. |
 | **It's on the wrong display** | Settings → General → *Show the island on*. |
+| **Music shows only as a thin line under the notch** | There's no free menu bar space next to the notch: menus or menu bar icons reach it. Hover the notch to open it as usual. Fewer menu bar icons (or allowing Accessibility, so Notchy can use the space left of the notch) gives the wings room. To let the wings cover menu bar items instead, turn off Settings → General → *Keep clear of menus and menu bar icons*. |
 | **No menu bar icon** | You hid it. Open Notchy.app again from Applications or Spotlight to get Settings. |
 | **Now Playing shows nothing** | Check Settings → Activities → *Source*. "System Now Playing" means the bridge works; the player must report to macOS Now Playing (most do; in browsers, media must be playing in a tab). "Music and Spotify (fallback)" means macOS blocked the bridge, so other players can't be shown. |
 | **Fallback mode has no artwork or controls** | Allow Notchy under *Privacy & Security → Automation* for Music/Spotify. |

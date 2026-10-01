@@ -121,6 +121,8 @@ final class Delegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     var nextSignal: DispatchSourceSignal?
     var toggleSignal: DispatchSourceSignal?
+    var crowdSignal: DispatchSourceSignal?
+    var crowd: NSStatusItem?
 
     func applicationDidFinishLaunching(_ n: Notification) {
         let screen = NSScreen.screens[0]
@@ -151,6 +153,26 @@ final class Delegate: NSObject, NSApplicationDelegate {
         }
         p.resume()
         toggleSignal = p
+        // SIGHUP: add (or remove) a wide menu bar icon, crowding the menu bar next to the notch.
+        signal(SIGHUP, SIG_IGN)
+        let h = DispatchSource.makeSignalSource(signal: SIGHUP, queue: .main)
+        h.setEventHandler { [unowned self] in
+            if let c = crowd {
+                NSStatusBar.system.removeStatusItem(c)
+                crowd = nil
+                log("CROWD removed")
+            } else {
+                // The width comes from the file named by FP_CROWD_FILE (the test works it out).
+                let text = ProcessInfo.processInfo.environment["FP_CROWD_FILE"].flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }
+                let width = text.flatMap { Double($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 160
+                let c = NSStatusBar.system.statusItem(withLength: width)
+                c.button?.title = "QA crowding the menu bar"
+                crowd = c
+                log("CROWD added width=\(Int(width))")
+            }
+        }
+        h.resume()
+        crowdSignal = h
         log("READY")
     }
 }

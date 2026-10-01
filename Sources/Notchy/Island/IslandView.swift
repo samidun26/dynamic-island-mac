@@ -27,7 +27,8 @@ struct IslandCanvas: View {
                 .shadow(color: .black.opacity(open ? 0.55 : 0), radius: open ? 20 : 0, y: open ? 10 : 0)
             content
                 .frame(width: max(1, geometry.size.width), height: max(1, geometry.size.height), alignment: .top)
-                .clipShape(IslandShape(geometry))
+                .clipShape(IslandShape(geometry, centred: true))
+                .offset(x: geometry.offsetX)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
         .environment(\.colorScheme, .dark)
@@ -73,7 +74,9 @@ struct IslandStateContent: View {
 
 // MARK: - Compact
 
-/// Live activity in the two wings beside the notch; the middle stays clear for the camera.
+/// Live activity beside the notch; the middle stays clear for the camera. Normally split across
+/// the two wings; on one side only, or as a lip under the notch, when menu bar items leave no
+/// room (see `IslandModel.fit(for:secondaries:)`).
 struct CompactContent: View {
     let model: IslandModel
     let kind: ActivityKind
@@ -81,22 +84,92 @@ struct CompactContent: View {
 
     var body: some View {
         let notch = model.metrics.notchSize
-        let wing = model.wing(for: kind) + CGFloat(secondaries.count) * IslandModel.minimalSlot
+        let fit = model.compactFit
         let inset = max(10, (notch.height * 0.3).rounded())
-        HStack(spacing: 0) {
-            CompactLeading(model: model, kind: kind)
-                .padding(.leading, inset)
-                .frame(width: wing, alignment: .leading)
-            Color.clear.frame(width: notch.width)
-            HStack(spacing: 8) {
-                ForEach(secondaries, id: \.self) { MinimalGlyph(model: model, kind: $0) }
-                CompactTrailing(model: model, kind: kind)
+        let folded = fit.arrangement == .folded
+        Group {
+            switch fit.arrangement {
+            case .split:
+                HStack(spacing: 0) {
+                    CompactLeading(model: model, kind: kind)
+                        .padding(.leading, inset)
+                        .frame(width: fit.left, alignment: .leading)
+                    Color.clear.frame(width: notch.width)
+                    trailing
+                        .padding(.trailing, inset)
+                        .frame(width: fit.right, alignment: .trailing)
+                }
+            case .right:
+                HStack(spacing: 0) {
+                    Color.clear.frame(width: notch.width)
+                    together.padding(.horizontal, inset).frame(width: fit.right)
+                }
+            case .left:
+                HStack(spacing: 0) {
+                    together.padding(.horizontal, inset).frame(width: fit.left)
+                    Color.clear.frame(width: notch.width)
+                }
+            case .folded:
+                VStack(spacing: 0) {
+                    Color.clear.frame(height: notch.height)
+                    CompactLip(model: model, kind: kind).frame(height: NotchMetrics.lipHeight)
+                }
             }
-            .padding(.trailing, inset)
-            .frame(width: wing, alignment: .trailing)
         }
-        .frame(width: notch.width + 2 * wing, height: notch.height)
+        .frame(width: notch.width + fit.left + fit.right, height: notch.height + (folded ? NotchMetrics.lipHeight : 0))
         .foregroundStyle(.white)
+    }
+
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            ForEach(secondaries, id: \.self) { MinimalGlyph(model: model, kind: $0) }
+            CompactTrailing(model: model, kind: kind)
+        }
+    }
+
+    /// Leading and trailing content side by side, for a one-sided island.
+    private var together: some View {
+        HStack(spacing: 8) {
+            CompactLeading(model: model, kind: kind)
+            Spacer(minLength: 0)
+            trailing
+        }
+    }
+}
+
+/// A live activity with no room beside the notch: a thin tinted line in a lip under the notch,
+/// showing its progress (track position, timer, level). Hovering opens the island as usual.
+struct CompactLip: View {
+    let model: IslandModel
+    let kind: ActivityKind
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let v = value(at: ctx.date)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(v.color.opacity(0.3))
+                    Capsule().fill(v.color).frame(width: max(2, geo.size.width * min(1, max(0, v.fraction))))
+                }
+                .frame(height: 2)
+                .frame(maxHeight: .infinity)
+            }
+            .padding(.horizontal, 14)
+        }
+        .accessibilityElement()
+        .accessibilityLabel(Text(kind.rawValue))
+    }
+
+    private func value(at date: Date) -> (fraction: Double, color: Color) {
+        switch kind {
+        case .nowPlaying:
+            // Streams and radio have no duration: a full line.
+            (model.nowPlaying.info.map { ($0.duration ?? 0) > 0 ? $0.progress(at: date) : 1 } ?? 1, model.nowPlaying.tint)
+        case .timer: (model.timer.progress(at: date), .orange)
+        case .calendar: (1, model.calendar.phase.event?.color ?? .red)
+        case .hud: (model.hud.current.map { $0.muted ? 0 : $0.level } ?? 0, .white)
+        case .battery: (Double(model.battery.level ?? 100) / 100, .green)
+        }
     }
 }
 

@@ -38,7 +38,7 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            GeneralTab(settings: settings)
+            GeneralTab(settings: settings, model: model)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ActivitiesTab(settings: settings, model: model)
                 .tabItem { Label("Activities", systemImage: "square.stack.3d.up") }
@@ -53,6 +53,7 @@ struct SettingsView: View {
 
 private struct GeneralTab: View {
     @Bindable var settings: AppSettings
+    let model: IslandModel
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
 
@@ -73,13 +74,25 @@ private struct GeneralTab: View {
                 Toggle("Haptic feedback when opening", isOn: $settings.haptics)
                 Toggle("Hide from screen sharing and recordings", isOn: $settings.hideFromScreenSharing)
             }
-            Section("Display") {
+            Section {
                 Picker("Show the island on", selection: $settings.screenChoice) {
                     ForEach(AppSettings.ScreenChoice.allCases) { Text($0.title).tag($0) }
                 }
                 Picker("On displays without a notch", selection: $settings.nonNotchMode) {
                     ForEach(AppSettings.NonNotchMode.allCases) { Text($0.title).tag($0) }
                 }
+                Toggle("Keep clear of menus and menu bar icons", isOn: $settings.keepClearOfMenuBar)
+                if settings.keepClearOfMenuBar, !model.menuBar.seesMenus {
+                    LabeledContent("App menus") {
+                        Button("Allow Accessibility…") { model.menuBar.requestAccess() }
+                    }
+                }
+            } header: {
+                Text("Display")
+            } footer: {
+                Text(settings.keepClearOfMenuBar
+                     ? "Live activities fit into the free space beside the notch. When one side is taken they move to the other, and with no room at all they show as a thin line under the notch. Menu bar icons are always avoided; seeing where the app menus end needs Accessibility, and until then activities stay right of the notch."
+                     : "Live activities always use both sides of the notch and may cover menus and menu bar icons next to it.")
             }
             Section("App") {
                 Toggle("Launch at login", isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }))
