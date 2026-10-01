@@ -83,10 +83,11 @@ trap cleanup EXIT
 
 # ---------------------------------------------------------------- harness
 echo "== building the QA harness"
-swiftc -O -swift-version 5 "$HERE/Driver/main.swift" -o "$D" || { echo "driver build failed"; exit 2; }
+harness_failed() { echo "$1"; { echo; echo "Harness build failed: $1"; echo; echo '```'; grep -E "error:" "$OUT/harness-build.log" | head -20; echo '```'; } >> "$REPORT"; exit 2; }
+swiftc -O -swift-version 5 "$HERE/Driver/main.swift" -o "$D" 2> "$OUT/harness-build.log" || harness_failed "QA driver did not compile"
 FP_APP="$OUT/bin/FakePlayer.app"
 mkdir -p "$FP_APP/Contents/MacOS"
-swiftc -O -swift-version 5 "$HERE/FakePlayer/main.swift" -o "$FP_APP/Contents/MacOS/FakePlayer" || { echo "fake player build failed"; exit 2; }
+swiftc -O -swift-version 5 "$HERE/FakePlayer/main.swift" -o "$FP_APP/Contents/MacOS/FakePlayer" 2>> "$OUT/harness-build.log" || harness_failed "FakePlayer did not compile"
 cat > "$FP_APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -122,7 +122,7 @@ func find(_ bundleID: String, _ needle: String) -> AXUIElement? {
 func loadImage(_ path: String) -> (CGImage, Double) {
     guard let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
           let img = CGImageSourceCreateImageAtIndex(src, 0, nil) else { fail("cannot read \(path)") }
-    let pointsWide = NSScreen.screens.first?.frame.width ?? Double(img.width)
+    let pointsWide = Double(NSScreen.screens.first?.frame.width ?? CGFloat(img.width))
     return (img, Double(img.width) / pointsWide)
 }
 
