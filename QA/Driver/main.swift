@@ -10,10 +10,13 @@
 //   qa-driver key escape|return|cmd-w      press a key
 //   qa-driver windows OWNER                on-screen windows of a process: id, layer, x, y, w, h, sharing
 //   qa-driver ax-dump BUNDLE_ID            accessibility tree (role, label, value, frame)
-//   qa-driver ax-find BUNDLE_ID LABEL      centre "X Y" of the first element whose label/title/value contains LABEL
-//   qa-driver ax-frame BUNDLE_ID LABEL     its frame "X Y W H"
+//   qa-driver ax-find BUNDLE_ID LABEL [X Y W H]   centre "X Y" of the first element whose label/title/value
+//                                          contains LABEL (falls back to hit-testing the given region)
+//   qa-driver ax-frame BUNDLE_ID LABEL [X Y W H]  its frame "X Y W H"
+//   qa-driver ax-at X Y                    the element under a point (what VoiceOver would hit)
 //   qa-driver ax-press BUNDLE_ID LABEL     AXPress it
-//   qa-driver ax-texts BUNDLE_ID           every static text value
+//   qa-driver ax-texts BUNDLE_ID [X Y W H] every static text value
+//   qa-driver pixel PNG X Y                "dark" or "light" and the RGB at a point (points)
 //   qa-driver dark-run PNG Y               longest run of near-black pixels on row Y (points): "x width"
 //   qa-driver dark-box PNG                 bounding box of the near-black blob touching the top centre: "x y w h"
 import AppKit
@@ -46,12 +49,18 @@ func glide(to target: CGPoint, ms: Double, dragging: Bool = false) {
     }
 }
 
+func button(_ type: CGEventType, _ p: CGPoint) {
+    let e = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: p, mouseButton: .left)
+    e?.setIntegerValueField(.mouseEventClickState, value: 1)
+    post(e)
+}
+
 func click(_ p: CGPoint) {
     glide(to: p, ms: 120)
     usleep(60_000)
-    post(CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: p, mouseButton: .left))
+    button(.leftMouseDown, p)
     usleep(70_000)
-    post(CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: p, mouseButton: .left))
+    button(.leftMouseUp, p)
 }
 
 /// A trackpad-style scroll gesture: continuous deltas with began/changed/ended phases.
@@ -106,15 +115,60 @@ func walk(_ e: AXUIElement, depth: Int = 0, _ visit: (AXUIElement, Int) -> Bool)
     for c in (attr(e, kAXChildrenAttribute) as? [AXUIElement]) ?? [] { walk(c, depth: depth + 1, visit) }
 }
 
-func find(_ bundleID: String, _ needle: String) -> AXUIElement? {
-    var hit: AXUIElement?
-    for w in (attr(appElement(bundleID), kAXWindowsAttribute) as? [AXUIElement]) ?? [] {
-        walk(w) { e, _ in
-            if hit == nil, label(e).localizedCaseInsensitiveContains(needle) { hit = e }
-            return hit == nil
+/// Top-level elements: the app's windows and children (some panels only appear in one of them).
+func roots(_ bundleID: String) -> [AXUIElement] {
+    let app = appElement(bundleID)
+    return ((attr(app, kAXWindowsAttribute) as? [AXUIElement]) ?? []) + ((attr(app, kAXChildrenAttribute) as? [AXUIElement]) ?? [])
+}
+
+/// Elements found by hit-testing a grid over a region (works even when window enumeration does not).
+func scan(_ region: CGRect?, pid: pid_t) -> [AXUIElement] {
+    guard let r = region else { return [] }
+    let system = AXUIElementCreateSystemWide()
+    var out: [AXUIElement] = []
+    var y = r.minY + 3
+    while y < r.maxY {
+        var x = r.minX + 3
+        while x < r.maxX {
+            var el: AXUIElement?
+            if AXUIElementCopyElementAtPosition(system, Float(x), Float(y), &el) == .success, let el {
+                var owner: pid_t = 0
+                AXUIElementGetPid(el, &owner)
+                if owner == pid, !out.contains(where: { CFEqual($0, el) }) { out.append(el) }
+            }
+            x += 6
+        }
+        y += 6
+    }
+    return out
+}
+
+func region(at i: Int) -> CGRect? {
+    args.count >= i + 4 ? CGRect(x: num(i), y: num(i + 1), width: num(i + 2), height: num(i + 3)) : nil
+}
+
+func pid(_ bundleID: String) -> pid_t { NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.processIdentifier ?? 0 }
+
+func labelParts(_ e: AXUIElement) -> [String] {
+    [kAXDescriptionAttribute, kAXTitleAttribute, kAXValueAttribute, kAXHelpAttribute]
+        .compactMap { attr(e, $0) as? String }.filter { !$0.isEmpty }
+}
+
+/// Exact label matches win over substring matches ("Play" must not hit "Playback position").
+func find(_ bundleID: String, _ needle: String, _ r: CGRect?) -> AXUIElement? {
+    var candidates: [AXUIElement] = []
+    for w in roots(bundleID) { walk(w) { e, _ in candidates.append(e); return true } }
+    for e in scan(r, pid: pid(bundleID)) {
+        // The hit element may be a child of the labelled one (e.g. an image inside a button).
+        var cur: AXUIElement? = e
+        for _ in 0..<4 {
+            guard let c = cur else { break }
+            candidates.append(c)
+            cur = attr(c, kAXParentAttribute).map { $0 as! AXUIElement }
         }
     }
-    return hit
+    let exact = candidates.first { labelParts($0).contains { $0.caseInsensitiveCompare(needle) == .orderedSame } }
+    return exact ?? candidates.first { label($0).localizedCaseInsensitiveContains(needle) }
 }
 
 // MARK: Pixels
@@ -158,11 +212,11 @@ case "click":
 case "drag":
     let a = CGPoint(x: num(1), y: num(2)), b = CGPoint(x: num(3), y: num(4))
     glide(to: a, ms: 120)
-    post(CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: a, mouseButton: .left))
+    button(.leftMouseDown, a)
     usleep(80_000)
     glide(to: b, ms: num(5, 300), dragging: true)
     usleep(80_000)
-    post(CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: b, mouseButton: .left))
+    button(.leftMouseUp, b)
 case "swipe":
     if args.count >= 5 { glide(to: CGPoint(x: num(3), y: num(4)), ms: 150) }
     swipe(dx: num(1), dy: num(2))
@@ -179,8 +233,26 @@ case "windows":
         let b = w[kCGWindowBounds as String] as? [String: Double] ?? [:]
         print("id=\(w[kCGWindowNumber as String] ?? 0) layer=\(w[kCGWindowLayer as String] ?? 0) x=\(Int(b["X"] ?? 0)) y=\(Int(b["Y"] ?? 0)) w=\(Int(b["Width"] ?? 0)) h=\(Int(b["Height"] ?? 0)) sharing=\(w[kCGWindowSharingState as String] ?? -1) name=\(w[kCGWindowName as String] ?? "")")
     }
+case "ax-at":
+    var el: AXUIElement?
+    let err = AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(num(1)), Float(num(2)), &el)
+    if let el {
+        var owner: pid_t = 0
+        AXUIElementGetPid(el, &owner)
+        print("pid=\(owner) role=\(attr(el, kAXRoleAttribute) as? String ?? "?") label=[\(label(el))] frame=\(frame(el).map { "\($0)" } ?? "-")")
+    } else {
+        print("none (error \(err.rawValue))")
+    }
+case "pixel":
+    let (img, scale) = loadImage(arg(1))
+    let px = pixels(img), w = img.width
+    let x = min(w - 1, Int(num(2) * scale)), y = min(img.height - 1, Int(num(3) * scale))
+    let i = (y * w + x) * 4
+    print("\(isDark(px, w, x, y) ? "dark" : "light") \(px[i]) \(px[i + 1]) \(px[i + 2])")
 case "ax-dump":
-    for w in (attr(appElement(arg(1)), kAXWindowsAttribute) as? [AXUIElement]) ?? [] {
+    let app = appElement(arg(1))
+    print("windows=\((attr(app, kAXWindowsAttribute) as? [AXUIElement])?.count ?? -1) children=\((attr(app, kAXChildrenAttribute) as? [AXUIElement])?.count ?? -1)")
+    for w in roots(arg(1)) {
         walk(w) { e, d in
             let f = frame(e).map { "\(Int($0.minX)),\(Int($0.minY)) \(Int($0.width))x\(Int($0.height))" } ?? "-"
             print(String(repeating: "  ", count: d) + "\(attr(e, kAXRoleAttribute) as? String ?? "?") [\(label(e))] \(f)")
@@ -188,21 +260,24 @@ case "ax-dump":
         }
     }
 case "ax-find":
-    guard let e = find(arg(1), arg(2)), let f = frame(e) else { fail("not found: \(arg(2))") }
+    guard let e = find(arg(1), arg(2), region(at: 3)), let f = frame(e) else { fail("not found: \(arg(2))") }
     print("\(Int(f.midX)) \(Int(f.midY))")
 case "ax-frame":
-    guard let e = find(arg(1), arg(2)), let f = frame(e) else { fail("not found: \(arg(2))") }
+    guard let e = find(arg(1), arg(2), region(at: 3)), let f = frame(e) else { fail("not found: \(arg(2))") }
     print("\(Int(f.minX)) \(Int(f.minY)) \(Int(f.width)) \(Int(f.height))")
 case "ax-press":
-    guard let e = find(arg(1), arg(2)) else { fail("not found: \(arg(2))") }
+    guard let e = find(arg(1), arg(2), region(at: 3)) else { fail("not found: \(arg(2))") }
     print(AXUIElementPerformAction(e, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
 case "ax-texts":
-    for w in (attr(appElement(arg(1)), kAXWindowsAttribute) as? [AXUIElement]) ?? [] {
-        walk(w) { e, _ in
-            if (attr(e, kAXRoleAttribute) as? String) == kAXStaticTextRole, let v = attr(e, kAXValueAttribute) as? String, !v.isEmpty { print(v) }
-            return true
+    var seen = Set<String>()
+    func emit(_ e: AXUIElement) {
+        if (attr(e, kAXRoleAttribute) as? String) == kAXStaticTextRole {
+            let v = (attr(e, kAXValueAttribute) as? String) ?? (attr(e, kAXDescriptionAttribute) as? String) ?? ""
+            if !v.isEmpty, seen.insert(v).inserted { print(v) }
         }
     }
+    for w in roots(arg(1)) { walk(w) { e, _ in emit(e); return true } }
+    for e in scan(region(at: 2), pid: pid(arg(1))) { emit(e) }
 case "dark-run":
     let (img, scale) = loadImage(arg(1))
     let px = pixels(img), w = img.width

@@ -161,13 +161,17 @@ final class IslandController {
 
         // A click anywhere else dismisses a pinned island.
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] _ in
-            MainActor.assumeIsolated { self?.clickedOutside() }
+            MainActor.assumeIsolated {
+                QALog.log("MOUSEDOWN elsewhere at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))")
+                self?.clickedOutside()
+            }
         }) { monitors.append(g) }
 
         // Clicks and trackpad swipes on the island itself.
         if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel], handler: { [weak self] e in
             let consumed = MainActor.assumeIsolated { () -> Bool in
                 guard let self, e.window === self.panel else { return false }
+                if e.type == .leftMouseDown { QALog.log("MOUSEDOWN island at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))") }
                 if e.type == .scrollWheel { return self.handleScroll(e) }
                 self.clickedIsland()
                 return false

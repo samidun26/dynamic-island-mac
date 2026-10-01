@@ -48,8 +48,12 @@ wait_for() { # file pattern seconds
     return 1
 }
 last_state() { grep -E 'QA .* STATE ' "$LOG" | tail -1 | sed -E 's/.* STATE ([^ ]+) ([0-9]+x[0-9]+).*/\1 \2/'; }
+# State changes since the last bookmark ("idle" if there were none: idle is not logged at launch).
+state_since() { local l; l=$(after "$LOG" | grep -E ' STATE ' | tail -1 | sed -E 's/.* STATE ([^ ]+) ([0-9]+x[0-9]+).*/\1 \2/'); echo "${l:-idle}"; }
 shot() { lim 10 screencapture -x -R "0,0,$SW,${2:-220}" "$OUT/shots/$1.png" 2>/dev/null; }
-island_width() { "$D" dark-run "$OUT/shots/$1.png" "$((MB / 2))" | awk '{print $2}'; }
+# Width of the black island along its top edge (3 pt down: below any content, above the menu text).
+island_width() { "$D" dark-run "$OUT/shots/$1.png" 3 | awk '{print $2}'; }
+logged_size() { last_state | awk '{print $2}'; }
 near() { [ "$1" -ge $(($2 - $3)) ] && [ "$1" -le $(($2 + $3)) ]; }
 
 launch_notchy() {
@@ -111,6 +115,7 @@ MB=$(echo "$INFO" | sed -E 's/.*visibleTop=([0-9]+).*/\1/')
 [ "$MB" -gt 0 ] 2>/dev/null || MB=24
 CX=$((SW / 2))
 AX=$(echo "$INFO" | grep -q 'axTrusted=true' && echo yes || echo no)
+AXR="$((CX - 260)) 0 520 180"   # where the expanded island is, for accessibility hit-testing
 
 # Can we synthesise input here?
 "$D" jump 300 400 >/dev/null; "$D" move 340 420 150 >/dev/null
@@ -135,33 +140,6 @@ else
 fi
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
-# Downloaded (quarantined) copy: blocked until the documented xattr step.
-DL="$OUT/download"; rm -rf "$DL"; mkdir -p "$DL"
-ditto -c -k --keepParent "$APP" "$DL/Notchy.zip" && ditto -x -k "$DL/Notchy.zip" "$DL"
-xattr -w com.apple.quarantine "0081;$(printf %x "$(date +%s)");Safari;" "$DL/Notchy.app"
-if spctl --status 2>/dev/null | grep -q disabled; then
-    skip QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "Gatekeeper is disabled on this machine"
-else
-    # LaunchServices waits for the user to answer the Gatekeeper dialog: do not wait for it.
-    ( lim 6 open "$DL/Notchy.app" >/dev/null 2>&1 & ); sleep 5
-    if pgrep -f "$DL/Notchy.app/Contents/MacOS/Notchy" >/dev/null; then
-        fail QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "quarantined copy launched without a prompt"
-        pkill -f "$DL/Notchy.app/Contents/MacOS/Notchy"
-    else
-        shot qa02-gatekeeper 700
-        killall CoreServicesUIAgent 2>/dev/null
-        xattr -dr com.apple.quarantine "$DL/Notchy.app"
-        ( lim 8 open "$DL/Notchy.app" >/dev/null 2>&1 & ); sleep 4
-        if pgrep -f "$DL/Notchy.app/Contents/MacOS/Notchy" >/dev/null; then
-            pass QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "blocked while quarantined ([shot](shots/qa02-gatekeeper.png)); opens after xattr -dr"
-        else
-            fail QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "still not running after xattr -dr"
-        fi
-        pkill -f "$DL/Notchy.app/Contents/MacOS/Notchy"; sleep 1
-    fi
-fi
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$DL/Notchy.app" 2>/dev/null
-rm -rf "$DL"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
 
 # ---------------------------------------------------------------- privacy default
@@ -213,12 +191,12 @@ else
     fail QA-04 "Menu bar icon present (FR-S1)" "no status item window"
 fi
 
-sleep 1; shot qa05-idle
+mark "$LOG"; sleep 1; shot qa05-idle
 W=$(island_width qa05-idle)
-if [ "$(last_state | cut -d' ' -f1)" = idle ] && [ "${W:-0}" -lt 40 ]; then
+if [ "$(state_since | cut -d' ' -f1)" = idle ] && [ "${W:-0}" -lt 40 ]; then
     pass QA-05 "Idle island is hidden on a display without a notch (FR-W5)" "state idle, nothing drawn over the menu bar ([shot](shots/qa05-idle.png))"
 else
-    fail QA-05 "Idle island is hidden on a display without a notch (FR-W5)" "state $(last_state), dark run ${W} pt"
+    fail QA-05 "Idle island is hidden on a display without a notch (FR-W5)" "state $(state_since), dark run ${W} pt"
 fi
 
 sleep 4
@@ -253,7 +231,7 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     W=$(island_width qa09-compact)
     NOTCH=$(grep LAUNCH "$LOG" | tail -1 | sed -E 's/.*notchSize=([0-9]+)x([0-9]+).*/\1 \2/')
     NW=${NOTCH%% *}; NH=${NOTCH##* }
-    WANT=$((NW + 2 * (NH + 12)))
+    WANT=$((NW + 2 * (NH + 12)))   # notch + two wings of (notch height + 12)
     if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "$WANT" 6; then
         pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide, expected ${WANT} ([shot](shots/qa09-compact.png))"
     else
@@ -276,25 +254,34 @@ else
     "$D" move "$CX" $((MB / 2)) 450 >/dev/null
     if wait_for "$LOG" "HOVER open" 2 && wait_for "$LOG" "STATE expanded" 1; then
         sleep 0.8; shot qa11-expanded 240
-        BOX=$("$D" dark-box "$OUT/shots/qa11-expanded.png")
-        pass QA-11 "Resting the pointer opens it (FR-I1)" "$(last_state); island box $BOX ([shot](shots/qa11-expanded.png))"
+        SIZE=$(logged_size); EW=${SIZE%x*}; EH=${SIZE#*x}
+        W=$(island_width qa11-expanded)
+        BOTTOM_IN=$("$D" pixel "$OUT/shots/qa11-expanded.png" "$CX" $((EH - 4)) | cut -d' ' -f1)
+        BOTTOM_OUT=$("$D" pixel "$OUT/shots/qa11-expanded.png" "$CX" $((EH + 14)) | cut -d' ' -f1)
+        if near "${W:-0}" "$EW" 8 && [ "$BOTTOM_IN" = dark ] && [ "$BOTTOM_OUT" = light ]; then
+            pass QA-11 "Resting the pointer opens it (FR-I1)" "$(last_state); on screen ${W} pt wide, bottom edge at ${EH} pt ([shot](shots/qa11-expanded.png))"
+        else
+            fail QA-11 "Resting the pointer opens it (FR-I1)" "logged ${SIZE}, on screen ${W} pt wide, bottom ${BOTTOM_IN}/${BOTTOM_OUT}"
+        fi
+        lim 30 "$D" ax-dump $BID > "$OUT/ax-dump.txt" 2>&1
+        for y in 60 100 125; do echo "at $CX,$y: $(lim 8 "$D" ax-at "$CX" "$y")"; done >> "$OUT/ax-dump.txt"
     else
         fail QA-11 "Resting the pointer opens it (FR-I1)" "state $(last_state)"
     fi
 
     if [ "$AX" = yes ]; then
-        TEXTS=$(lim 15 "$D" ax-texts $BID | tr '\n' '|')
+        TEXTS=$(lim 20 "$D" ax-texts $BID $AXR | tr '\n' '|')
         if echo "$TEXTS" | grep -q "QA Track One" && echo "$TEXTS" | grep -q "The Testers"; then
             pass QA-12 "Expanded shows title and artist (FR-N4)" "AX texts: ${TEXTS:0:120}"
         else
             fail QA-12 "Expanded shows title and artist (FR-N4)" "AX texts: ${TEXTS:0:160}"
         fi
         # Play/pause through a real click on the button.
-        P=$(lim 15 "$D" ax-find $BID "Pause" 2>/dev/null)
+        P=$(lim 20 "$D" ax-find $BID "Pause" $AXR 2>/dev/null)
         if [ -n "$P" ]; then
             mark "$FPLOG"; "$D" click $P
             if wait_for "$FPLOG" "CMD (toggle|pause)" 4; then
-                mark "$FPLOG"; P2=$(lim 15 "$D" ax-find $BID "Play" 2>/dev/null); [ -n "$P2" ] && "$D" click $P2
+                mark "$FPLOG"; P2=$(lim 20 "$D" ax-find $BID "Play" $AXR 2>/dev/null); [ -n "$P2" ] && "$D" click $P2
                 if wait_for "$FPLOG" "CMD (toggle|play)" 4; then
                     pass QA-13 "Play/pause button controls the player (FR-N4)" "player received pause then play"
                 else
@@ -307,7 +294,7 @@ else
             fail QA-13 "Play/pause button controls the player (FR-N4)" "no Pause button in the accessibility tree"
         fi
         # Next track.
-        N=$(lim 15 "$D" ax-find $BID "Next track" 2>/dev/null)
+        N=$(lim 20 "$D" ax-find $BID "Next track" $AXR 2>/dev/null)
         mark "$LOG"; mark "$FPLOG"
         if [ -n "$N" ] && "$D" click $N && wait_for "$FPLOG" "CMD next" 4; then
             if wait_for "$LOG" "NOWPLAYING title=QA Track Two" 5; then
@@ -319,7 +306,7 @@ else
             fail QA-14 "Next button skips and the island follows (FR-N4)" "no next command"
         fi
         # Seek by dragging the scrubber to 75%.
-        F=$(lim 15 "$D" ax-frame $BID "Playback position" 2>/dev/null)
+        F=$(lim 20 "$D" ax-frame $BID "Playback position" $AXR 2>/dev/null)
         if [ -n "$F" ]; then
             read -r FX FY FW FH <<< "$F"
             mark "$FPLOG"
@@ -384,7 +371,7 @@ else
     if [ $PINNED = yes ] && [[ $STAY == expanded* ]] && wait_for "$LOG" "DISMISS" 2; then
         pass QA-19 "Click pins it open; a click elsewhere closes it (FR-I4)" "pinned, stayed open after leaving, dismissed by outside click"
     else
-        fail QA-19 "Click pins it open; a click elsewhere closes it (FR-I4)" "pinned=$PINNED, after leaving=$STAY"
+        fail QA-19 "Click pins it open; a click elsewhere closes it (FR-I4)" "pinned=$PINNED, after leaving=$STAY; clicks seen: $(grep MOUSEDOWN "$LOG" | tail -3 | sed -E 's/.*MOUSEDOWN //' | tr '\n' ';')"
     fi
 
     # Two-finger swipes on the island.
@@ -435,14 +422,14 @@ if [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
     wait_for "$LOG" "STATE expanded:timer" 2
     sleep 0.6; shot qa23-timer-page 240
     OK=yes; DETAIL=""
-    B=$(lim 15 "$D" ax-find $BID "+1 min" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="no +1 min"; }
+    B=$(lim 20 "$D" ax-find $BID "+1 min" $AXR 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="no +1 min"; }
     sleep 0.5
-    B=$(lim 15 "$D" ax-find $BID "Pause timer" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no pause"; }
+    B=$(lim 20 "$D" ax-find $BID "Pause timer" $AXR 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no pause"; }
     sleep 0.6
-    PAUSED=$(lim 15 "$D" ax-texts $BID | grep -c Paused)
-    T=$(lim 15 "$D" ax-texts $BID | grep -E '^[0-9]+:[0-9]{2}$' | head -1)
+    PAUSED=$(lim 20 "$D" ax-texts $BID $AXR | grep -c Paused)
+    T=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^[0-9]+:[0-9]{2}$' | head -1)
     shot qa23-timer-paused 240
-    B=$(lim 15 "$D" ax-find $BID "Cancel timer" 2>/dev/null); mark "$LOG"; [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no cancel"; }
+    B=$(lim 20 "$D" ax-find $BID "Cancel timer" $AXR 2>/dev/null); mark "$LOG"; [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no cancel"; }
     if [ $OK = yes ] && [ "$PAUSED" -ge 1 ] && wait_for "$LOG" "STATE expanded:nowPlaying" 2; then
         pass QA-23 "Timer page: +1 min, pause, cancel (FR-T2)" "paused at ${T:-?} after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png))"
     else
@@ -525,6 +512,37 @@ else
     fail QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "panel still on screen"
 fi
 quit_notchy
+
+# ---------------------------------------------------------------- downloaded copy (Gatekeeper)
+# Last, because the system dialog it triggers stays on screen.
+echo "== downloaded copy"
+LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+DL="$OUT/download"; rm -rf "$DL"; mkdir -p "$DL/a" "$DL/b"
+ditto -c -k --keepParent "$APP" "$DL/Notchy.zip"
+ditto -x -k "$DL/Notchy.zip" "$DL/a"; ditto -x -k "$DL/Notchy.zip" "$DL/b"
+QUAR="0081;$(printf %x "$(date +%s)");Safari;"
+xattr -w com.apple.quarantine "$QUAR" "$DL/a/Notchy.app"
+xattr -w com.apple.quarantine "$QUAR" "$DL/b/Notchy.app"
+if spctl --status 2>/dev/null | grep -q disabled; then
+    skip QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "Gatekeeper is disabled on this machine"
+else
+    # a) opened as downloaded: must be blocked (LaunchServices waits on the dialog: do not wait for it)
+    ( lim 6 open "$DL/a/Notchy.app" >/dev/null 2>&1 & ); sleep 6
+    BLOCKED=yes; pgrep -f "$DL/a/Notchy.app/Contents/MacOS/Notchy" >/dev/null && BLOCKED=no
+    shot qa02-gatekeeper 700
+    # b) the user guide's step first, then open: must run
+    xattr -dr com.apple.quarantine "$DL/b/Notchy.app"
+    ( lim 10 open "$DL/b/Notchy.app" >/dev/null 2>&1 & )
+    RUNS=no
+    for _ in $(seq 1 20); do pgrep -f "$DL/b/Notchy.app/Contents/MacOS/Notchy" >/dev/null && { RUNS=yes; break; }; sleep 0.5; done
+    if [ $BLOCKED = yes ] && [ $RUNS = yes ]; then
+        pass QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "blocked as downloaded ([shot](shots/qa02-gatekeeper.png)); after xattr -dr it opens"
+    else
+        fail QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "blocked=$BLOCKED, opens after xattr=$RUNS; $(spctl -a -t exec -vv "$DL/b/Notchy.app" 2>&1 | tr '\n' ' ' | cut -c1-160)"
+    fi
+    pkill -f "$DL/a/Notchy.app/Contents/MacOS/Notchy"; pkill -f "$DL/b/Notchy.app/Contents/MacOS/Notchy"
+fi
+$LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/null
 
 # ---------------------------------------------------------------- summary
 {
