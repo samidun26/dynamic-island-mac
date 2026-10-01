@@ -30,6 +30,9 @@ pass() { PASS=$((PASS + 1)); row "$1" "$2" "✅ pass" "$3"; echo "✅ PASS $1 $2
 fail() { FAIL=$((FAIL + 1)); row "$1" "$2" "❌ fail" "$3"; echo "❌ FAIL $1 $2 — $3"; }
 skip() { SKIP=$((SKIP + 1)); row "$1" "$2" "⏭ skip" "$3"; echo "⏭ SKIP $1 $2 — $3"; }
 note() { echo "   · $*"; }
+# Run with a hard time limit (perl's alarm: portable, no coreutils needed). Anything that can wait
+# on UI (open, Accessibility calls into a busy app, screencapture) goes through this.
+lim() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
 
 # Log helpers: bookmark a log, then wait for a pattern after the bookmark (one per log file;
 # macOS ships bash 3.2, so no associative arrays).
@@ -45,7 +48,7 @@ wait_for() { # file pattern seconds
     return 1
 }
 last_state() { grep -E 'QA .* STATE ' "$LOG" | tail -1 | sed -E 's/.* STATE ([^ ]+) ([0-9]+x[0-9]+).*/\1 \2/'; }
-shot() { screencapture -x -R "0,0,$SW,${2:-220}" "$OUT/shots/$1.png" 2>/dev/null; }
+shot() { lim 10 screencapture -x -R "0,0,$SW,${2:-220}" "$OUT/shots/$1.png" 2>/dev/null; }
 island_width() { "$D" dark-run "$OUT/shots/$1.png" "$((MB / 2))" | awk '{print $2}'; }
 near() { [ "$1" -ge $(($2 - $3)) ] && [ "$1" -le $(($2 + $3)) ]; }
 
@@ -139,7 +142,8 @@ xattr -w com.apple.quarantine "0081;$(printf %x "$(date +%s)");Safari;" "$DL/Not
 if spctl --status 2>/dev/null | grep -q disabled; then
     skip QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "Gatekeeper is disabled on this machine"
 else
-    open "$DL/Notchy.app" 2>/dev/null; sleep 4
+    # LaunchServices waits for the user to answer the Gatekeeper dialog: do not wait for it.
+    ( lim 6 open "$DL/Notchy.app" >/dev/null 2>&1 & ); sleep 5
     if pgrep -f "$DL/Notchy.app/Contents/MacOS/Notchy" >/dev/null; then
         fail QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "quarantined copy launched without a prompt"
         pkill -f "$DL/Notchy.app/Contents/MacOS/Notchy"
@@ -147,7 +151,7 @@ else
         shot qa02-gatekeeper 700
         killall CoreServicesUIAgent 2>/dev/null
         xattr -dr com.apple.quarantine "$DL/Notchy.app"
-        open "$DL/Notchy.app"; sleep 3
+        ( lim 8 open "$DL/Notchy.app" >/dev/null 2>&1 & ); sleep 4
         if pgrep -f "$DL/Notchy.app/Contents/MacOS/Notchy" >/dev/null; then
             pass QA-02 "Downloaded build is blocked until un-quarantined (user guide §1)" "blocked while quarantined ([shot](shots/qa02-gatekeeper.png)); opens after xattr -dr"
         else
@@ -166,7 +170,7 @@ defaults delete "$BID" >/dev/null 2>&1
 defaults write "$BID" calendarEnabled -bool false   # its permission prompt would sit on screen with nobody to answer
 touch "$LOG" "$FPLOG"
 launch_notchy || note "no LAUNCH line in the trace"
-mark "$LOG"; open "notchy://timer?seconds=30"
+mark "$LOG"; lim 8 open "notchy://timer?seconds=30"
 if wait_for "$LOG" "STATE compact:timer" 8; then
     sleep 0.8; shot qa25-hidden
     W=$(island_width qa25-hidden)
@@ -279,18 +283,18 @@ else
     fi
 
     if [ "$AX" = yes ]; then
-        TEXTS=$("$D" ax-texts $BID | tr '\n' '|')
+        TEXTS=$(lim 15 "$D" ax-texts $BID | tr '\n' '|')
         if echo "$TEXTS" | grep -q "QA Track One" && echo "$TEXTS" | grep -q "The Testers"; then
             pass QA-12 "Expanded shows title and artist (FR-N4)" "AX texts: ${TEXTS:0:120}"
         else
             fail QA-12 "Expanded shows title and artist (FR-N4)" "AX texts: ${TEXTS:0:160}"
         fi
         # Play/pause through a real click on the button.
-        P=$("$D" ax-find $BID "Pause" 2>/dev/null)
+        P=$(lim 15 "$D" ax-find $BID "Pause" 2>/dev/null)
         if [ -n "$P" ]; then
             mark "$FPLOG"; "$D" click $P
             if wait_for "$FPLOG" "CMD (toggle|pause)" 4; then
-                mark "$FPLOG"; P2=$("$D" ax-find $BID "Play" 2>/dev/null); [ -n "$P2" ] && "$D" click $P2
+                mark "$FPLOG"; P2=$(lim 15 "$D" ax-find $BID "Play" 2>/dev/null); [ -n "$P2" ] && "$D" click $P2
                 if wait_for "$FPLOG" "CMD (toggle|play)" 4; then
                     pass QA-13 "Play/pause button controls the player (FR-N4)" "player received pause then play"
                 else
@@ -303,7 +307,7 @@ else
             fail QA-13 "Play/pause button controls the player (FR-N4)" "no Pause button in the accessibility tree"
         fi
         # Next track.
-        N=$("$D" ax-find $BID "Next track" 2>/dev/null)
+        N=$(lim 15 "$D" ax-find $BID "Next track" 2>/dev/null)
         mark "$LOG"; mark "$FPLOG"
         if [ -n "$N" ] && "$D" click $N && wait_for "$FPLOG" "CMD next" 4; then
             if wait_for "$LOG" "NOWPLAYING title=QA Track Two" 5; then
@@ -315,7 +319,7 @@ else
             fail QA-14 "Next button skips and the island follows (FR-N4)" "no next command"
         fi
         # Seek by dragging the scrubber to 75%.
-        F=$("$D" ax-frame $BID "Playback position" 2>/dev/null)
+        F=$(lim 15 "$D" ax-frame $BID "Playback position" 2>/dev/null)
         if [ -n "$F" ]; then
             read -r FX FY FW FH <<< "$F"
             mark "$FPLOG"
@@ -404,7 +408,7 @@ fi
 # ---------------------------------------------------------------- timer
 echo "== timer"
 mark "$LOG"
-open "notchy://timer?seconds=8"
+lim 8 open "notchy://timer?seconds=8"
 if wait_for "$LOG" "URL notchy://timer" 4 && wait_for "$LOG" "STATE compact:timer" 4; then
     sleep 0.8; shot qa21-timer
     W=$(island_width qa21-timer)
@@ -425,20 +429,20 @@ else
 fi
 
 if [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
-    open "notchy://timer?minutes=5"; sleep 1
+    lim 8 open "notchy://timer?minutes=5"; sleep 1
     "$D" jump "$CX" 500 >/dev/null; sleep 0.3
     mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
     wait_for "$LOG" "STATE expanded:timer" 2
     sleep 0.6; shot qa23-timer-page 240
     OK=yes; DETAIL=""
-    B=$("$D" ax-find $BID "+1 min" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="no +1 min"; }
+    B=$(lim 15 "$D" ax-find $BID "+1 min" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="no +1 min"; }
     sleep 0.5
-    B=$("$D" ax-find $BID "Pause timer" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no pause"; }
+    B=$(lim 15 "$D" ax-find $BID "Pause timer" 2>/dev/null); [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no pause"; }
     sleep 0.6
-    PAUSED=$("$D" ax-texts $BID | grep -c Paused)
-    T=$("$D" ax-texts $BID | grep -E '^[0-9]+:[0-9]{2}$' | head -1)
+    PAUSED=$(lim 15 "$D" ax-texts $BID | grep -c Paused)
+    T=$(lim 15 "$D" ax-texts $BID | grep -E '^[0-9]+:[0-9]{2}$' | head -1)
     shot qa23-timer-paused 240
-    B=$("$D" ax-find $BID "Cancel timer" 2>/dev/null); mark "$LOG"; [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no cancel"; }
+    B=$(lim 15 "$D" ax-find $BID "Cancel timer" 2>/dev/null); mark "$LOG"; [ -n "$B" ] && "$D" click $B || { OK=no; DETAIL="$DETAIL no cancel"; }
     if [ $OK = yes ] && [ "$PAUSED" -ge 1 ] && wait_for "$LOG" "STATE expanded:nowPlaying" 2; then
         pass QA-23 "Timer page: +1 min, pause, cancel (FR-T2)" "paused at ${T:-?} after +1 min, cancel removed the page ([shot](shots/qa23-timer-paused.png))"
     else
@@ -452,7 +456,7 @@ fi
 # ---------------------------------------------------------------- settings & menu
 echo "== settings window and menu"
 mark "$LOG"
-open "notchy://settings"
+lim 8 open "notchy://settings"
 if wait_for "$LOG" "SETTINGS shown" 4; then
     sleep 1.5
     # A normal-level (layer 0) window of about 500 pt: titles need Screen Recording to read.

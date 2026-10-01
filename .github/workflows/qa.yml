@@ -44,7 +44,7 @@ jobs:
           git -C app log -1 --format='Testing %h %s'
 
       - name: Run QA
-        timeout-minutes: 20
+        timeout-minutes: 12
         run: QA/run-qa.sh "$PWD/app" "$PWD/qa-out"
 
       - name: Show results
