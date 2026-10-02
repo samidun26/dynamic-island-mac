@@ -1,0 +1,21 @@
+FP 322.835 AUDIO playing
+FP 322.867 PUBLISH title=QA Track One playing=true position=30
+FP 322.868 READY
+FP 348.101 CMD toggle
+FP 348.211 PUBLISH title=QA Track One playing=false position=55
+FP 349.860 CMD toggle
+FP 349.864 PUBLISH title=QA Track One playing=true position=55
+FP 351.722 CMD next
+FP 351.722 PUBLISH title=QA Track Two playing=true position=0
+FP 354.753 CMD seek position=140
+FP 354.753 PUBLISH title=QA Track Two playing=true position=140
+FP 359.207 BACKDROP_CLICK x=722 y=120
+FP 362.928 BACKDROP_CLICK x=512 y=520
+FP 369.428 BACKDROP_CLICK x=512 y=520
+FP 426.430 SIGNAL toggle
+FP 426.491 PUBLISH title=QA Track Two playing=false position=211
+FP 437.764 SIGNAL toggle
+FP 437.783 PUBLISH title=QA Track Two playing=true position=211
+FP 441.618 CROWD added width=136
+FP 442.717 CROWD placed x=600 w=152 visible=true
+FP 443.217 CROWD removed
