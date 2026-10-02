@@ -16,6 +16,8 @@
 //   qa-driver ax-at X Y                    the element under a point (what VoiceOver would hit)
 //   qa-driver ax-press BUNDLE_ID LABEL     AXPress it
 //   qa-driver ax-texts BUNDLE_ID [X Y W H] every static text value
+//   qa-driver ax-menu BUNDLE_ID TITLE [press]  an item of the app's own menus: its shortcut ("key=W
+//                                          modifiers=0" is ⌘W), and AXPress it with "press"
 //   qa-driver pasteboard TEXT [TYPE…]      put TEXT on the clipboard, with extra (empty) marker types
 //   qa-driver file-drag PATH X1 Y1 X2 Y2 [HOLD_MS]
 //                                          drag PATH from a small window at X1,Y1 and drop it at X2,Y2,
@@ -419,6 +421,25 @@ case "dark-box":
     }
     if maxX < 0 { print("0 0 0 0") } else {
         print("\(Int(Double(minX) / scale)) \(Int(Double(minY) / scale)) \(Int(Double(maxX - minX + 1) / scale)) \(Int(Double(maxY - minY + 1) / scale))")
+    }
+case "ax-menu":
+    guard let bar = attr(appElement(arg(1)), kAXMenuBarAttribute) else { fail("no menu bar") }
+    var found: AXUIElement?
+    func search(_ e: AXUIElement, _ depth: Int) {
+        guard found == nil, depth < 6 else { return }
+        if (attr(e, kAXRoleAttribute) as? String) == kAXMenuItemRole, (attr(e, kAXTitleAttribute) as? String) == arg(2) {
+            found = e
+            return
+        }
+        for c in (attr(e, kAXChildrenAttribute) as? [AXUIElement]) ?? [] { search(c, depth + 1) }
+    }
+    search(bar as! AXUIElement, 0)
+    guard let item = found else { fail("no menu item \(arg(2))") }
+    let key = attr(item, kAXMenuItemCmdCharAttribute) as? String ?? "-"
+    let mods = (attr(item, kAXMenuItemCmdModifiersAttribute) as? Int) ?? -1
+    print("key=\(key) modifiers=\(mods)")
+    if arg(3) == "press" {
+        print(AXUIElementPerformAction(item, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
     }
 case "pasteboard":
     let pb = NSPasteboard.general

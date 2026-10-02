@@ -542,7 +542,20 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
                     # The VM sometimes drops synthetic key presses before any app gets them (the
                     # trace shows Notchy never received one). Hand ⌘W straight to Notchy instead.
                     mark "$LOG"; "$D" key cmd-w "$NOTCHY_PID"; sleep 0.8
-                    settings_open && CLOSED=no || CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                    TO_PID=$(after "$LOG" | grep -c ' KEY w ')
+                    if ! settings_open; then
+                        CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                    elif [ "$TO_PID" = 0 ] && [ "$AX" = yes ]; then
+                        # Not one key press reached Notchy, so this VM session isn't delivering
+                        # keys (seen on earlier runs too). Check the app side without the keyboard:
+                        # ⌘W must be the shortcut of Window → Close, and that item must close the window.
+                        MENU=$(lim 10 "$D" ax-menu $BID Close press 2>&1 | tr '\n' ' '); sleep 0.8
+                        if ! settings_open && echo "$MENU" | grep -qiE 'key=w modifiers=0 pressed'; then
+                            CLOSED="yes, by Window → Close, whose shortcut is ⌘W (${MENU% }), pressed through Accessibility: none of the 3 key presses reached Notchy on this VM ($WENT; sent to its process: 0)"
+                        else
+                            WENT="$WENT; sent to its process: 0; Window → Close: ${MENU:-not found}"
+                        fi
+                    fi
                 else
                     CLOSED="after clicking the window (the first press went astray: $WENT)"
                 fi
