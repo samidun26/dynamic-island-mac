@@ -40,7 +40,7 @@ sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" Resources/Info.
 # The icon is drawn by the app itself (SwiftUI), then packed with iconutil.
 rm -rf "$OUT/AppIcon.iconset"
 # (perl's alarm is a portable timeout: never let the build hang on it)
-if perl -e 'alarm shift; exec @ARGV' 60 "$BIN_DIR/Notchy" --render-icon "$OUT/AppIcon.iconset" && iconutil -c icns "$OUT/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"; then
+if perl -e 'alarm shift; exec @ARGV' 60 "$BIN_DIR/Notchy" --render-icon "$OUT/AppIcon.iconset" Resources/AppIconArt.jpg && iconutil -c icns "$OUT/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"; then
   echo "    icon ok"
 else
   echo "    (icon skipped)"
@@ -79,6 +79,7 @@ cp "$MRA/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/mediaremote-adapte
 # Retro style fonts (SIL Open Font License; the licences ship next to them).
 mkdir -p "$APP/Contents/Resources/Fonts"
 cp Resources/Fonts/*.ttf Resources/Fonts/*-OFL.txt "$APP/Contents/Resources/Fonts/"
+cp Resources/AppIconArt.jpg "$APP/Contents/Resources/"
 
 echo "==> codesign ($SIGN_IDENTITY)"
 # Hardened runtime in both cases: without it, another process could start the app with

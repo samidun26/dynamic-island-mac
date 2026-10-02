@@ -3,7 +3,7 @@ import AppKit
 // Entry point. Extra modes for verification without a mouse:
 //   --demo <scenario> [--print-window]   fake activities, live panel (see DemoScenario)
 //   --snapshot <dir>                      render every state to PNG and exit
-//   --render-icon <dir>                   write AppIcon.iconset PNGs and exit
+//   --render-icon <dir> [art.jpg]         write AppIcon.iconset PNGs and exit
 MainActor.assumeIsolated {
     let args = CommandLine.arguments
     func value(after flag: String) -> String? {
@@ -18,7 +18,7 @@ MainActor.assumeIsolated {
         exit(0)
     }
     if let dir = value(after: "--render-icon") {
-        AppIcon.renderIconset(to: dir)
+        AppIcon.renderIconset(to: dir, artPath: value(after: dir))
         exit(0)
     }
 

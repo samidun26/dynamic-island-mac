@@ -49,7 +49,7 @@ struct CompactTrailing: View {
             }
         case .hud:
             if let c = model.hud.current {
-                LevelBar(level: c.muted ? 0 : c.level, dimmed: c.muted)
+                LevelBar(level: c.muted ? 0 : c.level, dimmed: c.muted, edgeHits: c.edgeHits)
                     .frame(width: 54)
             }
         case .battery:
@@ -133,42 +133,34 @@ struct RelativeTime: View {
     }
 }
 
+/// The volume or brightness level: glides to each new value, and stretches like a rubber band
+/// when a key pushes past the top or bottom.
 struct LevelBar: View {
     var level: Double
     var dimmed = false
+    var edgeHits = 0
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
-        GeometryReader { g in
-            ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.18))
-                Capsule().fill(.white.opacity(dimmed ? 0.35 : 1)).frame(width: max(5, g.size.width * level))
+        MeterBar(fraction: min(1, max(0, level)), tint: .white.opacity(dimmed ? 0.35 : 1), minFill: 5)
+            .frame(height: theme.isRetro ? 6 : 5)
+            .animation(.spring(response: 0.28, dampingFraction: 0.78), value: level)
+            .keyframeAnimator(initialValue: 1.0, trigger: edgeHits) { content, stretch in
+                content.scaleEffect(x: stretch, y: 1 / stretch, anchor: level >= 0.5 ? .leading : .trailing)
+            } keyframes: { _ in
+                SpringKeyframe(1.07, duration: 0.09, spring: .snappy)
+                SpringKeyframe(1.0, duration: 0.35, spring: .bouncy)
             }
-        }
-        .frame(height: 5)
-        .animation(.spring(response: 0.25, dampingFraction: 0.85), value: level)
     }
 }
 
+/// Kept for callers that only need the glyph for the current HUD.
 struct HUDIcon: View {
     let hud: HUDModel.Current?
+    var size: CGFloat = 14
 
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.white)
-            .contentTransition(.symbolEffect(.replace))
-            .frame(width: 20)
-    }
-
-    private var symbol: String {
-        guard let hud else { return "speaker.wave.2.fill" }
-        switch hud.kind {
-        case .brightness:
-            return hud.level < 0.5 ? "sun.min.fill" : "sun.max.fill"
-        case .volume:
-            if hud.muted || hud.level <= 0.001 { return "speaker.slash.fill" }
-            return hud.level < 0.34 ? "speaker.wave.1.fill" : hud.level < 0.67 ? "speaker.wave.2.fill" : "speaker.wave.3.fill"
-        }
+        HUDGlyph(hud: hud, size: size).frame(width: 22)
     }
 }
 
@@ -243,9 +235,7 @@ struct VolumeControl: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: hud.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
+            SpeakerGlyph(level: hud.volume, muted: hud.muted, size: 10, tint: .white.opacity(0.55))
                 .frame(width: 16)
             LevelSlider(value: hud.muted ? 0 : hud.volume, label: "Volume", tint: .white.opacity(0.9)) { hud.setVolume($0) }
         }
@@ -257,9 +247,7 @@ struct BrightnessControl: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: hud.brightnessLevel < 0.5 ? "sun.min.fill" : "sun.max.fill")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
+            SunGlyph(level: hud.brightnessLevel, size: 11, tint: .white.opacity(0.55))
                 .frame(width: 16)
             LevelSlider(value: hud.brightnessLevel, label: "Brightness", tint: .white.opacity(0.9)) { hud.setBrightness($0) }
         }

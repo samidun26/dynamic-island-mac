@@ -757,13 +757,27 @@ if grep -q "HUD tap=active" <(after "$LOG"); then
     wait_for "$LOG" "STATE compact:hud" 2 && { HUDST=yes; sleep 0.6; shot qa46-volume; W=$(island_width qa46-volume); }
     HUDW=$(after "$LOG" | grep 'STATE compact:hud' | head -1 | sed -E 's/.*compact:hud ([0-9]+)x.*/\1/')
     "$D" media-key volume-down >/dev/null; sleep 2
-    if [ "$K" = "HUD key=0 handled=true" ] && [ $HUDST = yes ] && near "${W:-0}" "${HUDW:-0}" 12; then
+    if [ "$K" = "HUD key=0 handled=true" ] && [ $HUDST = yes ] && near "${W:-0}" "${HUDW:-0}" 12 && [ "${HUDW:-0}" -gt 300 ]; then
         pass QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "key taken by ponyhub ($K); the island showed the volume level, ${W} pt wide on screen ([shot](shots/qa46-volume.png))"
     else
         fail QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "${K:-the key never reached ponyhub}; HUD state: $HUDST (${HUDW:-?} pt); on screen: ${W:-?} pt; $(last_state)"
     fi
 else
     skip QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "no Accessibility for ponyhub on this machine ($(after "$LOG" | grep -o 'HUD tap=[a-zA-Z]*' | tail -1))"
+fi
+# QA-47: a volume change made elsewhere (here AppleScript, as Control Center or AirPods would)
+# shows in the notch too.
+V0=$(osascript -e 'output volume of (get volume settings)' 2>/dev/null)
+if [ -n "$V0" ] && [ "$V0" != "missing value" ]; then
+    mark "$LOG"; osascript -e "set volume output volume $(( V0 > 50 ? V0 - 25 : V0 + 25 ))"
+    if wait_for "$LOG" "HUD volume changed elsewhere" 3 && wait_for "$LOG" "STATE compact:hud" 2; then
+        pass QA-47 "Volume changed elsewhere shows in the notch (FR-H1)" "$(after "$LOG" | grep -o 'HUD volume changed elsewhere.*' | head -1)"
+    else
+        fail QA-47 "Volume changed elsewhere shows in the notch (FR-H1)" "no HUD after the volume went from $V0; $(last_state)"
+    fi
+    osascript -e "set volume output volume $V0"; sleep 2
+else
+    skip QA-47 "Volume changed elsewhere shows in the notch (FR-H1)" "this machine's output has no volume"
 fi
 quit_notchy
 

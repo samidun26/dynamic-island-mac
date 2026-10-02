@@ -149,7 +149,7 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - The battery percentage is always in the expanded header.
 
 ### Volume and brightness in the notch (on by default)
-Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear.
+Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear. The icon follows the level: the speaker's sound waves grow one by one as the volume rises (a slash when muted), and the sun gains its rays one by one up to a full ring at maximum brightness. Each press gives the icon a small bounce, and pressing past the top or bottom makes the bar stretch like a rubber band. Volume changed elsewhere (Control Center, AirPods, another app) shows in the notch too.
 1. This needs **Accessibility** permission. On first launch (or the first launch after updating), Settings opens on **Activities** to ask for it: click **Allow…**, then switch ponyhub on in *Privacy & Security → Accessibility*. It works from that moment, no restart needed. The menu bar icon also offers **Allow Accessibility for Volume and Brightness…** while it's missing.
 2. Until it's allowed, the keys work normally and macOS shows its own pop-up.
 3. **⌥⇧ + volume** changes in quarter steps.
@@ -196,7 +196,7 @@ Open with the menu bar icon → **Settings…**, or `ponyhub://settings`, or by 
 | | Show the island on: built-in display (notch) / main display / display with the pointer | Built-in |
 | | On displays without a notch: only when something is happening / always (fake notch) / never | Only when active |
 | | Style: **Classic** or **Retro** (pixel type, stepped corners, block meters, pixel-art album covers); in Retro, the screen in full colour, green or amber, and scanlines on or off | Classic |
-| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room. Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
+| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room (volume, brightness and charging always show in full, for a moment). Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
 | | Launch at login | Off |
 | | Show menu bar icon | On |
 | Activities | Now Playing, and its track-change preview | On, on |

@@ -179,6 +179,25 @@ enum Snapshots {
             if title == "retro · green screen" { write(scene, "\(dir)/retro-green.png") }
         }
         write(Sheet(rows: retroRows), "\(dir)/sheet-retro.png")
+
+        // Volume and brightness through their range: the glyph shows the level (waves, rays).
+        var hudRows: [(String, AnyView)] = []
+        let hudCases: [(String, HUDModel.Kind, Double, Bool)] = [
+            ("volume 0%", .volume, 0, false), ("volume 20%", .volume, 0.2, false), ("volume 50%", .volume, 0.5, false),
+            ("volume 80%", .volume, 0.8, false), ("volume 100%", .volume, 1, false), ("volume muted", .volume, 0.6, true),
+            ("brightness 5%", .brightness, 0.05, false), ("brightness 30%", .brightness, 0.3, false),
+            ("brightness 60%", .brightness, 0.6, false), ("brightness 100%", .brightness, 1, false),
+        ]
+        for (title, kind, level, muted) in hudCases {
+            let m = model(notched, .idle)
+            m.hud.show(kind, level: level, muted: muted)
+            m.refresh()
+            let scene = AnyView(SnapshotScene(metrics: notched) { IslandCanvas(model: m, state: m.state, geometry: m.geometry) })
+            hudRows.append((title, scene))
+            if title == "volume 50%" { write(scene, "\(dir)/hud-volume.png") }
+            if title == "brightness 100%" { write(scene, "\(dir)/hud-brightness.png") }
+        }
+        write(Sheet(rows: hudRows), "\(dir)/sheet-hud.png")
         filmstrip(opening: true, to: "\(dir)/filmstrip-open.png")
         filmstrip(opening: false, to: "\(dir)/filmstrip-close.png")
         write(AppIcon.IconView().frame(width: 256, height: 256), "\(dir)/app-icon.png")
@@ -316,48 +335,60 @@ private struct FilmFrame: View {
 
 @MainActor
 enum AppIcon {
+    /// The icon artwork (Resources/AppIconArt.jpg, a 1200 px square on white), cropped to the cat.
+    /// From the app bundle, or from a file when the bare binary renders the iconset during the build.
+    static func art(path: String? = nil) -> NSImage? {
+        let url = path.map { URL(fileURLWithPath: $0) } ?? Bundle.main.url(forResource: "AppIconArt", withExtension: "jpg")
+        guard let url, let source = NSImage(contentsOf: url),
+              let cg = source.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        // The head with its ears and whiskers sits in this square of the 1200 px original.
+        let k = CGFloat(cg.width) / 1200
+        guard let cropped = cg.cropping(to: CGRect(x: 240 * k, y: 220 * k, width: 720 * k, height: 720 * k)) else { return nil }
+        return NSImage(cgImage: cropped, size: NSSize(width: cropped.width, height: cropped.height))
+    }
+
     struct IconView: View {
+        var art: NSImage? = AppIcon.art()
+
         var body: some View {
             GeometryReader { geo in
                 let s = geo.size.width
                 let w = s * 0.805 // macOS icon grid: 824 of 1024
-                let island = IslandGeometry(size: CGSize(width: w * 0.66, height: w * 0.25), bottomRadius: w * 0.1, earRadius: w * 0.035)
-                ZStack(alignment: .top) {
-                    LinearGradient(colors: [Color(red: 0.16, green: 0.2, blue: 0.5), Color(red: 0.58, green: 0.32, blue: 0.66),
-                                            Color(red: 0.99, green: 0.66, blue: 0.44)], startPoint: .top, endPoint: .bottom)
-                    IslandShape(island).fill(Color.black)
-                    HStack(spacing: w * 0.045) {
-                        RoundedRectangle(cornerRadius: w * 0.03, style: .continuous)
-                            .fill(LinearGradient(colors: [Color(red: 0.99, green: 0.4, blue: 0.47), Color(red: 0.42, green: 0.2, blue: 0.75)],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: w * 0.13, height: w * 0.13)
-                        Spacer()
-                        HStack(spacing: w * 0.016) {
-                            ForEach([0.55, 0.95, 0.7, 0.4], id: \.self) { h in
-                                Capsule().fill(Color(red: 0.4, green: 0.95, blue: 0.55)).frame(width: w * 0.022, height: w * 0.11 * h)
-                            }
-                        }
-                        .frame(height: w * 0.11)
+                let shape = RoundedRectangle(cornerRadius: w * 0.225, style: .continuous)
+                ZStack {
+                    // Warm paper white, a touch brighter where the face is.
+                    RadialGradient(colors: [Color(red: 1, green: 0.995, blue: 0.985), Color(red: 0.93, green: 0.905, blue: 0.87)],
+                                   center: UnitPoint(x: 0.5, y: 0.42), startRadius: 0, endRadius: w * 0.72)
+                    if let art {
+                        // Multiply drops the artwork's white background onto the paper.
+                        Image(nsImage: art)
+                            .resizable()
+                            .interpolation(.high)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: w * 0.94, height: w * 0.94)
+                            .offset(y: w * 0.03)
+                            .blendMode(.multiply)
                     }
-                    .padding(.horizontal, w * 0.25)
-                    .frame(width: w, height: island.size.height * 0.92)
                 }
+                .compositingGroup()
                 .frame(width: w, height: w)
-                .clipShape(RoundedRectangle(cornerRadius: w * 0.225, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: w * 0.225, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: max(0.5, s * 0.002)))
-                .shadow(color: .black.opacity(0.3), radius: s * 0.02, y: s * 0.012)
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(.black.opacity(0.08), lineWidth: max(0.5, s * 0.002)))
+                .shadow(color: .black.opacity(0.28), radius: s * 0.02, y: s * 0.012)
                 .frame(width: s, height: s)
             }
         }
     }
 
     /// Writes the PNGs `iconutil -c icns` expects.
-    static func renderIconset(to dir: String) {
+    static func renderIconset(to dir: String, artPath: String?) {
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let art = AppIcon.art(path: artPath)
+        if art == nil { print("icon art not found at \(artPath ?? "the app bundle")") }
         for base in [16, 32, 128, 256, 512] {
             for scale in [1, 2] {
                 let px = CGFloat(base * scale)
-                let r = ImageRenderer(content: IconView().frame(width: px, height: px))
+                let r = ImageRenderer(content: IconView(art: art).frame(width: px, height: px))
                 r.scale = 1
                 guard let cg = r.cgImage,
                       let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else { continue }

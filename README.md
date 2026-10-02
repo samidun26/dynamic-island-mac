@@ -12,7 +12,7 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 |---|---|---|
 | ![](docs/screenshots/notch-compact.png) | ![](docs/screenshots/notch-multi.png) | ![](docs/screenshots/notch-home.png) |
 
-All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [Retro style](docs/screenshots/sheet-retro.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
+All states: [volume and brightness](docs/screenshots/sheet-hud.png) · [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [Retro style](docs/screenshots/sheet-retro.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
 
 <sub>Screenshots are rendered by the app itself on CI (`ponyhub --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 

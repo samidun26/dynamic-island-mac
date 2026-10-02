@@ -20,6 +20,10 @@ final class HUDModel {
         var level: Double
         var muted: Bool
         var at: Date
+        /// Counts key presses while it shows (each one bounces the glyph).
+        var presses = 1
+        /// Counts presses that hit the top or bottom (the bar stretches like a rubber band).
+        var edgeHits = 0
     }
 
     private(set) var current: Current?
@@ -37,10 +41,22 @@ final class HUDModel {
     @ObservationIgnored private var hideTask: Task<Void, Never>?
     @ObservationIgnored private var axObserver: NSObjectProtocol?
     @ObservationIgnored private var wantsTap = false
+    /// Changes Notchy makes itself (keys, slider) already have their feedback.
+    @ObservationIgnored private var quietUntil = Date.distantPast
 
     func startVolumeMirror() {
         syncVolume()
-        audio.observe { [weak self] in self?.syncVolume() }
+        audio.observe { [weak self] in self?.volumeChangedElsewhere() }
+    }
+
+    /// The volume changed outside Notchy (Control Center, AirPods, another app, or the keys while
+    /// Notchy can't take them): show it in the notch too, like the keys.
+    private func volumeChangedElsewhere() {
+        let before = (volume, muted)
+        syncVolume()
+        guard Date() > quietUntil, abs(volume - before.0) > 0.004 || muted != before.1 else { return }
+        QALog.log("HUD volume changed elsewhere level=\(String(format: "%.2f", volume)) muted=\(muted)")
+        show(.volume, level: volume, muted: muted)
     }
 
     private func syncVolume() {
@@ -50,6 +66,7 @@ final class HUDModel {
 
     /// Volume set from the island's own slider: no HUD (the slider is the feedback).
     func setVolume(_ v: Double) {
+        quietUntil = Date().addingTimeInterval(0.5)
         audio.setVolume(v)
         if v > 0, audio.isMuted { audio.setMuted(false) }
         syncVolume()
@@ -145,16 +162,18 @@ final class HUDModel {
         case MediaKey.soundUp, MediaKey.soundDown:
             guard audio.canSetVolume, let v = audio.volume else { return false }
             if down {
+                quietUntil = Date().addingTimeInterval(0.5)
                 let nv = stepped(v, code == MediaKey.soundUp)
                 audio.setVolume(nv)
                 if audio.isMuted, code == MediaKey.soundUp { audio.setMuted(false) }
                 syncVolume()
-                show(.volume, level: nv, muted: audio.isMuted)
+                show(.volume, level: nv, muted: audio.isMuted, atEdge: abs(nv - v) < 0.001 && !audio.isMuted)
             }
             return true
         case MediaKey.mute:
             guard audio.canSetVolume else { return false }
             if down && !isRepeat {
+                quietUntil = Date().addingTimeInterval(0.5)
                 audio.setMuted(!audio.isMuted)
                 syncVolume()
                 show(.volume, level: volume, muted: muted)
@@ -166,7 +185,7 @@ final class HUDModel {
                 let nv = stepped(v, code == MediaKey.brightnessUp)
                 b.setLevel(nv)
                 brightnessLevel = nv
-                show(.brightness, level: nv, muted: false)
+                show(.brightness, level: nv, muted: false, atEdge: abs(nv - v) < 0.001)
             }
             return true
         default:
@@ -174,8 +193,10 @@ final class HUDModel {
         }
     }
 
-    func show(_ kind: Kind, level: Double, muted: Bool) {
-        current = Current(kind: kind, level: level, muted: muted, at: current?.kind == kind ? current!.at : Date())
+    func show(_ kind: Kind, level: Double, muted: Bool, atEdge: Bool = false) {
+        let same = current?.kind == kind ? current : nil
+        current = Current(kind: kind, level: level, muted: muted, at: same?.at ?? Date(),
+                          presses: (same?.presses ?? 0) + 1, edgeHits: (same?.edgeHits ?? 0) + (atEdge ? 1 : 0))
         hideTask?.cancel()
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1.6))

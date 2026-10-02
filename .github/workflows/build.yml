@@ -109,7 +109,7 @@ jobs:
           rm -f docs/screenshots/*.png
           cp snapshots/sheet-*.png snapshots/filmstrip-*.png snapshots/app-icon.png docs/screenshots/
           cp snapshots/notch-compact.png snapshots/notch-expanded.png snapshots/notch-multi.png snapshots/notch-home.png snapshots/notch-shelf.png snapshots/notch-clipboard.png snapshots/notch-pomodoroExpanded.png docs/screenshots/ || true
-          cp snapshots/retro-compact.png snapshots/retro-expanded.png snapshots/retro-green.png docs/screenshots/ || true
+          cp snapshots/retro-compact.png snapshots/retro-expanded.png snapshots/retro-green.png snapshots/hud-volume.png snapshots/hud-brightness.png docs/screenshots/ || true
           cp snapshots/live-expanded.png snapshots/live-screen-*.png docs/screenshots/ 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
