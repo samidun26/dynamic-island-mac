@@ -129,7 +129,7 @@ final class HUDModel {
         if trusted, t.start() {
             tap = t
             tapState = .active
-            QALog.log("HUD tap=active")
+            QALog.log("HUD tap=active at=\(t.location)")
             return
         }
         tapState = .needsPermission
@@ -222,17 +222,27 @@ final class MediaKeyTap {
     private let handler: Handler
     private var port: CFMachPort?
     private var source: CFRunLoopSource?
+    /// Where the tap sits: "hid" normally, "session" if the HID level was refused.
+    private(set) var location = ""
 
     init(handler: @escaping Handler) { self.handler = handler }
 
+    /// The tap sits at the HID level, the first stop for a key press. macOS 26 shows its volume
+    /// and brightness pop-up before a session-level tap sees the key, so only there can the key
+    /// be taken before macOS reacts to it. The session level is the fallback.
     func start() -> Bool {
         let systemDefined: CGEventMask = 1 << 14 // NX_SYSDEFINED
         let ref = Unmanaged.passUnretained(self).toOpaque()
-        guard let port = CGEvent.tapCreate(
-            tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
-            eventsOfInterest: systemDefined,
-            callback: mediaKeyTapCallback,
-            userInfo: ref) else { return false }
+        var made: (CFMachPort, String)?
+        for (tap, name) in [(CGEventTapLocation.cghidEventTap, "hid"), (.cgSessionEventTap, "session")] {
+            if let p = CGEvent.tapCreate(tap: tap, place: .headInsertEventTap, options: .defaultTap,
+                                         eventsOfInterest: systemDefined, callback: mediaKeyTapCallback, userInfo: ref) {
+                made = (p, name)
+                break
+            }
+        }
+        guard let (port, name) = made else { return false }
+        location = name
         let src = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)

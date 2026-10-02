@@ -149,7 +149,7 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - The battery percentage is always in the expanded header.
 
 ### Volume and brightness in the notch (on by default)
-Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear. The icon follows the level: the speaker's sound waves grow one by one as the volume rises (a slash when muted), and the sun gains its rays one by one up to a full ring at maximum brightness. Each press gives the icon a small bounce, and pressing past the top or bottom makes the bar stretch like a rubber band. Volume changed elsewhere (Control Center, AirPods, another app) shows in the notch too.
+Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear (including the small corner pop-up of macOS 26). The icon follows the level: the speaker's sound waves grow one by one as the volume rises (a slash when muted), and the sun gains its rays one by one up to a full ring at maximum brightness. Each press gives the icon a small bounce, and pressing past the top or bottom makes the bar stretch like a rubber band. Volume changed elsewhere (Control Center, AirPods, another app) shows in the notch too.
 1. This needs **Accessibility** permission. On first launch (or the first launch after updating), Settings opens on **Activities** to ask for it: click **Allow…**, then switch ponyhub on in *Privacy & Security → Accessibility*. It works from that moment, no restart needed. The menu bar icon also offers **Allow Accessibility for Volume and Brightness…** while it's missing.
 2. Until it's allowed, the keys work normally and macOS shows its own pop-up.
 3. **⌥⇧ + volume** changes in quarter steps.
