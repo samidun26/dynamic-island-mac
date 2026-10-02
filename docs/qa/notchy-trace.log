@@ -1,316 +1,316 @@
-QA 257.179 FONTS text=true digits=true
-QA 257.273 STATE idle 101x0 secondaries=[] pages=2
-QA 257.273 SOURCE adapter
-QA 257.275 BRIGHTNESS available=false
-QA 257.280 HUD tap=active
-QA 257.617 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=24
-QA 257.753 MENUBAR left=23 right=219
-QA 258.042 URL ponyhub://timer?seconds=30
-QA 258.043 STATE compact:timer 283x33 secondaries=[] pages=3 fit=right:0/99 x=420
-QA 258.043 MENUBAR left=23 right=181
-QA 259.473 FONTS text=true digits=true
-QA 259.498 STATE idle 101x0 secondaries=[] pages=2
-QA 259.498 SOURCE adapter
-QA 259.500 BRIGHTNESS available=false
-QA 259.515 HUD tap=active
-QA 259.657 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
-QA 259.693 MENUBAR left=23 right=219
-QA 272.436 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 272.436 ARTWORK received
-QA 272.448 STATE peek:nowPlaying 484x161 secondaries=[] pages=3
-QA 275.512 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 275.514 MENUBAR left=23 right=148
-QA 279.717 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
-QA 279.816 UPDATE check failed: GitHub's answer could not be read (HTTP 403).
-QA 287.454 CLICKTHROUGH false
-QA 287.589 HOVER open
-QA 287.589 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
-QA 295.460 MENU opened
-QA 295.460 MENU closed
-QA 297.549 MOUSEDOWN island at 431,640
-QA 297.628 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
-QA 297.963 MENU opened
-QA 297.963 MENU closed
-QA 299.280 MOUSEDOWN island at 431,640
-QA 299.411 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 299.703 MENU opened
-QA 299.704 MENU closed
-QA 301.072 MOUSEDOWN island at 465,640
-QA 301.382 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 301.382 ARTWORK received
-QA 301.557 MENU opened
-QA 301.557 MENU closed
-QA 302.787 MOUSEDOWN island at 558,674
-QA 304.629 CLICKTHROUGH true
-QA 304.921 HOVER close
-QA 304.922 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 306.221 CLICKTHROUGH false
-QA 306.293 CLICKTHROUGH true
-QA 308.544 MOUSEDOWN elsewhere at 722,648
-QA 309.179 CLICKTHROUGH false
-QA 309.301 HOVER open
-QA 309.302 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
-QA 309.827 MOUSEDOWN island at 512,756
-QA 309.827 PIN
-QA 310.232 CLICKTHROUGH true
-QA 310.490 HOVER close
-QA 312.520 MOUSEDOWN elsewhere at 512,248
-QA 312.520 DISMISS
-QA 312.520 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 313.302 CLICKTHROUGH false
-QA 313.428 HOVER open
-QA 313.428 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
-QA 313.645 SCROLL began on island
-QA 313.878 SWIPE down
-QA 314.704 SCROLL began on island
-QA 314.893 SWIPE up
-QA 314.894 DISMISS
-QA 314.894 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 316.174 SCROLL began on island
-QA 316.332 SWIPE down
-QA 316.332 PIN
-QA 316.332 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
-QA 317.156 SCROLL began on island
-QA 317.341 SWIPE left
-QA 317.341 STATE expanded:home 484x161 secondaries=[] pages=3
-QA 318.461 CLICKTHROUGH true
-QA 319.312 MOUSEDOWN elsewhere at 512,248
-QA 319.313 DISMISS
-QA 319.313 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 320.648 URL ponyhub://timer?seconds=8
-QA 320.649 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 328.801 TIMER done
-QA 328.816 STATE peek:timer 484x161 secondaries=[] pages=4
-QA 334.819 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 337.084 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 337.268 URL ponyhub://timer?minutes=5
-QA 337.276 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 340.026 CLICKTHROUGH false
-QA 340.171 HOVER open
-QA 340.172 STATE expanded:timer 484x161 secondaries=[] pages=4
-QA 341.025 MENU opened
-QA 341.025 MENU closed
-QA 342.142 MOUSEDOWN island at 623,675
-QA 342.840 MENU opened
-QA 342.840 MENU closed
-QA 344.009 MOUSEDOWN island at 676,675
-QA 344.852 MENU opened
-QA 344.852 MENU closed
-QA 345.867 MENU opened
-QA 345.867 MENU closed
-QA 346.849 MOUSEDOWN island at 716,675
-QA 346.923 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
-QA 347.045 CLICKTHROUGH true
-QA 347.352 HOVER close
-QA 347.354 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 350.190 MOUSEDOWN own window NSStatusBarWindow at 771,756 active=false
-QA 350.226 MENU opened
-QA 351.464 MENU closed
-QA 351.475 URL ponyhub://settings
-QA 351.475 SETTINGS shown
-QA 352.070 SETTINGS focused=true
-QA 353.538 KEY w cmd=true keyWindow=ponyhub Settings active=true
-QA 353.554 SETTINGS closed
-QA 355.630 MENU opened
-QA 356.300 MENU closed
-QA 357.969 ARTWORK received
-QA 376.153 NOWPLAYING title=QA Track Two artist=The Testers playing=false app=dev.local.qa.fakeplayer
-QA 378.742 STATE idle 101x0 secondaries=[] pages=3
-QA 387.225 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 387.225 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 393.270 MENUBAR left=23 right=-4
-QA 393.270 STATE compact:nowPlaying 101x0 secondaries=[] pages=3 fit=hidden:0/0 x=461
-QA 395.229 MENUBAR left=23 right=148
-QA 395.230 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 395.388 NOWPLAYING title=- artist=- playing=false app=-
-QA 396.632 FONTS text=true digits=true
-QA 396.662 STATE idle 101x0 secondaries=[] pages=2
-QA 396.663 SOURCE adapter
-QA 396.664 BRIGHTNESS available=false
-QA 396.677 HUD tap=active
-QA 396.822 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=44
-QA 396.916 MENUBAR left=23 right=186
-QA 396.918 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 396.918 ARTWORK received
-QA 396.928 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 396.930 MENUBAR left=23 right=148
-QA 398.582 NOWPLAYING title=- artist=- playing=false app=-
-QA 403.038 FONTS text=true digits=true
-QA 403.060 STATE idle 101x0 secondaries=[] pages=2
-QA 403.060 SOURCE adapter
-QA 403.061 BRIGHTNESS available=false
-QA 403.067 HUD tap=active
-QA 403.186 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=52
-QA 403.232 MENUBAR left=23 right=186
-QA 403.234 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 403.234 ARTWORK received
-QA 403.243 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 403.244 MENUBAR left=23 right=148
-QA 405.329 HUD key=0 handled=true
-QA 405.330 STATE compact:hud 320x33 secondaries=[] pages=3 fit=right:0/136 x=420
-QA 406.251 HUD key=1 handled=true
-QA 407.873 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 408.423 NOWPLAYING title=- artist=- playing=false app=-
-QA 408.553 FONTS text=true digits=true
-QA 408.570 STATE idle 101x0 secondaries=[] pages=2
-QA 408.570 SOURCE adapter
-QA 408.571 BRIGHTNESS available=false
-QA 408.578 HUD tap=active
-QA 408.706 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=54
-QA 408.739 MENUBAR left=23 right=186
-QA 408.742 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 408.742 ARTWORK received
-QA 408.749 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 408.750 MENUBAR left=23 right=148
-QA 409.938 URL ponyhub://timer?minutes=3
-QA 409.939 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 412.854 CLICKTHROUGH false
-QA 412.976 HOVER open
-QA 412.976 STATE expanded:timer 484x161 secondaries=[] pages=4
-QA 414.521 CLICKTHROUGH true
-QA 414.786 HOVER close
-QA 414.787 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 415.074 URL ponyhub://timer/cancel
-QA 415.075 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 415.652 NOWPLAYING title=- artist=- playing=false app=-
-QA 415.773 FONTS text=true digits=true
-QA 415.787 STATE idle 101x0 secondaries=[] pages=2
-QA 415.787 SOURCE adapter
-QA 415.788 BRIGHTNESS available=false
-QA 415.791 HUD tap=active
-QA 415.894 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=57
-QA 415.922 MENUBAR left=23 right=186
-QA 415.953 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 415.953 ARTWORK received
-QA 415.957 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 415.958 MENUBAR left=23 right=148
-QA 417.679 URL notchy://pomodoro
-QA 417.679 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 419.499 CLICKTHROUGH false
-QA 419.626 HOVER open
-QA 419.626 STATE expanded:timer 484x161 secondaries=[] pages=4
-QA 420.741 MENU opened
-QA 420.741 MENU closed
-QA 422.811 MOUSEDOWN island at 621,675
-QA 422.925 POMODORO Short break
-QA 423.889 MENU opened
-QA 423.889 MENU closed
-QA 424.676 CLICKTHROUGH true
-QA 424.932 HOVER close
-QA 424.933 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
-QA 426.316 URL ponyhub://timer/cancel
-QA 426.322 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 427.377 CLIP added 19 characters
-QA 427.880 CLIP skipped (marked private)
-QA 428.129 URL ponyhub://clipboard
-QA 428.129 PIN
-QA 428.129 STATE expanded:shelf 484x161 secondaries=[] pages=3
-QA 429.143 MENU opened
-QA 429.143 MENU closed
-QA 430.410 MOUSEDOWN elsewhere at 512,248
-QA 430.410 DISMISS
-QA 430.411 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 433.287 MOUSEDOWN elsewhere at 212,348
-QA 435.909 DRAG files near
-QA 435.910 CLICKTHROUGH false
-QA 435.910 STATE expanded:shelf 484x161 secondaries=[] pages=3
-QA 435.935 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
-QA 435.989 DROP over
-QA 436.054 UPDATE check failed: GitHub's answer could not be read (HTTP 403).
-QA 438.935 DRAG files gone
-QA 438.942 DROP left
-QA 438.956 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 438.966 SHELF added 1 total=1
-QA 439.163 STATE expanded:shelf 484x161 secondaries=[] pages=3
-QA 440.287 MENU opened
-QA 440.287 MENU closed
-QA 441.114 CLICKTHROUGH true
-QA 441.439 HOVER close
-QA 441.439 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 442.803 NOWPLAYING title=- artist=- playing=false app=-
-QA 481.094 FONTS text=true digits=true
-QA 481.126 STATE idle 101x0 secondaries=[] pages=2
-QA 481.127 SOURCE adapter
-QA 481.129 BRIGHTNESS available=false
-QA 481.137 HUD tap=active
-QA 481.400 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=66
-QA 481.478 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 481.478 MENUBAR left=23 right=186
-QA 481.481 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 481.481 ARTWORK received
-QA 481.506 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 481.508 MENUBAR left=23 right=148
-QA 481.526 UPDATE available 9.9.9
-QA 481.706 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/ponyhub.app
-QA 481.708 NOWPLAYING title=- artist=- playing=false app=-
-QA 484.211 FONTS text=true digits=true
-QA 484.235 STATE idle 101x0 secondaries=[] pages=2
-QA 484.235 SOURCE adapter
-QA 484.236 BRIGHTNESS available=false
-QA 484.357 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=71
-QA 484.390 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.2
-QA 484.390 MENUBAR left=23 right=186
-QA 484.406 UPDATE available 9.9.9
-QA 484.447 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 484.447 ARTWORK received
-QA 484.452 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 484.453 MENUBAR left=23 right=148
-QA 484.485 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/legacy/Notchy.app
-QA 484.487 NOWPLAYING title=- artist=- playing=false app=-
-QA 486.972 FONTS text=true digits=true
-QA 486.994 STATE idle 101x0 secondaries=[] pages=2
-QA 486.994 SOURCE adapter
-QA 486.995 BRIGHTNESS available=false
-QA 486.998 HUD tap=active
-QA 487.115 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=75
-QA 487.158 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 487.159 MENUBAR left=23 right=186
-QA 487.178 UPDATE available 9.9.9
-QA 487.195 UPDATE failed: The download doesn't match the release's checksum.
-QA 487.208 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 487.208 ARTWORK received
-QA 487.212 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 487.213 MENUBAR left=23 right=148
-QA 487.475 NOWPLAYING title=- artist=- playing=false app=-
-QA 490.121 FONTS text=true digits=true
-QA 490.145 STATE idle 101x0 secondaries=[] pages=2
-QA 490.145 SOURCE adapter
-QA 490.146 BRIGHTNESS available=false
-QA 490.152 HUD tap=active
-QA 490.259 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=77
-QA 490.303 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 490.304 MENUBAR left=23 right=186
-QA 490.323 UPDATE available 9.9.9
-QA 490.352 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 490.352 ARTWORK received
-QA 490.355 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 490.356 MENUBAR left=23 right=148
-QA 490.417 UPDATE failed: The download is not signed by the same developer.
-QA 490.594 NOWPLAYING title=- artist=- playing=false app=-
-QA 492.436 FONTS text=true digits=true
-QA 492.465 STATE idle 101x0 secondaries=[] pages=2
-QA 492.465 SOURCE adapter
-QA 492.467 BRIGHTNESS available=false
-QA 492.473 HUD tap=active
-QA 492.631 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=79
-QA 492.692 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 492.693 MENUBAR left=23 right=186
-QA 492.730 UPDATE available 9.9.9
-QA 492.750 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 492.750 ARTWORK received
-QA 492.756 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 492.757 MENUBAR left=23 right=148
-QA 492.831 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/ponyhub.app
-QA 492.834 NOWPLAYING title=- artist=- playing=false app=-
-QA 494.791 FONTS text=true digits=true
-QA 494.821 STATE idle 101x0 secondaries=[] pages=2
-QA 494.821 SOURCE adapter
-QA 494.822 BRIGHTNESS available=false
-QA 494.827 HUD tap=active
-QA 494.935 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=83
-QA 494.983 MENUBAR left=23 right=186
-QA 494.988 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 494.988 ARTWORK received
-QA 495.001 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
-QA 495.002 MENUBAR left=23 right=148
-QA 496.250 NOWPLAYING title=- artist=- playing=false app=-
+QA 275.579 FONTS text=true digits=true
+QA 275.666 STATE idle 101x0 secondaries=[] pages=2
+QA 275.667 SOURCE adapter
+QA 275.668 BRIGHTNESS available=false
+QA 275.672 HUD tap=active
+QA 275.918 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=24
+QA 276.004 MENUBAR left=23 right=219
+QA 276.172 URL ponyhub://timer?seconds=30
+QA 276.172 STATE compact:timer 283x33 secondaries=[] pages=3 fit=right:0/99 x=420
+QA 276.173 MENUBAR left=23 right=181
+QA 277.511 FONTS text=true digits=true
+QA 277.534 STATE idle 101x0 secondaries=[] pages=2
+QA 277.534 SOURCE adapter
+QA 277.537 BRIGHTNESS available=false
+QA 277.542 HUD tap=active
+QA 277.695 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
+QA 277.726 MENUBAR left=23 right=219
+QA 290.410 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 290.410 ARTWORK received
+QA 290.415 STATE peek:nowPlaying 484x161 secondaries=[] pages=3
+QA 293.445 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 293.446 MENUBAR left=23 right=148
+QA 297.732 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
+QA 297.993 UPDATE check failed: GitHub's answer could not be read (HTTP 200).
+QA 305.328 CLICKTHROUGH false
+QA 305.456 HOVER open
+QA 305.456 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
+QA 313.273 MENU opened
+QA 313.273 MENU closed
+QA 315.505 MOUSEDOWN island at 431,640
+QA 315.643 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
+QA 315.910 MENU opened
+QA 315.910 MENU closed
+QA 317.136 MOUSEDOWN island at 431,640
+QA 317.233 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 317.540 MENU opened
+QA 317.540 MENU closed
+QA 318.941 MOUSEDOWN island at 465,640
+QA 319.248 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 319.248 ARTWORK received
+QA 319.359 MENU opened
+QA 319.359 MENU closed
+QA 320.388 MOUSEDOWN island at 558,674
+QA 322.497 CLICKTHROUGH true
+QA 322.764 HOVER close
+QA 322.765 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 324.102 CLICKTHROUGH false
+QA 324.177 CLICKTHROUGH true
+QA 326.494 MOUSEDOWN elsewhere at 722,648
+QA 327.075 CLICKTHROUGH false
+QA 327.198 HOVER open
+QA 327.198 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
+QA 327.548 MOUSEDOWN island at 512,756
+QA 327.548 PIN
+QA 327.963 CLICKTHROUGH true
+QA 328.240 HOVER close
+QA 330.067 MOUSEDOWN elsewhere at 512,248
+QA 330.068 DISMISS
+QA 330.069 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 330.853 CLICKTHROUGH false
+QA 331.042 HOVER open
+QA 331.043 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
+QA 331.178 SCROLL began on island
+QA 331.436 SWIPE down
+QA 332.290 SCROLL began on island
+QA 332.527 SWIPE up
+QA 332.527 DISMISS
+QA 332.527 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 333.954 SCROLL began on island
+QA 334.163 SWIPE down
+QA 334.164 PIN
+QA 334.164 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
+QA 334.879 SCROLL began on island
+QA 335.075 SWIPE left
+QA 335.075 STATE expanded:home 484x161 secondaries=[] pages=3
+QA 336.244 CLICKTHROUGH true
+QA 337.072 MOUSEDOWN elsewhere at 512,248
+QA 337.073 DISMISS
+QA 337.073 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 338.364 URL ponyhub://timer?seconds=8
+QA 338.364 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 346.512 TIMER done
+QA 346.523 STATE peek:timer 484x161 secondaries=[] pages=4
+QA 352.540 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 354.841 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 354.923 URL ponyhub://timer?minutes=5
+QA 354.928 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 357.585 CLICKTHROUGH false
+QA 357.717 HOVER open
+QA 357.718 STATE expanded:timer 484x161 secondaries=[] pages=4
+QA 358.594 MENU opened
+QA 358.594 MENU closed
+QA 359.677 MOUSEDOWN island at 623,675
+QA 360.369 MENU opened
+QA 360.369 MENU closed
+QA 361.538 MOUSEDOWN island at 676,675
+QA 362.300 MENU opened
+QA 362.300 MENU closed
+QA 363.395 MENU opened
+QA 363.395 MENU closed
+QA 364.406 MOUSEDOWN island at 716,675
+QA 364.556 STATE expanded:nowPlaying 484x161 secondaries=[] pages=3
+QA 365.002 CLICKTHROUGH true
+QA 365.278 HOVER close
+QA 365.278 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 368.131 MOUSEDOWN own window NSStatusBarWindow at 771,756 active=false
+QA 368.149 MENU opened
+QA 369.361 MENU closed
+QA 369.366 URL ponyhub://settings
+QA 369.366 SETTINGS shown
+QA 369.943 SETTINGS focused=true
+QA 371.088 KEY w cmd=true keyWindow=ponyhub Settings active=true
+QA 371.102 SETTINGS closed
+QA 373.083 MENU opened
+QA 374.412 MENU closed
+QA 376.033 ARTWORK received
+QA 393.725 NOWPLAYING title=QA Track Two artist=The Testers playing=false app=dev.local.qa.fakeplayer
+QA 396.330 STATE idle 101x0 secondaries=[] pages=3
+QA 404.904 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 404.904 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 410.930 MENUBAR left=23 right=-4
+QA 410.931 STATE compact:nowPlaying 101x0 secondaries=[] pages=3 fit=hidden:0/0 x=461
+QA 413.077 MENUBAR left=23 right=148
+QA 413.077 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 413.282 NOWPLAYING title=- artist=- playing=false app=-
+QA 414.476 FONTS text=true digits=true
+QA 414.497 STATE idle 101x0 secondaries=[] pages=2
+QA 414.498 SOURCE adapter
+QA 414.499 BRIGHTNESS available=false
+QA 414.502 HUD tap=active
+QA 414.594 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=44
+QA 414.638 MENUBAR left=23 right=186
+QA 414.675 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 414.675 ARTWORK received
+QA 414.678 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 414.679 MENUBAR left=23 right=148
+QA 416.394 NOWPLAYING title=- artist=- playing=false app=-
+QA 420.762 FONTS text=true digits=true
+QA 420.781 STATE idle 101x0 secondaries=[] pages=2
+QA 420.781 SOURCE adapter
+QA 420.782 BRIGHTNESS available=false
+QA 420.786 HUD tap=active
+QA 420.903 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=52
+QA 420.942 MENUBAR left=23 right=186
+QA 420.944 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 420.944 ARTWORK received
+QA 420.950 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 420.951 MENUBAR left=23 right=148
+QA 423.064 HUD key=0 handled=true
+QA 423.065 STATE compact:hud 320x33 secondaries=[] pages=3 fit=right:0/136 x=420
+QA 424.116 HUD key=1 handled=true
+QA 425.739 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 426.386 NOWPLAYING title=- artist=- playing=false app=-
+QA 426.619 FONTS text=true digits=true
+QA 426.675 STATE idle 101x0 secondaries=[] pages=2
+QA 426.675 SOURCE adapter
+QA 426.676 BRIGHTNESS available=false
+QA 426.685 HUD tap=active
+QA 426.849 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=54
+QA 426.936 MENUBAR left=23 right=186
+QA 426.987 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 426.987 ARTWORK received
+QA 426.990 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 426.992 MENUBAR left=23 right=148
+QA 428.160 URL ponyhub://timer?minutes=3
+QA 428.162 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 431.292 CLICKTHROUGH false
+QA 431.423 HOVER open
+QA 431.424 STATE expanded:timer 484x161 secondaries=[] pages=4
+QA 432.956 CLICKTHROUGH true
+QA 433.210 HOVER close
+QA 433.210 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 433.598 URL ponyhub://timer/cancel
+QA 433.600 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 434.134 NOWPLAYING title=- artist=- playing=false app=-
+QA 434.477 FONTS text=true digits=true
+QA 434.502 STATE idle 101x0 secondaries=[] pages=2
+QA 434.502 SOURCE adapter
+QA 434.505 BRIGHTNESS available=false
+QA 434.510 HUD tap=active
+QA 434.716 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=57
+QA 434.801 MENUBAR left=23 right=186
+QA 434.804 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 434.804 ARTWORK received
+QA 434.820 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 434.821 MENUBAR left=23 right=148
+QA 436.807 URL notchy://pomodoro
+QA 436.807 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 438.749 CLICKTHROUGH false
+QA 438.875 HOVER open
+QA 438.875 STATE expanded:timer 484x161 secondaries=[] pages=4
+QA 440.014 MENU opened
+QA 440.014 MENU closed
+QA 442.406 MOUSEDOWN island at 621,675
+QA 442.527 POMODORO Short break
+QA 443.484 MENU opened
+QA 443.484 MENU closed
+QA 444.628 CLICKTHROUGH true
+QA 444.893 HOVER close
+QA 444.894 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=4 fit=right:0/121 x=420
+QA 446.450 URL ponyhub://timer/cancel
+QA 446.469 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 447.656 CLIP added 19 characters
+QA 448.144 CLIP skipped (marked private)
+QA 448.265 URL ponyhub://clipboard
+QA 448.265 PIN
+QA 448.266 STATE expanded:shelf 484x161 secondaries=[] pages=3
+QA 449.237 MENU opened
+QA 449.237 MENU closed
+QA 450.699 MOUSEDOWN elsewhere at 512,248
+QA 450.700 DISMISS
+QA 450.700 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 453.294 MOUSEDOWN elsewhere at 212,348
+QA 454.853 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
+QA 455.132 UPDATE check failed: GitHub's answer could not be read (HTTP 200).
+QA 455.758 DRAG files near
+QA 455.758 CLICKTHROUGH false
+QA 455.759 STATE expanded:shelf 484x161 secondaries=[] pages=3
+QA 455.818 DROP over
+QA 458.931 DRAG files gone
+QA 458.942 DROP left
+QA 458.953 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 458.961 SHELF added 1 total=1
+QA 459.140 STATE expanded:shelf 484x161 secondaries=[] pages=3
+QA 460.408 MENU opened
+QA 460.408 MENU closed
+QA 461.546 CLICKTHROUGH true
+QA 461.844 HOVER close
+QA 461.845 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 463.297 NOWPLAYING title=- artist=- playing=false app=-
+QA 499.864 FONTS text=true digits=true
+QA 499.884 STATE idle 101x0 secondaries=[] pages=2
+QA 499.885 SOURCE adapter
+QA 499.886 BRIGHTNESS available=false
+QA 499.888 HUD tap=active
+QA 500.034 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=66
+QA 500.072 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 500.072 MENUBAR left=23 right=186
+QA 500.102 UPDATE available 9.9.9
+QA 500.147 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 500.147 ARTWORK received
+QA 500.151 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 500.152 MENUBAR left=23 right=148
+QA 500.169 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/ponyhub.app
+QA 500.170 NOWPLAYING title=- artist=- playing=false app=-
+QA 502.671 FONTS text=true digits=true
+QA 502.684 STATE idle 101x0 secondaries=[] pages=2
+QA 502.685 SOURCE adapter
+QA 502.685 BRIGHTNESS available=false
+QA 502.753 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=71
+QA 502.776 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.2
+QA 502.776 MENUBAR left=23 right=186
+QA 502.777 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 502.777 ARTWORK received
+QA 502.785 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 502.786 MENUBAR left=23 right=148
+QA 502.789 UPDATE available 9.9.9
+QA 502.944 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/legacy/Notchy.app
+QA 502.946 NOWPLAYING title=- artist=- playing=false app=-
+QA 505.223 FONTS text=true digits=true
+QA 505.244 STATE idle 101x0 secondaries=[] pages=2
+QA 505.244 SOURCE adapter
+QA 505.245 BRIGHTNESS available=false
+QA 505.248 HUD tap=active
+QA 505.332 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=75
+QA 505.359 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 505.359 MENUBAR left=23 right=186
+QA 505.370 UPDATE available 9.9.9
+QA 505.378 UPDATE failed: The download doesn't match the release's checksum.
+QA 505.396 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 505.396 ARTWORK received
+QA 505.399 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 505.400 MENUBAR left=23 right=148
+QA 505.501 NOWPLAYING title=- artist=- playing=false app=-
+QA 507.708 FONTS text=true digits=true
+QA 507.730 STATE idle 101x0 secondaries=[] pages=2
+QA 507.730 SOURCE adapter
+QA 507.732 BRIGHTNESS available=false
+QA 507.737 HUD tap=active
+QA 507.842 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=77
+QA 507.876 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 507.876 MENUBAR left=23 right=186
+QA 507.876 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 507.876 ARTWORK received
+QA 507.884 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 507.885 MENUBAR left=23 right=148
+QA 507.890 UPDATE available 9.9.9
+QA 507.939 UPDATE failed: The download is not signed by the same developer.
+QA 508.152 NOWPLAYING title=- artist=- playing=false app=-
+QA 509.728 FONTS text=true digits=true
+QA 509.739 STATE idle 101x0 secondaries=[] pages=2
+QA 509.739 SOURCE adapter
+QA 509.740 BRIGHTNESS available=false
+QA 509.742 HUD tap=active
+QA 509.810 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=79
+QA 509.831 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 509.831 MENUBAR left=23 right=186
+QA 509.843 UPDATE available 9.9.9
+QA 509.879 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 509.879 ARTWORK received
+QA 509.880 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 509.881 MENUBAR left=23 right=148
+QA 510.012 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/ponyhub.app
+QA 510.015 NOWPLAYING title=- artist=- playing=false app=-
+QA 511.722 FONTS text=true digits=true
+QA 511.735 STATE idle 101x0 secondaries=[] pages=2
+QA 511.736 SOURCE adapter
+QA 511.736 BRIGHTNESS available=false
+QA 511.738 HUD tap=active
+QA 511.806 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=83
+QA 511.849 MENUBAR left=23 right=186
+QA 511.879 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 511.879 ARTWORK received
+QA 511.881 STATE compact:nowPlaying 254x33 secondaries=[] pages=3 fit=right:0/70 x=420
+QA 511.881 MENUBAR left=23 right=148
+QA 512.986 NOWPLAYING title=- artist=- playing=false app=-
