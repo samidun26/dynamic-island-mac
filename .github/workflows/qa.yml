@@ -22,6 +22,12 @@ on:
 permissions:
   contents: write
 
+# One QA session per branch: a newer push replaces a run still in progress, so two runs never
+# publish results over each other.
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   qa:
     runs-on: macos-15
@@ -67,7 +73,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A docs/qa
           git commit -m "Update QA results [skip ci]" || exit 0
-          git pull --rebase --quiet origin "$GITHUB_REF_NAME"
+          # If another run published meanwhile, this run's results replace its files.
+          git pull --rebase --quiet -X theirs origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
 
       - uses: actions/upload-artifact@v4
