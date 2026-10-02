@@ -78,9 +78,19 @@ final class HUDModel {
 
     // MARK: Key tap
 
+    /// Starts replacing the system HUD if Accessibility is allowed; otherwise waits for it quietly
+    /// (no dialog at launch: Settings explains it and asks, see `requestAccess`).
     func enableKeys() {
         wantsTap = true
-        if tap == nil { installTap(prompt: true) }
+        if tap == nil { installTap(prompt: false) }
+    }
+
+    /// Asks macOS for Accessibility: its dialog adds ponyhub to the list in Privacy & Security, and
+    /// the tap starts as soon as it's switched on.
+    func requestAccess() {
+        if AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) {
+            if tap == nil { installTap(prompt: false) }
+        }
     }
 
     func disableKeys() {

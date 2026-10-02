@@ -38,7 +38,7 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 | Shelf | – | dropped files, clipboard history | Files you drag to the notch (references only); text you copy (memory only, private copies skipped). |
 | Calendar | 📅 · "in 4m" | next three events with **Join** for Zoom / Meet / Teams / Webex links | EventKit. Counts down from 15 min, alerts at 5 min. |
 | Battery | ⚡ Charging · 76% | – | IOKit power-source notifications (no polling). Also warns at 20% and 10%. |
-| Volume HUD | 🔊 · level | – | Replaces the system volume HUD (opt-in, needs Accessibility). |
+| Volume and brightness | 🔊 / ☀️ · level | slider in Now Playing | Replaces macOS's volume and brightness pop-up, like Alcove (on by default; needs Accessibility, asked once at first launch). |
 
 ## Install
 

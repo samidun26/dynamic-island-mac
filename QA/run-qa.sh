@@ -21,6 +21,7 @@ FPLOG="$OUT/fakeplayer.log"
 D="$OUT/bin/qa-driver"
 APP=/Applications/ponyhub.app
 BID=dev.local.notchy
+app_version() { /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist"; }
 PASS=0 FAIL=0 SKIP=0
 NOTCHY_PID="" FP_PID=""
 
@@ -154,6 +155,8 @@ fi
 echo "== screen-sharing privacy (default settings)"
 defaults delete "$BID" >/dev/null 2>&1
 defaults write "$BID" calendarEnabled -bool false   # its permission prompt would sit on screen with nobody to answer
+# The first-launch Accessibility screen has its own case (QA-45).
+defaults write "$BID" hudOnboardedVersion "$(app_version)"
 touch "$LOG" "$FPLOG"
 launch_notchy || note "no LAUNCH line in the trace"
 mark "$LOG"; lim 8 open "ponyhub://timer?seconds=30"
@@ -710,6 +713,30 @@ else
     fi
     quit_notchy
 fi
+
+# ---------------------------------------------------------------- first launch: volume and brightness
+# QA-45: volume and brightness in the notch are on by default and need Accessibility, which the
+# app doesn't have here. The first launch opens Settings on Activities to ask, once.
+quit_notchy
+defaults delete "$BID" hudOnboardedVersion 2>/dev/null
+launch_notchy
+ONB=no; SWIN=""; ASK=0
+if wait_for "$LOG" "ONBOARDING hud" 5; then
+    ONB=yes; sleep 1.5
+    SWIN=$("$D" windows ponyhub | awk '{split($2,l,"="); split($5,w,"="); if (l[2]==0 && w[2]>=400) {split($1,i,"="); print i[2]}}' | head -1)
+    [ -n "$SWIN" ] && lim 10 screencapture -x -o -l "$SWIN" "$OUT/shots/qa45-onboarding.png"
+    [ "$AX" = yes ] && ASK=$(lim 20 "$D" ax-texts $BID | grep -c "Needs Accessibility")
+fi
+quit_notchy
+launch_notchy; sleep 1.5
+AGAIN=$(after "$LOG" | grep -c "ONBOARDING hud")
+quit_notchy
+if [ $ONB = yes ] && [ -n "$SWIN" ] && { [ "$AX" != yes ] || [ "$ASK" -ge 1 ]; } && [ "$AGAIN" = 0 ]; then
+    pass QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "Settings opened on Activities with \"Needs Accessibility\" and Allow…; not again on the next launch ([shot](shots/qa45-onboarding.png))"
+else
+    fail QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "onboarding: $ONB; settings window: ${SWIN:-none}; permission row: $ASK; shown again on relaunch: $AGAIN"
+fi
+defaults write "$BID" hudOnboardedVersion "$(app_version)"
 
 # ---------------------------------------------------------------- retro style
 # Settings → General → Style: Retro. The bundled pixel fonts must load, and the island must draw.

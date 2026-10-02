@@ -214,19 +214,25 @@ private struct ActivitiesTab: View {
                 Text("Shows the next event, counts down from 15 minutes before it, and alerts you at 5.")
             }
             Section {
-                Toggle("Volume and brightness keys in the island", isOn: $settings.hudEnabled)
+                Toggle("Volume and brightness in the notch", isOn: $settings.hudEnabled)
                 if settings.hudEnabled {
                     switch model.hud.tapState {
-                    case .active: LabeledContent("Media keys", value: "Active")
+                    case .active:
+                        LabeledContent("Status", value: "On: the notch replaces macOS's pop-up")
                     case .needsPermission, .off:
-                        LabeledContent("Media keys") {
-                            Button("Grant Accessibility…") { model.hud.openAccessibilitySettings() }
+                        LabeledContent("Needs Accessibility") {
+                            HStack {
+                                Button("Allow…") { model.hud.requestAccess() }
+                                Button("Open Privacy Settings") { model.hud.openAccessibilitySettings() }
+                            }
                         }
+                        Text("Until it's allowed, macOS shows its own volume and brightness pop-up. Click Allow…, then switch \(AppInfo.name) on under Accessibility; it takes effect right away. If \(AppInfo.name) is already listed and on but this still asks, remove it with − and add it again.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Toggle("Brightness in the island", isOn: $settings.brightnessEnabled)
             } footer: {
-                Text("Replacing the system HUD means intercepting the volume and brightness keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
+                Text("Showing volume and brightness in the notch instead of macOS's pop-up means handling those keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
             }
         }
         .formStyle(.grouped)

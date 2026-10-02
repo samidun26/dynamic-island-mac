@@ -22,7 +22,7 @@ All optional. Each is requested only when the feature that needs it is on, and t
 | Permission (System Settings → Privacy & Security) | Requested when | Used for | Without it |
 |---|---|---|---|
 | **Calendars** (full access) | Calendar activity is on (default) at first launch | Reading upcoming events for the countdown, alert and Join button | No calendar activity; Home shows "No calendar access" |
-| **Accessibility** | You turn on *Volume HUD in the island* | Intercepting the volume keys so the system HUD stays hidden | Keys behave normally and macOS shows its own HUD |
+| **Accessibility** | You click **Allow…** for *Volume and brightness in the notch* (on by default; Settings asks once at first launch) | Intercepting the volume keys so the system HUD stays hidden | Keys behave normally and macOS shows its own HUD |
 | **Automation → Music / Spotify** | Only if the Now Playing bridge is unavailable and ponyhub falls back | Artwork, Music's playhead, and controls in fallback mode | Fallback shows titles only, without controls |
 
 Not needed: Screen Recording, Input Monitoring, Full Disk Access, Location, Microphone, Camera, Notifications.

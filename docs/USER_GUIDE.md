@@ -148,10 +148,11 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - On battery, it warns once at **20%** and once at **10%**.
 - The battery percentage is always in the expanded header.
 
-### Volume and brightness HUD (off by default)
-1. **Settings → Activities → Volume and brightness keys in the island**.
-2. Click **Grant Accessibility…**, switch ponyhub on in *Privacy & Security → Accessibility*. ponyhub picks it up automatically.
-3. The volume keys now show a level in the island instead of the big system HUD. **⌥⇧ + volume** changes in quarter steps.
+### Volume and brightness in the notch (on by default)
+Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear.
+1. This needs **Accessibility** permission. On first launch (or the first launch after updating), Settings opens on **Activities** to ask for it: click **Allow…**, then switch ponyhub on in *Privacy & Security → Accessibility*. It works from that moment, no restart needed. The menu bar icon also offers **Allow Accessibility for Volume and Brightness…** while it's missing.
+2. Until it's allowed, the keys work normally and macOS shows its own pop-up.
+3. **⌥⇧ + volume** changes in quarter steps.
 - **Brightness works the same way:** the brightness keys show a sun and a level in the island instead of the system HUD, and Now Playing has a brightness slider under the volume one. This is for the built-in display and uses a private Apple framework (there is no public way), so a macOS update could break it; the keys then go back to macOS. Turn it off with *Brightness in the island*. Keyboard backlight keys always use the system HUD.
 - If your output device has no software volume (some HDMI/USB devices), ponyhub leaves the keys to macOS.
 
@@ -205,7 +206,7 @@ Open with the menu bar icon → **Settings…**, or `ponyhub://settings`, or by 
 | | Clipboard history (memory only; private copies never kept) | On |
 | | Charging and low battery | On |
 | | Calendar (shows access status) | On |
-| | Volume and brightness keys in the island (shows Accessibility status) | Off |
+| | Volume and brightness in the notch (shows Accessibility status, with Allow…) | On |
 | | Brightness in the island (keys and slider, built-in display) | On |
 | Motion | Open and close spring response and damping, Preview, Reset | 0.42 s / 0.80, 0.36 s / 0.90 |
 | About | Version, update status (**Check for Updates**, **What's New**, **Install and Relaunch**), credits, the mediaremote-adapter license | — |

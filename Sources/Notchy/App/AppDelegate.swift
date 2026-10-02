@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             updates.runQAInstallIfAsked()
         }
         controller = IslandController(model: model, settings: settings, demo: options.demo != nil)
+        if options.demo == nil { onboardHUDIfNeeded() }
         let m = model.metrics
         QALog.log("LAUNCH screen=\(Int(m.screenFrame.width))x\(Int(m.screenFrame.height)) hasNotch=\(m.hasNotch) notchSize=\(Int(m.notchSize.width))x\(Int(m.notchSize.height)) panel=\(Int(controller.panel.frame.minX)),\(Int(controller.panel.frame.minY)) \(Int(controller.panel.frame.width))x\(Int(controller.panel.frame.height)) window=\(controller.panel.windowNumber)")
         if options.printWindowID {
@@ -73,6 +74,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         observeChanges({ [updates] in updates.available != nil }) { [weak self] waiting in
             self?.statusItem?.button?.image = Self.statusIcon(badge: waiting)
         }
+    }
+
+    /// Volume and brightness in the notch are on by default but need Accessibility. Explain it once
+    /// per version (first launch, and again after an update if the permission went missing, as it
+    /// does with unsigned releases), on the tab where it's allowed.
+    private func onboardHUDIfNeeded() {
+        let key = "hudOnboardedVersion"
+        let version = updates.current.description
+        guard settings.hudEnabled, model.hud.tapState == .needsPermission,
+              UserDefaults.standard.string(forKey: key) != version else { return }
+        UserDefaults.standard.set(version, forKey: key)
+        QALog.log("ONBOARDING hud")
+        settingsWindow.show(settings: settings, model: model, updates: updates, tab: .activities)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -125,12 +139,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.item(withTag: Self.accessItemTag)?.isHidden = !(settings.hudEnabled && model.hud.tapState == .needsPermission)
         let release = updates.available
         for tag in [Self.updateItemTag, Self.updateSeparatorTag] { menu.item(withTag: tag)?.isHidden = release == nil }
         if let release { menu.item(withTag: Self.updateItemTag)?.title = "Update to \(AppInfo.name) \(release.version.description)…" }
     }
 
-    private static let updateItemTag = 100, updateSeparatorTag = 101
+    private static let updateItemTag = 100, updateSeparatorTag = 101, accessItemTag = 102
     func menuDidClose(_ menu: NSMenu) { QALog.log("MENU closed") }
 
 
@@ -145,6 +160,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         separator.tag = Self.updateSeparatorTag
         separator.isHidden = true
         menu.addItem(separator)
+        let access = menuItem("Allow Accessibility for Volume and Brightness…", #selector(showHUDSettings))
+        access.tag = Self.accessItemTag
+        access.isHidden = true
+        menu.addItem(access)
         menu.addItem(menuItem("Open Island", #selector(openIsland)))
         let timer = NSMenuItem(title: "Start Timer", action: nil, keyEquivalent: "")
         let sub = NSMenu()
@@ -185,6 +204,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func checkForUpdates() {
         showUpdate()
         Task { await updates.check(userInitiated: true) }
+    }
+
+    @objc private func showHUDSettings() {
+        QALog.log("SETTINGS shown")
+        settingsWindow.show(settings: settings, model: model, updates: updates, tab: .activities)
     }
 
     @objc private func showUpdate() {

@@ -118,7 +118,7 @@ final class AppSettings {
         clipboardHistory = bool("clipboardHistory", true)
         batteryEnabled = bool("batteryEnabled", true)
         calendarEnabled = bool("calendarEnabled", true)
-        hudEnabled = bool("hudEnabled", false)
+        hudEnabled = bool("hudEnabled", true)
         brightnessEnabled = bool("brightnessEnabled", true)
         openResponse = double("openResponse", Self.motionDefaults.openResponse)
         openDamping = double("openDamping", Self.motionDefaults.openDamping)
