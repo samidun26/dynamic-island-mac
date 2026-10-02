@@ -741,9 +741,10 @@ try_update() { # installed dir: sets UPD_RESULT and RELAUNCHED
 }
 disk_version() { $PB -c 'Print CFBundleShortVersionString' "$1/Notchy.app/Contents/Info.plist" 2>/dev/null; }
 
-python3 -m http.server 8765 --bind 127.0.0.1 --directory "$UPD/feed" >/dev/null 2>&1 &
+python3 -m http.server 8765 --bind 127.0.0.1 --directory "$UPD/feed" > "$UPD/http.log" 2>&1 &
 HTTP_PID=$!
-sleep 1
+# Wait until the stand-in actually answers (a cold runner can take a while to start Python).
+for _ in $(seq 1 60); do curl -s -o /dev/null --max-time 2 http://127.0.0.1:8765/ && break; sleep 0.5; done
 
 # QA-37: the usual case today: ad-hoc signed copy, ad-hoc signed release.
 make_copy "$UPD/installed" 1.0.0 -
