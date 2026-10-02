@@ -110,6 +110,7 @@ private struct FileTile: View {
             Text(file.name)
                 .islandFont(10, .medium)
                 .lineLimit(2)
+                .truncationMode(.middle)   // keep the extension visible
                 .multilineTextAlignment(.center)
                 .frame(width: 66)
                 .foregroundStyle(.white.opacity(0.85))
