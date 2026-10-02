@@ -47,9 +47,7 @@ final class MenuBarSpace {
 
     /// Ask for Accessibility, which lets Notchy see where the frontmost app's menus end.
     func requestAccess() {
-        if !AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-        }
+        AccessibilityAccess.request()
         // Granting it doesn't notify the app: look again for a while.
         for delay in [2.0, 5, 10, 20, 40] { measure(after: delay) }
     }

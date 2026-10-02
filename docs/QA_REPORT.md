@@ -111,6 +111,7 @@ Install as in the [user guide](USER_GUIDE.md), then:
 - [ ] **Not a drop target by accident.** Drag a window by its title bar, select text by dragging, and drag a file to somewhere else near the top of the screen: the island never opens for these.
 - [ ] **Clipboard with a real password manager.** Copy a password from 1Password, Bitwarden or Keychain Access: it never appears in the shelf's Clipboard tab. Copy ordinary text: it does. Pin an item, quit and reopen: only the pin is left.
 - [ ] **Pomodoro end to end.** Set focus to 5 min and break to 1 min, start Focus from Home, and let it run: a sound and a peek at each change, the colour and icon switch between focus and break, and after the fourth focus the break is the long one.
+- [ ] **Accessibility after an update (macOS 26).** Update to a new release, then press volume: if macOS's corner pop-up shows, Settings → Activities says *Needs Accessibility*; **Allow…** lists ponyhub afresh, switching it on makes the pop-up stop at once and the status read *On*.
 - [ ] **Menu bar icon.** Click it several times, including after opening and closing Settings: the menu opens every time. (CI can only check this once per session with a real click; see bug 7.)
 
 ## How it was installed, used and tested
