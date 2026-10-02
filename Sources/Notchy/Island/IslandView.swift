@@ -249,8 +249,8 @@ struct ExpandedHeader: View {
                 if let hud = model.hud.current, model.settings.hudEnabled {
                     // A volume/brightness key while open: the system HUD is suppressed, so show it here.
                     HStack(spacing: 6) {
-                        HUDIcon(hud: hud).font(.system(size: 11))
-                        LevelBar(level: hud.muted ? 0 : hud.level, dimmed: hud.muted).frame(width: 60)
+                        HUDIcon(hud: hud, size: 11)
+                        LevelBar(level: hud.muted ? 0 : hud.level, dimmed: hud.muted, edgeHits: hud.edgeHits).frame(width: 60)
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if model.pages.count > 1 {

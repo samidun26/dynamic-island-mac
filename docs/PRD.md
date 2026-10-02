@@ -171,7 +171,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-H1 | Volume up/down/mute shown in the island instead of the system HUD, on by default (needs Accessibility; consumes the key and applies the change via CoreAudio). No dialog at launch: the first launch (and the first after an update) opens Settings → Activities once to ask, and the menu bar menu offers it while missing. Option+Shift for quarter steps. | P1 | ✅ | H, Q |
+| FR-H1 | Volume up/down/mute shown in the island instead of the system HUD, on by default (needs Accessibility; consumes the key and applies the change via CoreAudio). No dialog at launch: the first launch (and the first after an update) opens Settings → Activities once to ask, and the menu bar menu offers it while missing. Option+Shift for quarter steps. The glyph shows the level (speaker waves 0–3, sun rays 0–8), bounces on each press, and the bar stretches when pushed past either end. Volume changes from elsewhere (Control Center, AirPods, apps) also show. | P1 | ✅ | H, Q, R |
 | FR-H2 | Devices without software volume, or no permission: pass the key through untouched. | P0 | ✅ | H |
 | FR-H3 | While the island is open, show the level in the header. | P2 | ✅ | H |
 | FR-H4 | Brightness like volume: keys shown in the island instead of the system HUD, and a slider under the volume slider in Now Playing. Built-in display, private DisplayServices; on by default, its own switch; keys pass through when unavailable. | P1 | ✅ | H |
