@@ -187,6 +187,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L, Q |
 | FR-S6 | CI builds, tests and renders every state on each push; every app change on `main` publishes a numbered GitHub Release with its SHA-256. | P1 | ✅ | L |
 | FR-S7 | `--demo <scenario>` and `--snapshot <dir>` for verification without a mouse. | P1 | ✅ | L |
+| FR-S9 | Style: Classic (system font, smooth shapes) or Retro (bundled OFL pixel fonts Pixelify Sans and VT323, pixel-stepped corners, block meters, pixel-art covers), with a full-colour, green or amber screen and optional scanlines. | P2 | ✅ | R, Q |
 | FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. | P1 | ✅ | T, Q |
 
 ### 7.11 Explicitly out (see §9)

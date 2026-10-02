@@ -96,6 +96,24 @@ private struct GeneralTab: View {
                 Toggle("Hide from screen sharing and recordings", isOn: $settings.hideFromScreenSharing)
             }
             Section {
+                Picker("Style", selection: $settings.islandStyle) {
+                    ForEach(IslandStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                if settings.islandStyle == .retro {
+                    Picker("Screen", selection: $settings.phosphor) {
+                        ForEach(Phosphor.allCases) { Text($0.title).tag($0) }
+                    }
+                    Toggle("Scanlines", isOn: $settings.scanlines)
+                }
+            } header: {
+                Text("Style")
+            } footer: {
+                Text(settings.islandStyle == .retro
+                     ? "Pixel type, stepped corners, block meters and pixel-art covers. Green and amber turn the island into a one-colour monitor."
+                     : "The system font and smooth shapes, like the iPhone.")
+            }
+            Section {
                 Picker("Show the island on", selection: $settings.screenChoice) {
                     ForEach(AppSettings.ScreenChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -268,6 +286,8 @@ private struct AboutTab: View {
             Text("A Dynamic Island for the Mac notch. No accounts or telemetry; the only request Notchy makes on its own is the update check on GitHub.")
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
+            Text("Retro style fonts: Pixelify Sans (The Pixelify Sans Project Authors) and VT323 (The VT323 Project Authors), SIL Open Font License 1.1.")
+                .font(.caption).foregroundStyle(.secondary)
             Text("Includes mediaremote-adapter").font(.headline)
             Text("Copyright (c) 2025 Jonas van den Berg and contributors. BSD 3-Clause License. github.com/ungive/mediaremote-adapter")
                 .font(.caption).foregroundStyle(.secondary)

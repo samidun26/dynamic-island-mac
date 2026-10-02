@@ -21,17 +21,20 @@ struct IslandCanvas: View {
     var body: some View {
         let canvas = model.metrics.canvasSize
         let open = state.isOpen
+        let theme = model.settings.theme
         ZStack(alignment: .top) {
-            IslandShape(geometry)
+            IslandShape(geometry, pixel: theme.pixel)
                 .fill(Color.black)
                 .shadow(color: .black.opacity(open ? 0.55 : 0), radius: open ? 20 : 0, y: open ? 10 : 0)
             content
+                .modifier(RetroScreen(theme: theme))
                 .frame(width: max(1, geometry.size.width), height: max(1, geometry.size.height), alignment: .top)
-                .clipShape(IslandShape(geometry, centred: true))
+                .clipShape(IslandShape(geometry, centred: true, pixel: theme.pixel))
                 .offset(x: geometry.offsetX)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
         .environment(\.colorScheme, .dark)
+        .environment(\.islandTheme, theme)
         .ignoresSafeArea()
     }
 
@@ -253,7 +256,7 @@ struct ExpandedHeader: View {
                 }
                 if let level = model.battery.level {
                     HStack(spacing: 4) {
-                        Text("\(level)%").font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        Text("\(level)%").islandFont(11, .semibold, digits: true)
                             .foregroundStyle(.white.opacity(0.7))
                         BatteryGlyph(level: level, tint: batteryTint(level), width: 21)
                     }
@@ -293,7 +296,7 @@ struct ExpandedHeader: View {
                 }
             }
         }
-        .font(.system(size: 11.5, weight: .semibold))
+        .islandFont(11.5, .semibold)
         .foregroundStyle(.white.opacity(0.75))
     }
 }
@@ -301,11 +304,12 @@ struct ExpandedHeader: View {
 struct PageDots: View {
     let model: IslandModel
     let current: Page
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         HStack(spacing: 5) {
             ForEach(model.pages, id: \.self) { p in
-                Capsule()
+                RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 2.5, style: .continuous)
                     .fill(.white.opacity(p == current ? 0.95 : 0.3))
                     .frame(width: p == current ? 12 : 5, height: 5)
                     .contentShape(Rectangle().inset(by: -4))

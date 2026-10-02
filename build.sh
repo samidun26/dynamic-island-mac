@@ -75,6 +75,9 @@ ln -sfn A "$FW/Versions/Current"
 ln -sfn Versions/Current/MediaRemoteAdapter "$FW/MediaRemoteAdapter"
 ln -sfn Versions/Current/Resources "$FW/Resources"
 cp "$MRA/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/mediaremote-adapter.pl"
+# Retro style fonts (SIL Open Font License; the licences ship next to them).
+mkdir -p "$APP/Contents/Resources/Fonts"
+cp Resources/Fonts/*.ttf Resources/Fonts/*-OFL.txt "$APP/Contents/Resources/Fonts/"
 
 echo "==> codesign ($SIGN_IDENTITY)"
 # Hardened runtime in both cases: without it, another process could start Notchy with

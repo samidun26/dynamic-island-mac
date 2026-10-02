@@ -44,7 +44,7 @@ struct CompactTrailing: View {
         case .calendar:
             if let e = model.calendar.phase.event {
                 RelativeTime(date: e.start)
-                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .islandFont(12, .semibold, digits: true)
                     .foregroundStyle(e.color)
             }
         case .hud:
@@ -55,7 +55,7 @@ struct CompactTrailing: View {
         case .battery:
             if let level = model.battery.level {
                 HStack(spacing: 5) {
-                    Text("\(level)%").font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    Text("\(level)%").islandFont(12, .semibold, digits: true)
                     BatteryGlyph(level: level, tint: model.battery.banner?.kind == .low ? .red : .green, width: 22)
                 }
                 .foregroundStyle(model.battery.banner?.kind == .low ? .red : .green)
@@ -182,7 +182,7 @@ struct BatteryBannerLeading: View {
                 .font(.system(size: 11, weight: .bold))
                 .symbolEffect(.bounce, value: battery.banner?.at)
             Text(kind == .low ? "Low Battery" : kind == .charging ? "Charging" : "Connected")
-                .font(.system(size: 12, weight: .semibold))
+                .islandFont(12, .semibold)
                 .lineLimit(1)
                 .fixedSize()
         }
@@ -203,9 +203,9 @@ struct NowPlayingPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top, spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(info.title).font(.system(size: 14.5, weight: .semibold))
+                            Text(info.title).islandFont(14.5, .semibold)
                             Text(info.artist.isEmpty ? info.album : info.artist)
-                                .font(.system(size: 12.5))
+                                .islandFont(12.5)
                                 .foregroundStyle(.white.opacity(0.55))
                         }
                         .lineLimit(1)
@@ -266,7 +266,7 @@ struct TimerPage: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(timer.isDone ? "Time's up" : timer.isPaused ? "Paused" : "Timer")
-                    .font(.system(size: 12, weight: .semibold))
+                    .islandFont(12, .semibold)
                     .foregroundStyle(.white.opacity(0.55))
                 TimerText(timer: timer, size: 36)
             }
@@ -311,15 +311,15 @@ struct EventRow: View {
         HStack(spacing: 10) {
             Capsule().fill(event.color).frame(width: 3.5, height: 28)
             VStack(alignment: .leading, spacing: 1) {
-                Text(event.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(event.title).islandFont(13, .semibold).lineLimit(1)
                 Text(timeRange + (event.location.map { $0.isEmpty ? "" : "  ·  \($0)" } ?? ""))
-                    .font(.system(size: 11))
+                    .islandFont(11)
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
             }
             Spacer(minLength: 6)
             RelativeTime(date: event.start)
-                .font(.system(size: 11.5, weight: .semibold).monospacedDigit())
+                .islandFont(11.5, .semibold, digits: true)
                 .foregroundStyle(event.color)
             if let url = event.joinURL {
                 PillButton(title: "Join", symbol: "video.fill", tint: .green) { NSWorkspace.shared.open(url) }
@@ -343,9 +343,9 @@ struct HomePage: View {
                 TimelineView(.everyMinute) { ctx in
                     VStack(alignment: .leading, spacing: 0) {
                         Text(ctx.date, format: .dateTime.hour().minute())
-                            .font(.system(size: 40, weight: .semibold, design: .rounded).monospacedDigit())
+                            .islandFont(40, .semibold, digits: true, rounded: true)
                         Text(ctx.date, format: .dateTime.weekday(.wide).month(.wide).day())
-                            .font(.system(size: 12, weight: .medium))
+                            .islandFont(12, .medium)
                             .foregroundStyle(.white.opacity(0.5))
                     }
                 }
@@ -373,13 +373,13 @@ struct NextUpCard: View {
         let cal = model.calendar
         VStack(alignment: .leading, spacing: 6) {
             Text("UP NEXT")
-                .font(.system(size: 9.5, weight: .bold))
+                .islandFont(9.5, .bold)
                 .kerning(0.6)
                 .foregroundStyle(.white.opacity(0.4))
             if !model.settings.calendarEnabled {
-                Text("Calendar is off").font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
+                Text("Calendar is off").islandFont(12).foregroundStyle(.white.opacity(0.5))
             } else if cal.access == .denied {
-                Text("No calendar access").font(.system(size: 12, weight: .semibold))
+                Text("No calendar access").islandFont(12, .semibold)
                 PillButton(title: "Open Settings", tint: .white) {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
                 }
@@ -389,22 +389,22 @@ struct NextUpCard: View {
                 HStack(spacing: 8) {
                     Capsule().fill(e.color).frame(width: 3, height: 30)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(e.title).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+                        Text(e.title).islandFont(12.5, .semibold).lineLimit(1)
                         Text(e.start, format: .dateTime.hour().minute())
-                            .font(.system(size: 11))
+                            .islandFont(11)
                             .foregroundStyle(.white.opacity(0.5))
                     }
                 }
                 HStack(spacing: 6) {
                     RelativeTime(date: e.start)
-                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .islandFont(11, .semibold, digits: true)
                         .foregroundStyle(e.color)
                     if let url = e.joinURL {
                         PillButton(title: "Join", symbol: "video.fill", tint: .green) { NSWorkspace.shared.open(url) }
                     }
                 }
             } else {
-                Text("Nothing else today").font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.55))
+                Text("Nothing else today").islandFont(12, .medium).foregroundStyle(.white.opacity(0.55))
             }
         }
         .padding(12)

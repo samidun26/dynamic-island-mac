@@ -696,6 +696,29 @@ else
     quit_notchy
 fi
 
+# ---------------------------------------------------------------- retro style
+# Settings → General → Style: Retro. The bundled pixel fonts must load, and the island must draw.
+defaults write "$BID" nonNotchMode whenActive
+defaults write "$BID" islandStyle retro
+launch_notchy; sleep 1
+lim 8 open "notchy://timer?minutes=3"
+if wait_for "$LOG" "STATE compact:timer" 6; then
+    sleep 1; shot qa40-retro-compact
+    "$D" jump "$CX" 400 >/dev/null; sleep 0.4; mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
+    wait_for "$LOG" "STATE expanded" 3 && { sleep 0.9; shot qa40-retro-expanded 240; }
+    "$D" move "$CX" 520 200 >/dev/null
+fi
+FONTS=$(grep -E 'FONTS ' "$LOG" | tail -1 | sed -E 's/.*FONTS //')
+W=$(island_width qa40-retro-compact)
+if [ "$FONTS" = "text=true digits=true" ] && [ "${W:-0}" -gt 150 ]; then
+    pass QA-40 "Retro style: pixel fonts load and the island draws in them (FR-S9)" "fonts: $FONTS; island ${W} pt ([compact](shots/qa40-retro-compact.png), [open](shots/qa40-retro-expanded.png))"
+else
+    fail QA-40 "Retro style: pixel fonts load and the island draws in them (FR-S9)" "fonts: ${FONTS:-not logged}; island ${W:-?} pt; $(last_state)"
+fi
+lim 8 open "notchy://timer/cancel"; sleep 0.5
+quit_notchy
+defaults delete "$BID" islandStyle 2>/dev/null
+
 # ---------------------------------------------------------------- updates
 # Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub
 # (a test-only Info.plist key; shipped builds always ask GitHub). It offers 9.9.9. Covers the

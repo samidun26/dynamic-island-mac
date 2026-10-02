@@ -45,6 +45,12 @@ final class AppSettings {
     /// Look for a newer release on GitHub after launch and every 6 hours.
     var checkForUpdates: Bool { didSet { save(checkForUpdates, "checkForUpdates") } }
 
+    // Style
+    var islandStyle: IslandStyle { didSet { save(islandStyle.rawValue, "islandStyle") } }
+    var phosphor: Phosphor { didSet { save(phosphor.rawValue, "phosphor") } }
+    var scanlines: Bool { didSet { save(scanlines, "scanlines") } }
+    var theme: IslandTheme { IslandTheme(style: islandStyle, phosphor: phosphor, scanlines: scanlines) }
+
     // Display
     /// Fit the compact wings into the free menu bar space instead of covering menus and icons.
     var keepClearOfMenuBar: Bool { didSet { save(keepClearOfMenuBar, "keepClearOfMenuBar") } }
@@ -81,6 +87,9 @@ final class AppSettings {
         hideFromScreenSharing = bool("hideFromScreenSharing", true)
         showMenuBarIcon = bool("showMenuBarIcon", true)
         checkForUpdates = bool("checkForUpdates", true)
+        islandStyle = IslandStyle(rawValue: defaults.string(forKey: "islandStyle") ?? "") ?? .classic
+        phosphor = Phosphor(rawValue: defaults.string(forKey: "phosphor") ?? "") ?? .color
+        scanlines = bool("scanlines", true)
         keepClearOfMenuBar = bool("keepClearOfMenuBar", true)
         screenChoice = ScreenChoice(rawValue: defaults.string(forKey: "screenChoice") ?? "") ?? .notched
         nonNotchMode = NonNotchMode(rawValue: defaults.string(forKey: "nonNotchMode") ?? "") ?? .whenActive

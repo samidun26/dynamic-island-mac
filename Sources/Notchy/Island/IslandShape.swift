@@ -12,14 +12,17 @@ struct IslandShape: Shape {
     var bottomRadius: CGFloat
     var earRadius: CGFloat
     var offsetX: CGFloat
+    /// Retro style: the bottom corners become pixel staircases of this step (0 = smooth).
+    var pixel: CGFloat
 
     /// `centred` ignores the geometry's offset (for clipping content that is itself offset).
-    init(_ g: IslandGeometry, centred: Bool = false) {
+    init(_ g: IslandGeometry, centred: Bool = false, pixel: CGFloat = 0) {
         width = g.size.width
         height = g.size.height
         bottomRadius = g.bottomRadius
         earRadius = g.earRadius
         offsetX = centred ? 0 : g.offsetX
+        self.pixel = pixel
     }
 
     var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat>> {
@@ -49,16 +52,37 @@ struct IslandShape: Shape {
         p.addLine(to: CGPoint(x: x1 + e, y: y0))
         if e > 0 { p.addQuadCurve(to: CGPoint(x: x1, y: y0 + e), control: CGPoint(x: x1, y: y0)) }
         p.addLine(to: CGPoint(x: x1, y: y1 - r))
-        p.addCurve(to: CGPoint(x: x1 - r, y: y1),
-                   control1: CGPoint(x: x1, y: y1 - r + r * k),
-                   control2: CGPoint(x: x1 - r + r * k, y: y1))
-        p.addLine(to: CGPoint(x: x0 + r, y: y1))
-        p.addCurve(to: CGPoint(x: x0, y: y1 - r),
-                   control1: CGPoint(x: x0 + r - r * k, y: y1),
-                   control2: CGPoint(x: x0, y: y1 - r + r * k))
+        if pixel > 0, r > pixel {
+            stairs(&p, centre: CGPoint(x: x1 - r, y: y1 - r), radius: r, from: 0, to: .pi / 2, downFirst: true)
+            p.addLine(to: CGPoint(x: x0 + r, y: y1))
+            stairs(&p, centre: CGPoint(x: x0 + r, y: y1 - r), radius: r, from: .pi / 2, to: .pi, downFirst: false)
+        } else {
+            p.addCurve(to: CGPoint(x: x1 - r, y: y1),
+                       control1: CGPoint(x: x1, y: y1 - r + r * k),
+                       control2: CGPoint(x: x1 - r + r * k, y: y1))
+            p.addLine(to: CGPoint(x: x0 + r, y: y1))
+            p.addCurve(to: CGPoint(x: x0, y: y1 - r),
+                       control1: CGPoint(x: x0 + r - r * k, y: y1),
+                       control2: CGPoint(x: x0, y: y1 - r + r * k))
+        }
         p.addLine(to: CGPoint(x: x0, y: y0 + e))
         if e > 0 { p.addQuadCurve(to: CGPoint(x: x0 - e, y: y0), control: CGPoint(x: x0, y: y0)) }
         p.closeSubpath()
         return p
+    }
+
+    /// A quarter circle drawn as a pixel staircase: points on the arc snapped to the pixel grid,
+    /// joined by vertical and horizontal runs.
+    private func stairs(_ p: inout Path, centre c: CGPoint, radius r: CGFloat, from a0: CGFloat, to a1: CGFloat, downFirst: Bool) {
+        let steps = max(2, Int((r / pixel).rounded()))
+        var current = p.currentPoint ?? CGPoint(x: c.x + r * cos(a0), y: c.y + r * sin(a0))
+        for i in 1...steps {
+            let a = a0 + (a1 - a0) * CGFloat(i) / CGFloat(steps)
+            let q = CGPoint(x: c.x + ((r * cos(a)) / pixel).rounded() * pixel,
+                            y: c.y + ((r * sin(a)) / pixel).rounded() * pixel)
+            p.addLine(to: downFirst ? CGPoint(x: current.x, y: q.y) : CGPoint(x: q.x, y: current.y))
+            p.addLine(to: q)
+            current = q
+        }
     }
 }

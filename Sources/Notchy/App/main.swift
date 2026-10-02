@@ -12,6 +12,7 @@ MainActor.assumeIsolated {
     }
 
     let app = NSApplication.shared
+    RetroFonts.register()
     if let dir = value(after: "--snapshot") {
         Snapshots.render(to: dir)
         exit(0)
