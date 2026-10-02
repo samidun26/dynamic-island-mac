@@ -129,6 +129,10 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - **Drag files to the notch** (from Finder, the desktop, Mail…). The island opens on the shelf with a drop zone; let go and the files stay there. The shelf stays open until you move the pointer away, so you can see what landed.
 - **Drag them out** to any app or folder when you need them; double-click opens one; right-click for **Show in Finder** and **Remove from Shelf**; **Clear** empties it.
 - ponyhub keeps a reference to each file, never a copy. The shelf survives restarts and follows files you move. Up to 40 files.
+- **Screenshots:** take one (⌘⇧3, ⌘⇧4 or ⌘⇧5) and drag the thumbnail that appears in the corner up to the notch. Images dragged out of apps and browsers work too. While you drag, the island shows two targets:
+  - **Keep on Shelf** (left): it stays on the shelf. ponyhub keeps its own copy, since macOS deletes the screenshot's temporary file once it's dragged away.
+  - **Copy** (right): the picture goes on the clipboard, ready to paste into a chat, an email or a document. *Image copied to clipboard* confirms it; nothing is kept on the shelf.
+- Shelf tiles show a preview of images, PDFs and documents.
 - Open it any time: swipe to the last page of the island, or `ponyhub://shelf`.
 
 ### Shelf: clipboard history
@@ -151,7 +155,7 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 ### Volume and brightness in the notch (on by default)
 Like Alcove: the volume and brightness keys show their level in the notch, and macOS's own pop-up doesn't appear (including the small corner pop-up of macOS 26). The icon follows the level: the speaker's sound waves grow one by one as the volume rises (a slash when muted), and the sun gains its rays one by one up to a full ring at maximum brightness. Each press gives the icon a small bounce, and pressing past the top or bottom makes the bar stretch like a rubber band. Volume changed elsewhere (Control Center, AirPods, another app) shows in the notch too.
 1. This needs **Accessibility** permission. On first launch (or the first launch after updating), Settings opens on **Activities** to ask for it: click **Allow…**, then switch ponyhub on in *Privacy & Security → Accessibility*. It works from that moment, no restart needed. The menu bar icon also offers **Allow Accessibility for Volume and Brightness…** while it's missing.
-2. Until it's allowed, the keys work normally and macOS shows its own pop-up.
+2. Until it's allowed, the keys work and the notch shows the level, but macOS shows its own pop-up too. **After an update** (while releases aren't signed with a fixed identity) macOS stops applying the permission even though ponyhub still looks switched on in the list: Settings opens on Activities again, and **Allow…** clears the old entry and asks afresh, so you only switch it on again. Settings → Activities shows *On: only the notch shows volume and brightness* when it works.
 3. **⌥⇧ + volume** changes in quarter steps.
 - **Brightness works the same way:** the brightness keys show a sun and a level in the island instead of the system HUD, and Now Playing has a brightness slider under the volume one. This is for the built-in display and uses a private Apple framework (there is no public way), so a macOS update could break it; the keys then go back to macOS. Turn it off with *Brightness in the island*. Keyboard backlight keys always use the system HUD.
 - If your output device has no software volume (some HDMI/USB devices), ponyhub leaves the keys to macOS.

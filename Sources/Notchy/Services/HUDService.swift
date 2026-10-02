@@ -105,8 +105,10 @@ final class HUDModel {
     /// Asks macOS for Accessibility: its dialog adds ponyhub to the list in Privacy & Security, and
     /// the tap starts as soon as it's switched on.
     func requestAccess() {
-        if AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary) {
+        if AccessibilityAccess.granted {
             if tap == nil { installTap(prompt: false) }
+        } else {
+            AccessibilityAccess.request()
         }
     }
 

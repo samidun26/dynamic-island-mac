@@ -46,8 +46,13 @@ final class IslandModel {
     private(set) var fileDragNear = false
     /// …and are over the island, where letting go drops them on the shelf.
     private(set) var dropTargeted = false
+    /// Which drop target the pointer is over while dragging: keep on the shelf, or copy.
+    private(set) var dropZone = ShelfDropZone.keep
     /// Which half of the shelf is showing.
     var shelfTab = ShelfTab.files
+    /// A short confirmation on the shelf ("Copied to clipboard").
+    private(set) var shelfNotice: String?
+    @ObservationIgnored private var noticeTask: Task<Void, Never>?
     private(set) var selectedPage: Page?
     private(set) var preferred: ActivityKind?
 
@@ -271,6 +276,22 @@ final class IslandModel {
         }
     }
 
+    func setDropZone(_ zone: ShelfDropZone) {
+        if dropZone != zone { dropZone = zone }
+    }
+
+    static let copyZoneWidth: CGFloat = 140
+
+    /// The Copy target in the panel's coordinates: the right end of the expanded island's page
+    /// (see `DropZones`), where letting go copies instead of keeping.
+    func copyZone() -> CGRect {
+        let canvas = metrics.canvasSize, size = metrics.expandedSize()
+        let inset = ExpandedContent.inset
+        let right = (canvas.width + size.width) / 2 - inset.trailing
+        let top = metrics.notchSize.height + inset.top
+        return CGRect(x: right - Self.copyZoneWidth, y: top, width: Self.copyZoneWidth, height: size.height - inset.bottom - top)
+    }
+
     func setDropTargeted(_ on: Bool) {
         guard dropTargeted != on else { return }
         dropTargeted = on
@@ -289,6 +310,27 @@ final class IslandModel {
         shelfTab = .files
         peekKind = nil
         if settings.openOnHover { hoverOpen = true } else { pinned = true }
+    }
+
+    /// Dropped on "Copy": onto the clipboard, ready to paste. A screenshot's copy kept for the
+    /// drop is deleted again (the clipboard holds the picture).
+    func droppedForCopy(_ urls: [URL]) {
+        guard let what = clipboard.copyFiles(urls) else { return }
+        urls.forEach(shelf.discardIfStored)
+        showShelfNotice(what == "image" ? "Image copied to clipboard" : "Copied to clipboard")
+        selectedPage = .shelf
+        peekKind = nil
+        if settings.openOnHover { hoverOpen = true } else { pinned = true }
+    }
+
+    func showShelfNotice(_ text: String) {
+        shelfNotice = text
+        noticeTask?.cancel()
+        noticeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.8))
+            guard !Task.isCancelled else { return }
+            self?.shelfNotice = nil
+        }
     }
 
     func dismiss() {

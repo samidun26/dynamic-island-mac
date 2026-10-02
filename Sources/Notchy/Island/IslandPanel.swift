@@ -266,7 +266,7 @@ final class IslandController {
         guard settings.shelfEnabled, NSEvent.pressedMouseButtons & 1 != 0 else { return false }
         if let dragHasFiles { return dragHasFiles }
         let pb = NSPasteboard(name: .drag)
-        let files = pb.changeCount != dragBaseline && pb.types?.contains(.fileURL) == true
+        let files = pb.changeCount != dragBaseline && ShelfDrop.accepts(pb.types ?? [])
         dragHasFiles = files
         return files
     }

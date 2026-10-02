@@ -218,7 +218,7 @@ private struct ActivitiesTab: View {
                 if settings.hudEnabled {
                     switch model.hud.tapState {
                     case .active:
-                        LabeledContent("Status", value: "On: the notch replaces macOS's pop-up")
+                        LabeledContent("Status", value: "On: only the notch shows volume and brightness")
                     case .needsPermission, .off:
                         LabeledContent("Needs Accessibility") {
                             HStack {
@@ -226,7 +226,7 @@ private struct ActivitiesTab: View {
                                 Button("Open Privacy Settings") { model.hud.openAccessibilitySettings() }
                             }
                         }
-                        Text("Until it's allowed, macOS shows its own volume and brightness pop-up. Click Allow…, then switch \(AppInfo.name) on under Accessibility; it takes effect right away. If \(AppInfo.name) is already listed and on but this still asks, remove it with − and add it again.")
+                        Text("Until it's allowed, macOS shows its own volume and brightness pop-up too. Click Allow…, then switch \(AppInfo.name) on in the list that opens; it takes effect right away. (Allow… first clears an entry left by an earlier version, which can look switched on but no longer applies after an update.)")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
