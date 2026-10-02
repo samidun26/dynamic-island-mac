@@ -720,6 +720,7 @@ fi
 # opens Settings on Activities to ask, once per version. (Started from the test's shell, it
 # inherits the shell's Accessibility instead: that is QA-46.)
 quit_notchy
+defaults write "$BID" nonNotchMode whenActive   # QA-29 left it on "Never", which hides the island here
 defaults delete "$BID" hudOnboardedVersion 2>/dev/null
 open_app() { : > "$1"; lim 10 open -n --env NOTCHY_QA_LOG=1 --stdout "$1" "$APP"; }
 quit_opened() { pkill -TERM -f "$APP/Contents/MacOS/ponyhub" 2>/dev/null; for _ in $(seq 1 25); do pgrep -f "$APP/Contents/MacOS/ponyhub" >/dev/null || break; sleep 0.2; done; }
