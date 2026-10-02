@@ -50,7 +50,7 @@ final class UpdateService {
         c.timeoutIntervalForRequest = 20
         c.timeoutIntervalForResource = 300
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-        c.httpAdditionalHeaders = ["User-Agent": "Notchy/\(version)", "Accept": "application/vnd.github+json"]
+        c.httpAdditionalHeaders = ["User-Agent": "\(AppInfo.name)/\(version)", "Accept": "application/vnd.github+json"]
         session = URLSession(configuration: c, delegate: RedirectGuard(localFeed: local), delegateQueue: nil)
     }
 
@@ -122,7 +122,7 @@ final class UpdateService {
         let target = Bundle.main.bundleURL
         do {
             guard FileManager.default.isWritableFile(atPath: target.deletingLastPathComponent().path) else {
-                throw UpdateError("Notchy can't replace itself in \(target.deletingLastPathComponent().path). Download the update from GitHub instead.")
+                throw UpdateError("\(AppInfo.name) can't replace itself in \(target.deletingLastPathComponent().path). Download the update from GitHub instead.")
             }
             phase = .installing("Downloading \(release.version)…")
             guard let sumURL = release.checksumURL else { throw UpdateError("This release has no checksum, so it can't be verified.") }
@@ -155,7 +155,7 @@ final class UpdateService {
 
     // MARK: Verification (off the main thread)
 
-    /// Checks the download and unpacks it; returns the verified Notchy.app inside `dir`.
+    /// Checks the download and unpacks it; returns the verified ponyhub.app inside `dir`.
     nonisolated static func verify(zip: URL, expectedSHA256: String, release: ReleaseInfo, into dir: URL) throws -> URL {
         let size = (try? FileManager.default.attributesOfItem(atPath: zip.path)[.size] as? Int) ?? 0
         guard size > 0, size <= UpdateFeed.maxDownloadSize else { throw UpdateError("The download has an unexpected size.") }
@@ -169,7 +169,7 @@ final class UpdateService {
         ditto.arguments = ["-x", "-k", zip.path, unpacked.path]
         try ditto.run()
         ditto.waitUntilExit()
-        let app = unpacked.appendingPathComponent("Notchy.app")
+        let app = unpacked.appendingPathComponent("\(AppInfo.name).app")
         guard ditto.terminationStatus == 0, FileManager.default.fileExists(atPath: app.path) else {
             throw UpdateError("The download could not be unpacked.")
         }
@@ -177,7 +177,7 @@ final class UpdateService {
         guard let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
               info["CFBundleIdentifier"] as? String == Bundle.main.bundleIdentifier,
               let v = (info["CFBundleShortVersionString"] as? String).flatMap(AppVersion.init), v == release.version else {
-            throw UpdateError("The download is not Notchy \(release.version).")
+            throw UpdateError("The download is not \(AppInfo.name) \(release.version).")
         }
         try checkSignature(of: app)
         // Downloaded by Notchy itself, so not quarantined; make sure nothing was carried over.
@@ -226,7 +226,7 @@ final class UpdateService {
         do {
             try p.run()
         } catch {
-            phase = .failed("Installed. Open Notchy again to finish.")
+            phase = .failed("Installed. Open \(AppInfo.name) again to finish.")
             return
         }
         NSApp.terminate(nil)

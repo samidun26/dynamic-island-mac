@@ -51,27 +51,27 @@ jobs:
 
       - name: Inspect bundle
         run: |
-          find build/Notchy.app -maxdepth 4 | sort
-          lipo -info build/Notchy.app/Contents/MacOS/Notchy
-          lipo -info build/Notchy.app/Contents/Frameworks/MediaRemoteAdapter.framework/MediaRemoteAdapter
-          codesign -dv build/Notchy.app 2>&1 | head -5
+          find build/ponyhub.app -maxdepth 4 | sort
+          lipo -info build/ponyhub.app/Contents/MacOS/ponyhub
+          lipo -info build/ponyhub.app/Contents/Frameworks/MediaRemoteAdapter.framework/MediaRemoteAdapter
+          codesign -dv build/ponyhub.app 2>&1 | head -5
 
       - name: Now Playing adapter smoke test
         run: |
-          R=build/Notchy.app/Contents
+          R=build/ponyhub.app/Contents
           set +e
           OUT=$(/usr/bin/perl "$R/Resources/mediaremote-adapter.pl" "$PWD/$R/Frameworks/MediaRemoteAdapter.framework" get --no-artwork 2>&1)
           echo "exit=$? output=$OUT"
 
       - name: Render snapshots (ImageRenderer)
         timeout-minutes: 5
-        run: build/Notchy.app/Contents/MacOS/Notchy --snapshot "$PWD/snapshots"
+        run: build/ponyhub.app/Contents/MacOS/ponyhub --snapshot "$PWD/snapshots"
 
       - name: Live window capture
         continue-on-error: true
         run: |
           for s in compact expanded multi; do
-            build/Notchy.app/Contents/MacOS/Notchy --demo $s --print-window > win.txt 2>&1 &
+            build/ponyhub.app/Contents/MacOS/ponyhub --demo $s --print-window > win.txt 2>&1 &
             PID=$!
             sleep 3
             cat win.txt
@@ -88,10 +88,10 @@ jobs:
         continue-on-error: true
         run: |
           # Real mode: all services on (Now Playing adapter stream, battery, calendar), nothing playing.
-          open -n build/Notchy.app
+          open -n build/ponyhub.app
           sleep 10
-          PID=$(pgrep -n -x Notchy)
-          echo "--- Notchy (real services, idle)"
+          PID=$(pgrep -n -x ponyhub)
+          echo "--- ponyhub (real services, idle)"
           top -l 4 -s 3 -pid $PID -stats pid,command,cpu,mem,idlew,threads | tail -2
           echo "--- what the main thread does while idle (sample, 3 s)"
           sample $PID 3 -file sample.txt > /dev/null 2>&1 || true
@@ -119,8 +119,8 @@ jobs:
 
       - name: Package
         run: |
-          ditto -c -k --keepParent build/Notchy.app Notchy.zip
-          shasum -a 256 Notchy.zip | tee Notchy.zip.sha256
+          ditto -c -k --keepParent build/ponyhub.app ponyhub.zip
+          shasum -a 256 ponyhub.zip | tee ponyhub.zip.sha256
 
       - uses: actions/upload-artifact@v4
         with:
@@ -128,7 +128,7 @@ jobs:
           path: snapshots/
       - uses: actions/upload-artifact@v4
         with:
-          name: Notchy-app
+          name: ponyhub-app
           path: |
-            Notchy.zip
-            Notchy.zip.sha256
+            ponyhub.zip
+            ponyhub.zip.sha256

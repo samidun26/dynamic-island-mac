@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds build/Notchy.app: the SwiftPM executable, the vendored MediaRemoteAdapter.framework
+# Builds build/ponyhub.app (called Notchy up to 1.0.2): the SwiftPM executable, the vendored MediaRemoteAdapter.framework
 # and its Perl launcher, Info.plist, and a code signature.
 #
 #   ./build.sh                       # host architecture, ad-hoc signed
@@ -14,7 +14,8 @@ VERSION=${VERSION:-1.0.0}
 BUILD_NUMBER=${BUILD_NUMBER:-1}
 SIGN_IDENTITY=${SIGN_IDENTITY:--}
 OUT=build
-APP=$OUT/Notchy.app
+NAME=ponyhub
+APP=$OUT/$NAME.app
 MRA=Vendor/mediaremote-adapter
 
 if [ "${UNIVERSAL:-0}" = 1 ]; then
@@ -34,7 +35,7 @@ BIN_DIR=$(swift build -c release $ARCH_FLAGS --show-bin-path)
 echo "==> assemble $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
-cp "$BIN_DIR/Notchy" "$APP/Contents/MacOS/Notchy"
+cp "$BIN_DIR/Notchy" "$APP/Contents/MacOS/$NAME"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" Resources/Info.plist > "$APP/Contents/Info.plist"
 # The icon is drawn by the app itself (SwiftUI), then packed with iconutil.
 rm -rf "$OUT/AppIcon.iconset"
@@ -80,8 +81,8 @@ mkdir -p "$APP/Contents/Resources/Fonts"
 cp Resources/Fonts/*.ttf Resources/Fonts/*-OFL.txt "$APP/Contents/Resources/Fonts/"
 
 echo "==> codesign ($SIGN_IDENTITY)"
-# Hardened runtime in both cases: without it, another process could start Notchy with
-# DYLD_INSERT_LIBRARIES and run its code with the permissions granted to Notchy
+# Hardened runtime in both cases: without it, another process could start the app with
+# DYLD_INSERT_LIBRARIES and run its code with the permissions granted to it
 # (Accessibility, Calendars, Automation).
 if [ "$SIGN_IDENTITY" = "-" ]; then
   codesign --force --sign - "$FW"

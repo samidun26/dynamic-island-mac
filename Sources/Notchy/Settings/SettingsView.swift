@@ -22,7 +22,7 @@ final class SettingsWindowController {
         if window == nil {
             let host = NSHostingController(rootView: SettingsView(settings: settings, model: model, updates: updates, navigation: navigation))
             let w = NSWindow(contentViewController: host)
-            w.title = "Notchy Settings"
+            w.title = "\(AppInfo.name) Settings"
             w.styleMask = [.titled, .closable, .miniaturizable]
             w.isReleasedWhenClosed = false
             w.center()
@@ -133,14 +133,14 @@ private struct GeneralTab: View {
                      ? "Live activities use both sides of the notch and may cover menus and icons next to it."
                      : model.menuBar.seesMenus
                      ? "Live activities use only free menu bar space, or show as a thin line under the notch."
-                     : "Live activities use only free menu bar space. To use the space left of the notch, Notchy needs to see where app menus end.")
+                     : "Live activities use only free menu bar space. To use the space left of the notch, \(AppInfo.name) needs to see where app menus end.")
             }
             Section("App") {
                 Toggle("Launch at login", isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }))
                 if let loginError { Text(loginError).font(.caption).foregroundStyle(.red) }
                 Toggle("Show menu bar icon", isOn: $settings.showMenuBarIcon)
                 if !settings.showMenuBarIcon {
-                    Text("Open Notchy again from Finder or Spotlight to get back here.").font(.caption).foregroundStyle(.secondary)
+                    Text("Open \(AppInfo.name) again from Finder or Spotlight to get back here.").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -170,7 +170,7 @@ private struct ActivitiesTab: View {
                     .disabled(!settings.nowPlayingEnabled)
                 LabeledContent("Source", value: nowPlayingSource)
             } footer: {
-                Text("Works with any app that reports to macOS Now Playing (Music, Spotify, browsers…) through the bundled mediaremote-adapter. If macOS blocks it, Notchy falls back to Music and Spotify only.")
+                Text("Works with any app that reports to macOS Now Playing (Music, Spotify, browsers…) through the bundled mediaremote-adapter. If macOS blocks it, \(AppInfo.name) falls back to Music and Spotify only.")
             }
             Section {
                 Toggle("Timer", isOn: $settings.timerEnabled)
@@ -184,7 +184,7 @@ private struct ActivitiesTab: View {
                 }
                 .disabled(!settings.timerEnabled)
             } footer: {
-                Text("Start one from the island, the menu bar, or a URL: open notchy://timer?minutes=5 or notchy://pomodoro. A pomodoro runs focus and breaks in turn, with a long break after every fourth focus.")
+                Text("Start one from the island, the menu bar, or a URL: open ponyhub://timer?minutes=5 or ponyhub://pomodoro. A pomodoro runs focus and breaks in turn, with a long break after every fourth focus.")
             }
             Section {
                 Toggle("Shelf", isOn: $settings.shelfEnabled)
@@ -214,19 +214,25 @@ private struct ActivitiesTab: View {
                 Text("Shows the next event, counts down from 15 minutes before it, and alerts you at 5.")
             }
             Section {
-                Toggle("Volume and brightness keys in the island", isOn: $settings.hudEnabled)
+                Toggle("Volume and brightness in the notch", isOn: $settings.hudEnabled)
                 if settings.hudEnabled {
                     switch model.hud.tapState {
-                    case .active: LabeledContent("Media keys", value: "Active")
+                    case .active:
+                        LabeledContent("Status", value: "On: the notch replaces macOS's pop-up")
                     case .needsPermission, .off:
-                        LabeledContent("Media keys") {
-                            Button("Grant Accessibility…") { model.hud.openAccessibilitySettings() }
+                        LabeledContent("Needs Accessibility") {
+                            HStack {
+                                Button("Allow…") { model.hud.requestAccess() }
+                                Button("Open Privacy Settings") { model.hud.openAccessibilitySettings() }
+                            }
                         }
+                        Text("Until it's allowed, macOS shows its own volume and brightness pop-up. Click Allow…, then switch \(AppInfo.name) on under Accessibility; it takes effect right away. If \(AppInfo.name) is already listed and on but this still asks, remove it with − and add it again.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Toggle("Brightness in the island", isOn: $settings.brightnessEnabled)
             } footer: {
-                Text("Replacing the system HUD means intercepting the volume and brightness keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
+                Text("Showing volume and brightness in the notch instead of macOS's pop-up means handling those keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
             }
         }
         .formStyle(.grouped)
@@ -290,14 +296,14 @@ private struct AboutTab: View {
             HStack(spacing: 12) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Notchy").font(.title2.weight(.semibold))
-                    Text("Version \(updates.current.description)").foregroundStyle(.secondary)
+                    Text(AppInfo.name).font(.title2.weight(.semibold))
+                    Text("Version \(updates.current.description) · formerly \(AppInfo.legacyName)").foregroundStyle(.secondary)
                 }
                 Spacer()
                 UpdateStatus(updates: updates)
             }
             Toggle("Check for updates automatically", isOn: $settings.checkForUpdates)
-            Text("A Dynamic Island for the Mac notch. No accounts or telemetry; the only request Notchy makes on its own is the update check on GitHub.")
+            Text("A Dynamic Island for the Mac notch. No accounts or telemetry; the only request \(AppInfo.name) makes on its own is the update check on GitHub.")
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
             Text("Retro style fonts: Pixelify Sans (The Pixelify Sans Project Authors) and VT323 (The VT323 Project Authors), SIL Open Font License 1.1.")
@@ -331,7 +337,7 @@ private struct UpdateStatus: View {
         VStack(alignment: .trailing, spacing: 6) {
             switch updates.phase {
             case .available(let release):
-                Text("Notchy \(release.version.description) is available").font(.callout.weight(.semibold))
+                Text("\(AppInfo.name) \(release.version.description) is available").font(.callout.weight(.semibold))
                 HStack(spacing: 8) {
                     Button("What's New") { showNotes = true }
                         .popover(isPresented: $showNotes) { ReleaseNotes(release: release) }
@@ -343,7 +349,7 @@ private struct UpdateStatus: View {
             case .checking:
                 HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…").font(.callout) }
             case .upToDate:
-                Text("Notchy is up to date").font(.callout).foregroundStyle(.secondary)
+                Text("\(AppInfo.name) is up to date").font(.callout).foregroundStyle(.secondary)
                 Button("Check Again") { Task { await updates.check(userInitiated: true) } }
             case .failed(let message):
                 Text(message).font(.caption).foregroundStyle(.red).multilineTextAlignment(.trailing).frame(maxWidth: 230, alignment: .trailing)
@@ -360,7 +366,7 @@ private struct ReleaseNotes: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Notchy \(release.version.description)").font(.headline)
+            Text("\(AppInfo.name) \(release.version.description)").font(.headline)
             ScrollView {
                 Text(release.notes.isEmpty ? "No notes for this release." : release.notes)
                     .font(.callout).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)

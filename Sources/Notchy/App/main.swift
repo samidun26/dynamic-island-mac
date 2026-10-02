@@ -22,6 +22,11 @@ MainActor.assumeIsolated {
         exit(0)
     }
 
+    if !args.contains("--demo") {
+        LegacyRename.runIfNeeded(args)
+        LegacyRename.finish(args)
+    }
+
     app.setActivationPolicy(.accessory)
     let delegate = AppDelegate(options: LaunchOptions(args))
     app.delegate = delegate

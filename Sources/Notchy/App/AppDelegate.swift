@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             updates.runQAInstallIfAsked()
         }
         controller = IslandController(model: model, settings: settings, demo: options.demo != nil)
+        if options.demo == nil { onboardHUDIfNeeded() }
         let m = model.metrics
         QALog.log("LAUNCH screen=\(Int(m.screenFrame.width))x\(Int(m.screenFrame.height)) hasNotch=\(m.hasNotch) notchSize=\(Int(m.notchSize.width))x\(Int(m.notchSize.height)) panel=\(Int(controller.panel.frame.minX)),\(Int(controller.panel.frame.minY)) \(Int(controller.panel.frame.width))x\(Int(controller.panel.frame.height)) window=\(controller.panel.windowNumber)")
         if options.printWindowID {
@@ -73,6 +74,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         observeChanges({ [updates] in updates.available != nil }) { [weak self] waiting in
             self?.statusItem?.button?.image = Self.statusIcon(badge: waiting)
         }
+    }
+
+    /// Volume and brightness in the notch are on by default but need Accessibility. Explain it once
+    /// per version (first launch, and again after an update if the permission went missing, as it
+    /// does with unsigned releases), on the tab where it's allowed.
+    private func onboardHUDIfNeeded() {
+        let key = "hudOnboardedVersion"
+        let version = updates.current.description
+        guard settings.hudEnabled, model.hud.tapState == .needsPermission,
+              UserDefaults.standard.string(forKey: key) != version else { return }
+        UserDefaults.standard.set(version, forKey: key)
+        QALog.log("ONBOARDING hud")
+        settingsWindow.show(settings: settings, model: model, updates: updates, tab: .activities)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -111,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if visible, statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.button?.image = Self.statusIcon(badge: updates.available != nil)
-            item.button?.toolTip = "Notchy"
+            item.button?.toolTip = AppInfo.name
             let menu = buildMenu()
             menu.delegate = self
             item.menu = menu
@@ -125,19 +139,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) { QALog.log("MENU opened") }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.item(withTag: Self.accessItemTag)?.isHidden = !(settings.hudEnabled && model.hud.tapState == .needsPermission)
         let release = updates.available
         for tag in [Self.updateItemTag, Self.updateSeparatorTag] { menu.item(withTag: tag)?.isHidden = release == nil }
-        if let release { menu.item(withTag: Self.updateItemTag)?.title = "Update to Notchy \(release.version.description)…" }
+        if let release { menu.item(withTag: Self.updateItemTag)?.title = "Update to \(AppInfo.name) \(release.version.description)…" }
     }
 
-    private static let updateItemTag = 100, updateSeparatorTag = 101
+    private static let updateItemTag = 100, updateSeparatorTag = 101, accessItemTag = 102
     func menuDidClose(_ menu: NSMenu) { QALog.log("MENU closed") }
 
 
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-        let update = menuItem("Update to Notchy…", #selector(showUpdate))
+        let update = menuItem("Update to \(AppInfo.name)…", #selector(showUpdate))
         update.tag = Self.updateItemTag
         update.isHidden = true
         menu.addItem(update)
@@ -145,6 +160,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         separator.tag = Self.updateSeparatorTag
         separator.isHidden = true
         menu.addItem(separator)
+        let access = menuItem("Allow Accessibility for Volume and Brightness…", #selector(showHUDSettings))
+        access.tag = Self.accessItemTag
+        access.isHidden = true
+        menu.addItem(access)
         menu.addItem(menuItem("Open Island", #selector(openIsland)))
         let timer = NSMenuItem(title: "Start Timer", action: nil, keyEquivalent: "")
         let sub = NSMenu()
@@ -162,7 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(menuItem("Settings…", #selector(openSettings), key: ","))
         menu.addItem(menuItem("Check for Updates…", #selector(checkForUpdates)))
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Notchy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
     }
 
@@ -187,6 +206,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { await updates.check(userInitiated: true) }
     }
 
+    @objc private func showHUDSettings() {
+        QALog.log("SETTINGS shown")
+        settingsWindow.show(settings: settings, model: model, updates: updates, tab: .activities)
+    }
+
     @objc private func showUpdate() {
         QALog.log("SETTINGS shown")
         settingsWindow.show(settings: settings, model: model, updates: updates, tab: .about)
@@ -199,8 +223,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let app = NSMenu()
         app.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         app.addItem(.separator())
-        app.addItem(withTitle: "Hide Notchy", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        app.addItem(withTitle: "Quit Notchy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        app.addItem(withTitle: "Hide \(AppInfo.name)", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
@@ -209,7 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let window = NSMenu(title: "Window")
         window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        for (title, sub) in [("Notchy", app), ("Edit", edit), ("Window", window)] {
+        for (title, sub) in [(AppInfo.name, app), ("Edit", edit), ("Window", window)] {
             let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
             item.submenu = sub
             main.addItem(item)

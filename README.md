@@ -1,4 +1,6 @@
-# Notchy
+# ponyhub
+
+*Formerly Notchy. Copies installed under the old name update themselves and become ponyhub; old `notchy://` links keep working.*
 
 A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry; it only goes online to check GitHub for its own updates.
 
@@ -12,7 +14,7 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 
 All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [Retro style](docs/screenshots/sheet-retro.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
 
-<sub>Screenshots are rendered by the app itself on CI (`Notchy --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
+<sub>Screenshots are rendered by the app itself on CI (`ponyhub --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 
 ## What it does
 
@@ -36,24 +38,24 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 | Shelf | – | dropped files, clipboard history | Files you drag to the notch (references only); text you copy (memory only, private copies skipped). |
 | Calendar | 📅 · "in 4m" | next three events with **Join** for Zoom / Meet / Teams / Webex links | EventKit. Counts down from 15 min, alerts at 5 min. |
 | Battery | ⚡ Charging · 76% | – | IOKit power-source notifications (no polling). Also warns at 20% and 10%. |
-| Volume HUD | 🔊 · level | – | Replaces the system volume HUD (opt-in, needs Accessibility). |
+| Volume and brightness | 🔊 / ☀️ · level | slider in Now Playing | Replaces macOS's volume and brightness pop-up, like Alcove (on by default; needs Accessibility, asked once at first launch). |
 
 ## Install
 
 Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-step instructions, first launch and troubleshooting: [user guide](docs/USER_GUIDE.md).
 
-- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), check it with `shasum -a 256 -c Notchy.zip.sha256`, unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
+- **Download:** get `ponyhub.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **ponyhub-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), check it with `shasum -a 256 -c ponyhub.zip.sha256`, unzip, move **ponyhub.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/ponyhub.app`.
 - **Build:** needs Xcode 16 or later (the Command Line Tools are enough for a single-architecture build).
 
   ```sh
   git clone https://github.com/samidun26/dynamic-island-mac.git
   cd dynamic-island-mac
   ./build.sh                # or UNIVERSAL=1 ./build.sh for arm64 + x86_64
-  open build/Notchy.app     # or copy it to /Applications first
+  open build/ponyhub.app     # or copy it to /Applications first
   ```
 
-- **Updates:** Notchy checks GitHub for a new release and offers to install it (Settings → About, or the dot on its menu bar icon). It verifies the download before replacing itself. See [Updating](docs/USER_GUIDE.md#8-updating).
-- **Releases (maintainers):** automatic. Every app change merged into `main` publishes the next release (`VERSION` + a running number) with `Notchy.zip` and its checksum; installed copies pick it up. Run `scripts/setup-signing.sh` once so updates keep people's permissions ([details](docs/USER_GUIDE.md#d-publish-a-release-maintainers)).
+- **Updates:** ponyhub checks GitHub for a new release and offers to install it (Settings → About, or the dot on its menu bar icon). It verifies the download before replacing itself. See [Updating](docs/USER_GUIDE.md#8-updating).
+- **Releases (maintainers):** automatic. Every app change merged into `main` publishes the next release (`VERSION` + a running number) with `ponyhub.zip` and its checksum; installed copies pick it up. Run `scripts/setup-signing.sh` once so updates keep people's permissions ([details](docs/USER_GUIDE.md#d-publish-a-release-maintainers)).
 
 ## Using it
 
@@ -65,9 +67,9 @@ Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-
 | Two-finger swipe down / up on it | open / close |
 | Two-finger swipe left / right on it | next / previous page (open), or next activity (compact) |
 | Menu bar icon | open, start a timer, settings, quit |
-| `open "notchy://timer?minutes=5"` | start a timer from Terminal, scripts or the Shortcuts "Open URLs" action. Also `notchy://timer?seconds=90`, `notchy://timer/cancel`, `notchy://open`, `notchy://settings` |
+| `open "ponyhub://timer?minutes=5"` | start a timer from Terminal, scripts or the Shortcuts "Open URLs" action. Also `ponyhub://timer?seconds=90`, `ponyhub://timer/cancel`, `ponyhub://open`, `ponyhub://settings` |
 
-If you hide the menu bar icon, open Notchy again from Finder or Spotlight to get Settings back.
+If you hide the menu bar icon, open ponyhub again from Finder or Spotlight to get Settings back.
 
 ### Permissions (all optional, asked only when needed)
 
@@ -92,7 +94,7 @@ Sources/
     Activities.swift       IslandState, ActivityQueue (priority, transients, swipe preference, pages)
     HoverIntent.swift      dwell / pass-through / close-delay logic
     NowPlaying.swift       adapter stream parser (full payloads + diffs), playhead interpolation
-    Utilities.swift        notchy:// links, meeting-link finder, spring curve, artwork tint
+    Utilities.swift        ponyhub:// links, meeting-link finder, spring curve, artwork tint
   Notchy/
     Island/IslandPanel.swift   fixed NSPanel, click-through, mouse monitors, swipes, screens
     Island/IslandShape.swift   the outline (flat top, concave ears, convex corners), one animatableData
@@ -121,8 +123,8 @@ Built and checked on GitHub's macOS runners (see `.github/workflows/build.yml`):
 - Compiles in Swift 6 language mode; core unit tests pass (geometry, priority queue, hover intent, stream parsing, links).
 - `build.sh` produces a universal, signed `.app`; `codesign --verify --deep --strict` passes.
 - The bundled adapter loads under `/usr/bin/perl` on the runner and answers (`get` returns `null` when nothing plays).
-- Every state renders (the screenshots above are produced by `Notchy --snapshot` on CI).
-- Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: Notchy at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
+- Every state renders (the screenshots above are produced by `ponyhub --snapshot` on CI).
+- Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: ponyhub at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
 - The real panel renders on screen, centred and flush with the top edge over the menu bar ([window](docs/screenshots/live-expanded.png), [compact on the runner's screen](docs/screenshots/live-screen-compact.png), [expanded](docs/screenshots/live-screen-expanded.png)).
 - **End-to-end QA** ([report](docs/QA_REPORT.md), [latest results](docs/qa/results.md)): installed from this repository as the user guide says, then used with real mouse, click, key and trackpad events and a test music app that publishes to the system Now Playing. Covered: hover and fast sweeps, click-through, pin and dismiss, swipes, Now Playing detection, artwork, play/pause, next and seek reaching the player, timers, Settings, the menu bar menu, helper restart and shutdown, Gatekeeper on a downloaded copy, CPU.
 - **Security review** ([report](docs/SECURITY_REVIEW.md)): no high or critical issues and no secrets in the repository or its history; the issues found are fixed, and the two attack tests (library and Perl injection) run in every QA run.
@@ -140,9 +142,9 @@ Not possible or deliberately not done:
 - **Showing other apps' notifications** in the island. That needs private APIs or reading the notification database. Stretch goal, not implemented: high breakage risk and not App Store eligible.
 - **Lock screen widgets.** Drawing over the lock screen needs private SkyLight/CGS window-level hacks. Not implemented, for the same reasons.
 - **Brightness keys** have no public API on Apple silicon. Brightness in the island (keys and a slider, built-in display) uses the private DisplayServices framework, loaded with `dlopen`; if it disappears the keys go back to macOS, and it has its own switch. **Keyboard backlight** keys are left to macOS.
-- **The system HUD can only be hidden while Notchy consumes the key.** If Accessibility is not granted, or the output device has no software volume (some HDMI/USB devices), the key is passed through and macOS shows its own HUD.
-- **Now Playing on macOS 15.4+** depends on mediaremote-adapter's use of the Apple-signed `/usr/bin/perl`. Apple could close that; Notchy then falls back to Music and Spotify.
-- **App Intents / Spotlight actions** are not included: Shortcuts only discovers intents from metadata Xcode extracts at build time, which a SwiftPM build does not run. Use the `notchy://` URLs from Shortcuts' "Open URLs" action instead.
+- **The system HUD can only be hidden while ponyhub consumes the key.** If Accessibility is not granted, or the output device has no software volume (some HDMI/USB devices), the key is passed through and macOS shows its own HUD.
+- **Now Playing on macOS 15.4+** depends on mediaremote-adapter's use of the Apple-signed `/usr/bin/perl`. Apple could close that; ponyhub then falls back to Music and Spotify.
+- **App Intents / Spotlight actions** are not included: Shortcuts only discovers intents from metadata Xcode extracts at build time, which a SwiftPM build does not run. Use the `ponyhub://` URLs from Shortcuts' "Open URLs" action instead.
 - **Hidden from screen sharing** uses `NSWindow.sharingType = .none`; some capture tools ignore it.
 
 ## Development
@@ -162,9 +164,9 @@ CI renders the snapshots on every push. To refresh the images in `docs/screensho
 `SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build.sh` signs with the hardened runtime and `Resources/Notchy.entitlements` (Apple Events and Calendars). Then notarize:
 
 ```sh
-ditto -c -k --keepParent build/Notchy.app Notchy.zip
-xcrun notarytool submit Notchy.zip --keychain-profile <profile> --wait
-xcrun stapler staple build/Notchy.app
+ditto -c -k --keepParent build/ponyhub.app ponyhub.zip
+xcrun notarytool submit ponyhub.zip --keychain-profile <profile> --wait
+xcrun stapler staple build/ponyhub.app
 ```
 
 ## Credits

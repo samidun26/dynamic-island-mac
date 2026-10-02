@@ -1,6 +1,6 @@
 name: release
 
-# Publishes a new Notchy release whenever app code changes on main, so everyone who installed it
+# Publishes a new ponyhub release whenever app code changes on main, so everyone who installed it
 # gets the update from inside the app (Settings → About, or the menu bar icon).
 #
 # Version: the major.minor in VERSION plus this workflow's run number (1.0.1, 1.0.2, …). Bump
@@ -49,7 +49,7 @@ jobs:
         run: |
           BASE=$(tr -d ' \n' < VERSION)
           echo "version=$BASE.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "Notchy $BASE.$GITHUB_RUN_NUMBER"
+          echo "ponyhub $BASE.$GITHUB_RUN_NUMBER"
 
       - name: Unit tests
         run: |
@@ -89,12 +89,19 @@ jobs:
         run: |
           set -o pipefail
           BUILD_NUMBER=$GITHUB_RUN_NUMBER UNIVERSAL=1 ./build.sh 2>&1 | tail -15
-          codesign -dv build/Notchy.app 2>&1 | grep -E 'Identifier|Authority|Signature|flags'
-          /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' build/Notchy.app/Contents/Info.plist
+          codesign -dv build/ponyhub.app 2>&1 | grep -E 'Identifier|Authority|Signature|flags'
+          /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' build/ponyhub.app/Contents/Info.plist
 
       - name: Package
         run: |
-          ditto -c -k --keepParent build/Notchy.app Notchy.zip
+          ditto -c -k --keepParent build/ponyhub.app ponyhub.zip
+          shasum -a 256 ponyhub.zip | tee ponyhub.zip.sha256
+          # Copies up to 1.0.2 (still called Notchy) only install an asset named Notchy.zip holding
+          # a Notchy.app. Same signed app under the old folder name; once installed, it renames
+          # itself to ponyhub.app (Sources/Notchy/App/Rename.swift). Keep this while old copies
+          # may be around.
+          mkdir legacy && ditto build/ponyhub.app legacy/Notchy.app
+          (cd legacy && ditto -c -k --keepParent Notchy.app ../Notchy.zip)
           shasum -a 256 Notchy.zip | tee Notchy.zip.sha256
 
       - name: Release notes
@@ -110,11 +117,13 @@ jobs:
             echo
             echo "## Install or update"
             echo
-            echo "Already using Notchy? It will offer this update itself (Settings → About, or the dot on its menu bar icon)."
+            echo "Already using ponyhub (or Notchy, its old name)? It will offer this update itself (Settings → About, or the dot on its menu bar icon)."
             echo
-            echo "New here: download **Notchy.zip**, check it with \`shasum -a 256 -c Notchy.zip.sha256\`, unzip, move Notchy to Applications, then allow it once in System Settings → Privacy & Security (it is not notarized). Full steps: [user guide](https://github.com/$GITHUB_REPOSITORY/blob/main/docs/USER_GUIDE.md)."
+            echo "New here: download **ponyhub.zip**, check it with \`shasum -a 256 -c ponyhub.zip.sha256\`, unzip, move ponyhub to Applications, then allow it once in System Settings → Privacy & Security (it is not notarized). Full steps: [user guide](https://github.com/$GITHUB_REPOSITORY/blob/main/docs/USER_GUIDE.md)."
             echo
-            echo "Universal (Apple silicon and Intel), macOS 14 or later. SHA-256 \`$(cut -d' ' -f1 Notchy.zip.sha256)\`. Signature: $([ "$SIGN_IDENTITY" = "-" ] && echo "ad-hoc" || echo "Notchy release identity")."
+            echo "Universal (Apple silicon and Intel), macOS 14 or later. SHA-256 \`$(cut -d' ' -f1 ponyhub.zip.sha256)\`. Signature: $([ "$SIGN_IDENTITY" = "-" ] && echo "ad-hoc" || echo "release identity")."
+            echo
+            echo "<sub>Notchy.zip is the same app for copies from before the rename to ponyhub; they install it themselves.</sub>"
           } > notes.md
           cat notes.md
 
@@ -123,6 +132,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.v.outputs.version }}
         run: |
-          gh release create "v$VERSION" Notchy.zip Notchy.zip.sha256 \
+          gh release create "v$VERSION" ponyhub.zip ponyhub.zip.sha256 Notchy.zip Notchy.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Notchy $VERSION" --notes-file notes.md --latest
+            --title "ponyhub $VERSION" --notes-file notes.md --latest

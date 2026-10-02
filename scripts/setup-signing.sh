@@ -1,10 +1,10 @@
 #!/bin/sh
 # One-time setup, run by the repository owner on their Mac: creates a code signing identity for
-# Notchy releases and hands it to GitHub Actions as two secrets.
+# ponyhub releases and hands it to GitHub Actions as two secrets.
 #
 # Why: without it, releases are ad-hoc signed, so to macOS every update is a different app. People
 # then have to allow Calendars and Accessibility again after each update. With one identity for
-# all releases, macOS keeps those permissions, and Notchy's updater accepts only updates signed
+# all releases, macOS keeps those permissions, and ponyhub's updater accepts only updates signed
 # with it (a release built by anyone else is refused).
 #
 #   scripts/setup-signing.sh [owner/repo]
@@ -14,7 +14,7 @@
 # pass KEEP=1 to also keep a copy (notchy-release-signing.p12 + its password) in this folder.
 set -eu
 REPO=${1:-samidun26/dynamic-island-mac}
-NAME="Notchy Release Signing"
+NAME="ponyhub Release Signing"
 command -v gh >/dev/null || { echo "Install the GitHub CLI first: brew install gh && gh auth login"; exit 1; }
 
 DIR=$(mktemp -d)

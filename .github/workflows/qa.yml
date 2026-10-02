@@ -1,6 +1,6 @@
 name: qa
 
-# End-to-end QA on a real macOS session: installs Notchy from source the way the user guide
+# End-to-end QA on a real macOS session: installs ponyhub from source the way the user guide
 # says, then drives it with synthetic mouse/trackpad input and a fake music app.
 # Runs on pushes to working branches (claude/**), and from the Actions tab ("Run workflow")
 # once this file is on the default branch.
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Version of Notchy to install and test (branch, tag or commit). Empty = the branch you run this on.
+        description: Version of ponyhub to install and test (branch, tag or commit). Empty = the branch you run this on.
         required: false
         default: ""
       publish:
