@@ -3,7 +3,7 @@ import Foundation
 import CoreGraphics
 #endif
 
-/// `notchy://` URLs, usable from Shortcuts ("Open URL"), Terminal (`open notchy://…`) or scripts.
+/// `ponyhub://` URLs, usable from Shortcuts ("Open URL"), Terminal (`open ponyhub://…`) or scripts.
 public enum DeepLink: Equatable, Sendable {
     case startTimer(TimeInterval)
     case cancelTimer
@@ -14,12 +14,13 @@ public enum DeepLink: Equatable, Sendable {
     case shelf
     case clipboard
 
-    /// notchy://timer?minutes=5, notchy://timer?seconds=90, notchy://timer/cancel,
-    /// notchy://open, notchy://settings, notchy://update (shows the update section and checks),
-    /// notchy://pomodoro (starts focus and break rounds), notchy://shelf (opens the shelf),
-    /// notchy://clipboard (opens the shelf on clipboard history)
+    /// ponyhub://timer?minutes=5, ponyhub://timer?seconds=90, ponyhub://timer/cancel,
+    /// ponyhub://open, ponyhub://settings, ponyhub://update (shows the update section and checks),
+    /// ponyhub://pomodoro (starts focus and break rounds), ponyhub://shelf (opens the shelf),
+    /// ponyhub://clipboard (opens the shelf on clipboard history)
     public init?(url: URL) {
-        guard url.scheme?.lowercased() == "notchy" else { return nil }
+        // ponyhub://, and notchy:// from before the rename (Shortcuts and scripts keep working).
+        guard let scheme = url.scheme?.lowercased(), scheme == "ponyhub" || scheme == "notchy" else { return nil }
         let host = url.host?.lowercased() ?? ""
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         func value(_ name: String) -> Double? { items.first { $0.name == name }?.value.flatMap(Double.init) }

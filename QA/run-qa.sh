@@ -3,12 +3,12 @@
 #
 #   QA/run-qa.sh <app-source-dir> <output-dir>
 #
-# Installs Notchy from source the way docs/USER_GUIDE.md describes, then drives it with
+# Installs ponyhub from source the way docs/USER_GUIDE.md describes, then drives it with
 # synthetic mouse/trackpad input (QA/Driver) and a fake music app (QA/FakePlayer), asserting on
-# Notchy's test trace (NOTCHY_QA_LOG=1), the fake player's log, window lists, the accessibility
+# ponyhub's test trace (NOTCHY_QA_LOG=1), the fake player's log, window lists, the accessibility
 # tree and screenshots. Writes <output-dir>/results.md and <output-dir>/shots/*.png.
 #
-# On your own Mac: it moves the mouse and changes Notchy's preferences (restored at the end),
+# On your own Mac: it moves the mouse and changes ponyhub's preferences (restored at the end),
 # and needs Accessibility + Screen Recording for the terminal you run it from.
 set -u
 SRC=$(cd "${1:?app source dir}" && pwd)
@@ -19,7 +19,7 @@ REPORT="$OUT/results.md"
 LOG="$OUT/notchy.log"
 FPLOG="$OUT/fakeplayer.log"
 D="$OUT/bin/qa-driver"
-APP=/Applications/Notchy.app
+APP=/Applications/ponyhub.app
 BID=dev.local.notchy
 PASS=0 FAIL=0 SKIP=0
 NOTCHY_PID="" FP_PID=""
@@ -54,13 +54,13 @@ shot() { lim 10 screencapture -x -R "0,0,$SW,${2:-220}" "$OUT/shots/$1.png" 2>/d
 # Width of the black island along its top edge (3 pt down: below any content, above the menu text).
 island_width() { "$D" dark-run "$OUT/shots/$1.png" 3 | awk '{print $2}'; }
 logged_size() { last_state | awk '{print $2}'; }
-# Average %CPU of Notchy over the last three of four 2-second top samples.
+# Average %CPU of ponyhub over the last three of four 2-second top samples.
 cpu_avg() { top -l 4 -s 2 -pid "$NOTCHY_PID" -stats cpu | awk '{gsub(/ /,"")} /^[0-9.]+$/ {v[n++]=$0} END {s=0; for (i=n-3; i<n; i++) s+=v[i]; printf "%.1f", s/3}'; }
 near() { [ "$1" -ge $(($2 - $3)) ] && [ "$1" -le $(($2 + $3)) ]; }
 
 launch_notchy() {
     mark "$LOG"
-    NOTCHY_QA_LOG=1 "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 &
+    NOTCHY_QA_LOG=1 "$APP/Contents/MacOS/ponyhub" >> "$LOG" 2>&1 &
     NOTCHY_PID=$!
     wait_for "$LOG" "LAUNCH" 15
 }
@@ -138,7 +138,7 @@ defaults export "$BID" "$OUT/defaults-backup.plist" >/dev/null 2>&1 || rm -f "$O
 echo "== install"
 T0=$SECONDS
 if (cd "$SRC" && ./build.sh > "$OUT/build.log" 2>&1); then
-    rm -rf "$APP" && ditto "$SRC/build/Notchy.app" "$APP"
+    rm -rf "$APP" && ditto "$SRC/build/ponyhub.app" "$APP"
     if codesign --verify --deep --strict "$APP" 2>/dev/null; then
         pass QA-01 "Build from source and install to /Applications (FR-S5)" "build.sh in $((SECONDS - T0)) s, signature valid"
     else
@@ -156,7 +156,7 @@ defaults delete "$BID" >/dev/null 2>&1
 defaults write "$BID" calendarEnabled -bool false   # its permission prompt would sit on screen with nobody to answer
 touch "$LOG" "$FPLOG"
 launch_notchy || note "no LAUNCH line in the trace"
-mark "$LOG"; lim 8 open "notchy://timer?seconds=30"
+mark "$LOG"; lim 8 open "ponyhub://timer?seconds=30"
 if wait_for "$LOG" "STATE compact:timer" 8; then
     sleep 0.8; shot qa25-hidden
     W=$(island_width qa25-hidden)
@@ -184,7 +184,7 @@ HASNOTCH=$(echo "$LAUNCH" | grep -q 'hasNotch=true' && echo yes || echo no)
 # Window: one panel, top-centre, above the menu bar, plus a menu bar item.
 WINS=""
 for _ in $(seq 1 15); do
-    WINS=$("$D" windows Notchy)
+    WINS=$("$D" windows ponyhub)
     echo "$WINS" | awk '{split($5,w,"="); if (w[2]>300) a=1; split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) b=1} END {exit !(a && b)}' && break
     sleep 0.2
 done
@@ -253,7 +253,7 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     sleep 1; shot qa09-compact
     W=$(island_width qa09-compact)
     # The width depends on how much menu bar is free beside the notch (QA-35): check the island on
-    # screen is the size Notchy says it drew.
+    # screen is the size ponyhub says it drew.
     WANT=$(logged_size | cut -dx -f1)
     FIT=$(grep -E 'STATE compact:nowPlaying' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
     if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "${WANT:-0}" 6; then
@@ -404,7 +404,7 @@ else
     fi
 
     # Two-finger swipes on the island.
-    # Rest on the island first: a swipe that starts before Notchy has seen the pointer arrive
+    # Rest on the island first: a swipe that starts before ponyhub has seen the pointer arrive
     # (and stopped passing clicks through) goes to the app underneath.
     sleep 0.6; mark "$LOG"; "$D" jump "$CX" $((MB / 2)) >/dev/null; wait_for "$LOG" "CLICKTHROUGH false" 1; sleep 0.3
     mark "$LOG"; "$D" swipe 0 -60
@@ -426,11 +426,11 @@ fi
 # ---------------------------------------------------------------- timer
 echo "== timer"
 mark "$LOG"
-lim 8 open "notchy://timer?seconds=8"
-if wait_for "$LOG" "URL notchy://timer" 4 && wait_for "$LOG" "STATE compact:timer" 4; then
+lim 8 open "ponyhub://timer?seconds=8"
+if wait_for "$LOG" "URL ponyhub://timer" 4 && wait_for "$LOG" "STATE compact:timer" 4; then
     sleep 0.8; shot qa21-timer
     W=$(island_width qa21-timer)
-    pass QA-21 "notchy://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3)" "$(grep 'STATE compact:timer' "$LOG" | tail -1 | sed -E 's/.*STATE //'); ${W} pt ([shot](shots/qa21-timer.png))"
+    pass QA-21 "ponyhub://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3)" "$(grep 'STATE compact:timer' "$LOG" | tail -1 | sed -E 's/.*STATE //'); ${W} pt ([shot](shots/qa21-timer.png))"
     if wait_for "$LOG" "TIMER done" 12 && wait_for "$LOG" "STATE peek:timer" 2; then
         sleep 0.8; shot qa22-done 220
         if wait_for "$LOG" "STATE compact:nowPlaying" 20; then
@@ -442,12 +442,12 @@ if wait_for "$LOG" "URL notchy://timer" 4 && wait_for "$LOG" "STATE compact:time
         fail QA-22 "Timer ends: peek, then clears itself (FR-T3)" "no completion; state $(last_state)"
     fi
 else
-    fail QA-21 "notchy://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3)" "state $(last_state)"
+    fail QA-21 "ponyhub://timer starts a timer in the wings, music as a glyph (FR-T1, FR-A3)" "state $(last_state)"
     skip QA-22 "Timer ends: peek, then clears itself (FR-T3)" "QA-21 failed"
 fi
 
 if [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
-    lim 8 open "notchy://timer?minutes=5"; sleep 1
+    lim 8 open "ponyhub://timer?minutes=5"; sleep 1
     "$D" jump "$CX" 500 >/dev/null; sleep 0.3
     mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
     wait_for "$LOG" "STATE expanded:timer" 2
@@ -472,15 +472,15 @@ else
 fi
 
 # ---------------------------------------------------------------- settings & menu
-echo "== menu bar menu (before Notchy has ever been active)"
-# The menu is open when Notchy owns a window at the pop-up menu level (101). (The menu delegate's
+echo "== menu bar menu (before ponyhub has ever been active)"
+# The menu is open when ponyhub owns a window at the pop-up menu level (101). (The menu delegate's
 # "MENU opened" is not proof: it also fires whenever an accessibility client reads the menu.)
-menu_open() { "$D" windows Notchy | awk '{split($2,l,"="); if (l[2]>=100) f=1} END {exit !f}'; }
+menu_open() { "$D" windows ponyhub | awk '{split($2,l,"="); if (l[2]>=100) f=1} END {exit !f}'; }
 wait_menu() { for _ in 1 2 3 4 5 6 7 8 9 10; do menu_open && { echo yes; return; }; sleep 0.2; done; echo no; }
 front_app() { lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null | sed -E 's/.*=//; s/"//g'; }
 menu_click() { # $1 = label for the evidence; prints yes/no and what was under the pointer
     local item ix iw r
-    item=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
+    item=$("$D" windows ponyhub | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1)
     [ -z "$item" ] && { echo "no-item"; return; }
     ix=$(echo "$item" | sed -E 's/.* x=([0-9]+).*/\1/'); iw=$(echo "$item" | sed -E 's/.* w=([0-9]+).*/\1/')
     mark "$LOG"
@@ -493,7 +493,7 @@ menu_click() { # $1 = label for the evidence; prints yes/no and what was under t
 }
 menu_press() { # $1 = screenshot name; the same menu, opened through Accessibility instead of a click
     local r ix
-    ix=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1 | sed -E 's/.* x=([0-9]+).*/\1/')
+    ix=$("$D" windows ponyhub | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1 | sed -E 's/.* x=([0-9]+).*/\1/')
     ( lim 4 "$D" status-press $BID >/dev/null 2>&1 & )
     r=$(wait_menu)
     [ -n "$ix" ] && lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/$1.png"
@@ -516,42 +516,42 @@ fi
 
 echo "== settings window and menu"
 mark "$LOG"
-lim 8 open "notchy://settings"
+lim 8 open "ponyhub://settings"
 if wait_for "$LOG" "SETTINGS shown" 4; then
     sleep 1.5
     # A normal-level (layer 0) window of about 500 pt: titles need Screen Recording to read.
-    SW_ID=$("$D" windows Notchy | awk '{split($2,l,"="); split($5,w,"="); if (l[2]==0 && w[2]>=400) {split($1,i,"="); print i[2]}}' | head -1)
+    SW_ID=$("$D" windows ponyhub | awk '{split($2,l,"="); split($5,w,"="); if (l[2]==0 && w[2]>=400) {split($1,i,"="); print i[2]}}' | head -1)
     if [ -n "$SW_ID" ]; then
         lim 10 screencapture -x -o -l "$SW_ID" "$OUT/shots/qa24-settings.png"
         CLOSED=untested
         FOCUSED=$(grep -o 'SETTINGS focused=[a-z]*' "$LOG" | tail -1 | cut -d= -f2)
         if [ "$INPUT" = yes ]; then
             finder_windows() { "$D" windows Finder | awk '{split($2,l,"="); if (l[2]==0) n++} END {print n+0}'; }
-            settings_open() { "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID"; }
+            settings_open() { "$D" windows ponyhub | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID"; }
             F0=$(finder_windows)
             mark "$LOG"; "$D" key cmd-w; sleep 0.8
             settings_open && CLOSED=no || CLOSED=yes
             if [ $CLOSED = no ]; then
                 # Where did it go? Then once more, after clicking the window like a person would.
-                WENT="Notchy got it: $(after "$LOG" | grep -c ' KEY w '); Finder windows ${F0}→$(finder_windows)"
-                WIN=$("$D" windows Notchy | grep "id=$SW_ID ")
+                WENT="ponyhub got it: $(after "$LOG" | grep -c ' KEY w '); Finder windows ${F0}→$(finder_windows)"
+                WIN=$("$D" windows ponyhub | grep "id=$SW_ID ")
                 WX=$(echo "$WIN" | sed -E 's/.* x=([0-9]+).*/\1/'); WY=$(echo "$WIN" | sed -E 's/.* y=([0-9]+).*/\1/'); WW=$(echo "$WIN" | sed -E 's/.* w=([0-9]+).*/\1/')
                 "$D" click $((WX + WW / 2)) $((WY + 12)); sleep 0.4
                 mark "$LOG"; "$D" key cmd-w; sleep 0.8
                 if settings_open; then
                     # The VM sometimes drops synthetic key presses before any app gets them (the
-                    # trace shows Notchy never received one). Hand ⌘W straight to Notchy instead.
+                    # trace shows ponyhub never received one). Hand ⌘W straight to ponyhub instead.
                     mark "$LOG"; "$D" key cmd-w "$NOTCHY_PID"; sleep 0.8
                     TO_PID=$(after "$LOG" | grep -c ' KEY w ')
                     if ! settings_open; then
-                        CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                        CLOSED="yes, with ⌘W delivered straight to ponyhub (the VM dropped the normal key presses: $WENT)"
                     elif [ "$TO_PID" = 0 ] && [ "$AX" = yes ]; then
-                        # Not one key press reached Notchy, so this VM session isn't delivering
+                        # Not one key press reached ponyhub, so this VM session isn't delivering
                         # keys (seen on earlier runs too). Check the app side without the keyboard:
                         # ⌘W must be the shortcut of Window → Close, and that item must close the window.
                         MENU=$(lim 10 "$D" ax-menu $BID Close press 2>&1 | tr '\n' ' '); sleep 0.8
                         if ! settings_open && echo "$MENU" | grep -qiE 'key=w modifiers=0 pressed'; then
-                            CLOSED="yes, by Window → Close, whose shortcut is ⌘W (${MENU% }), pressed through Accessibility: none of the 3 key presses reached Notchy on this VM ($WENT; sent to its process: 0)"
+                            CLOSED="yes, by Window → Close, whose shortcut is ⌘W (${MENU% }), pressed through Accessibility: none of the 3 key presses reached ponyhub on this VM ($WENT; sent to its process: 0)"
                         else
                             WENT="$WENT; sent to its process: 0; Window → Close: ${MENU:-not found}"
                         fi
@@ -570,12 +570,12 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
     fi
 else
-    fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
+    fail QA-24 "Settings window opens (FR-S2)" "ponyhub://settings not handled"
 fi
 
-# The menu still opens after Settings was used (Notchy has been the active app). Opened through
+# The menu still opens after Settings was used (ponyhub has been the active app). Opened through
 # Accessibility, as VoiceOver would: on the CI machine only the first synthetic click on a menu bar
-# item in a session opens its menu, for a fresh Notchy that was never active too, so a second click
+# item in a session opens its menu, for a fresh ponyhub that was never active too, so a second click
 # proves nothing either way.
 if [ "$AX" = yes ]; then
     open -a Finder; sleep 1
@@ -657,9 +657,9 @@ if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
     FIT0=$(echo "$C" | grep -oE 'fit=[a-z]+')
     SEEN=$(grep MENUBAR "$LOG" | tail -1 | sed -E 's/.*MENUBAR //')
     if [ "${C%% *}" = ok ]; then
-        pass QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C#ok }; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+        pass QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C#ok }; ponyhub measured ${SEEN} ([shot](shots/qa35-clear.png))"
     else
-        fail QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C}; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+        fail QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C}; ponyhub measured ${SEEN} ([shot](shots/qa35-clear.png))"
     fi
 
     # Crowd the menu bar: a wide icon right next to the notch, like the Wi-Fi icon in the bug report.
@@ -703,7 +703,7 @@ if [ "$HASNOTCH" = yes ]; then
 else
     defaults write "$BID" nonNotchMode never
     launch_notchy; sleep 1.5
-    if "$D" windows Notchy | awk '{split($5,w,"="); if (w[2]>300) f=1} END {exit f}'; then
+    if "$D" windows ponyhub | awk '{split($5,w,"="); if (w[2]>300) f=1} END {exit f}'; then
         pass QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "no panel window on screen"
     else
         fail QA-29 "\"Never\" on displays without a notch hides the island (FR-W5)" "panel still on screen"
@@ -716,7 +716,7 @@ fi
 defaults write "$BID" nonNotchMode whenActive
 defaults write "$BID" islandStyle retro
 launch_notchy; sleep 1
-lim 8 open "notchy://timer?minutes=3"
+lim 8 open "ponyhub://timer?minutes=3"
 if wait_for "$LOG" "STATE compact:timer" 6; then
     sleep 1; shot qa40-retro-compact
     "$D" jump "$CX" 400 >/dev/null; sleep 0.4; mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
@@ -730,7 +730,7 @@ if [ "$FONTS" = "text=true digits=true" ] && [ "${W:-0}" -gt 150 ]; then
 else
     fail QA-40 "Retro style: pixel fonts load and the island draws in them (FR-S9)" "fonts: ${FONTS:-not logged}; island ${W:-?} pt; $(last_state)"
 fi
-lim 8 open "notchy://timer/cancel"; sleep 0.5
+lim 8 open "ponyhub://timer/cancel"; sleep 0.5
 quit_notchy
 defaults delete "$BID" islandStyle 2>/dev/null
 
@@ -739,7 +739,8 @@ echo "== pomodoro, clipboard and shelf"
 defaults delete "$BID" shelfFiles 2>/dev/null
 launch_notchy; sleep 1.5
 
-# QA-41: notchy://pomodoro starts focus round 1; Skip on the timer page moves to the short break.
+# QA-41: notchy://pomodoro (the link scheme from before the rename, still handled) starts focus
+# round 1; Skip on the timer page moves to the short break.
 mark "$LOG"
 lim 8 open "notchy://pomodoro"
 if ! wait_for "$LOG" "STATE compact:timer" 6; then
@@ -758,7 +759,7 @@ elif [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
         T2=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^(Focus|Short|Long)' | head -1)
     fi
     if [ "$T1" = "Focus 1 of 4" ] && [ "$T2" = "Short break" ]; then
-        pass QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "\"$T1\" → Skip → \"$T2\" ([focus](shots/qa41-pomodoro-focus.png), [break](shots/qa41-pomodoro-break.png))"
+        pass QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "started by the old notchy:// link; \"$T1\" → Skip → \"$T2\" ([focus](shots/qa41-pomodoro-focus.png), [break](shots/qa41-pomodoro-break.png))"
     else
         fail QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "before: ${T1:-?}; Skip button: ${B:-not found}; after: ${T2:-?}; $(last_state)"
     fi
@@ -766,7 +767,7 @@ elif [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
 else
     skip QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "needs input synthesis and Accessibility"
 fi
-lim 8 open "notchy://timer/cancel"; sleep 0.8
+lim 8 open "ponyhub://timer/cancel"; sleep 0.8
 
 # QA-42: copied text shows up in clipboard history; a copy marked private (as password managers
 # mark them) never does.
@@ -778,7 +779,7 @@ mark "$LOG"
 "$D" pasteboard "$SECRET" org.nspasteboard.ConcealedType >/dev/null
 SKIPPED=no; wait_for "$LOG" "CLIP skipped" 3 && SKIPPED=yes
 mark "$LOG"
-lim 8 open "notchy://clipboard"
+lim 8 open "ponyhub://clipboard"
 if wait_for "$LOG" "STATE expanded:shelf" 4; then
     sleep 0.8; shot qa42-clipboard 240
     if [ "$AX" = yes ]; then
@@ -793,13 +794,13 @@ if wait_for "$LOG" "STATE expanded:shelf" 4; then
         fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "added=$ADDED skipped=$SKIPPED shown=$SHOWN leaked=$LEAKED"
     fi
 else
-    fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "notchy://clipboard did not open the shelf; $(last_state)"
+    fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "ponyhub://clipboard did not open the shelf; $(last_state)"
 fi
 mark "$LOG"; "$D" click "$CX" 520; wait_for "$LOG" "DISMISS" 2; sleep 0.8
 
 # QA-43: a file dragged from another app to the notch opens the shelf, drops there, and stays.
 if [ "$INPUT" = yes ]; then
-    F="$OUT/notchy-qa-shelf.txt"; echo "Notchy shelf test" > "$F"
+    F="$OUT/notchy-qa-shelf.txt"; echo "ponyhub shelf test" > "$F"
     "$D" jump "$CX" 500 >/dev/null; sleep 0.3
     mark "$LOG"
     DROP=$(lim 25 "$D" file-drag "$F" $((CX - 300)) 420 "$CX" $((MB / 2)) 1400 2>&1 | tail -1)
@@ -821,37 +822,43 @@ quit_notchy
 defaults delete "$BID" shelfFiles 2>/dev/null
 
 # ---------------------------------------------------------------- updates
-# Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub
+# Copies of ponyhub that think they are 1.0.0 and read releases from a local stand-in for GitHub
 # (a test-only Info.plist key; shipped builds always ask GitHub). It offers 9.9.9. Covers the
 # download, every check before installing, the swap in place and the relaunch.
 echo "== updates"
 UPD="$OUT/update"; rm -rf "$UPD"; mkdir -p "$UPD/feed"
 PB=/usr/libexec/PlistBuddy
 make_copy() { # dir version identity("-" = ad-hoc)
-    rm -rf "$1"; mkdir -p "$1"; ditto "$APP" "$1/Notchy.app"
-    local plist="$1/Notchy.app/Contents/Info.plist"
+    rm -rf "$1"; mkdir -p "$1"; ditto "$APP" "$1/ponyhub.app"
+    local plist="$1/ponyhub.app/Contents/Info.plist"
     $PB -c "Set :CFBundleShortVersionString $2" "$plist"
     $PB -c "Add :NotchyUpdateFeed string http://127.0.0.1:8765/latest.json" "$plist"
     # Plain HTTP to the local stand-in (App Transport Security otherwise insists on HTTPS).
     $PB -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
-    codesign --force --timestamp=none --options runtime --sign "$3" "$1/Notchy.app/Contents/Frameworks/MediaRemoteAdapter.framework" 2>> "$UPD/codesign.log"
-    codesign --force --timestamp=none --options runtime --entitlements "$SRC/Resources/Notchy.entitlements" --sign "$3" "$1/Notchy.app" 2>> "$UPD/codesign.log"
+    codesign --force --timestamp=none --options runtime --sign "$3" "$1/ponyhub.app/Contents/Frameworks/MediaRemoteAdapter.framework" 2>> "$UPD/codesign.log"
+    codesign --force --timestamp=none --options runtime --entitlements "$SRC/Resources/Notchy.entitlements" --sign "$3" "$1/ponyhub.app" 2>> "$UPD/codesign.log"
 }
 publish() { # app dir to offer as 9.9.9 ["bad" checksum]
-    rm -f "$UPD/feed/Notchy.zip"
-    (cd "$1" && ditto -c -k --keepParent Notchy.app "$UPD/feed/Notchy.zip")
-    (cd "$UPD/feed" && shasum -a 256 Notchy.zip > Notchy.zip.sha256)
-    [ "${2:-}" = bad ] && echo "0000000000000000000000000000000000000000000000000000000000000000  Notchy.zip" > "$UPD/feed/Notchy.zip.sha256"
+    # Like a real release: ponyhub.zip, plus the same app as Notchy.zip/Notchy.app for copies from
+    # before the rename (see release.yml).
+    rm -rf "$UPD/feed/ponyhub.zip" "$UPD/feed/Notchy.zip" "$UPD/legacy-pack"
+    (cd "$1" && ditto -c -k --keepParent ponyhub.app "$UPD/feed/ponyhub.zip")
+    mkdir -p "$UPD/legacy-pack" && ditto "$1/ponyhub.app" "$UPD/legacy-pack/Notchy.app"
+    (cd "$UPD/legacy-pack" && ditto -c -k --keepParent Notchy.app "$UPD/feed/Notchy.zip")
+    (cd "$UPD/feed" && shasum -a 256 ponyhub.zip > ponyhub.zip.sha256 && shasum -a 256 Notchy.zip > Notchy.zip.sha256)
+    [ "${2:-}" = bad ] && echo "0000000000000000000000000000000000000000000000000000000000000000  ponyhub.zip" > "$UPD/feed/ponyhub.zip.sha256"
     cat > "$UPD/feed/latest.json" <<JSON
 {"tag_name": "v9.9.9", "html_url": "https://github.com/samidun26/dynamic-island-mac/releases/tag/v9.9.9",
  "body": "- QA release", "draft": false, "prerelease": false,
- "assets": [{"name": "Notchy.zip", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip", "size": $(stat -f %z "$UPD/feed/Notchy.zip")},
+ "assets": [{"name": "ponyhub.zip", "browser_download_url": "http://127.0.0.1:8765/ponyhub.zip", "size": $(stat -f %z "$UPD/feed/ponyhub.zip")},
+            {"name": "ponyhub.zip.sha256", "browser_download_url": "http://127.0.0.1:8765/ponyhub.zip.sha256", "size": 77},
+            {"name": "Notchy.zip", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip", "size": $(stat -f %z "$UPD/feed/Notchy.zip")},
             {"name": "Notchy.zip.sha256", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip.sha256", "size": 77}]}
 JSON
 }
 UPD_RESULT="" RELAUNCHED=""
 try_update() { # installed dir: sets UPD_RESULT and RELAUNCHED
-    local exe="$1/Notchy.app/Contents/MacOS/Notchy" pid
+    local exe="$1/ponyhub.app/Contents/MacOS/ponyhub" pid
     mark "$LOG"
     NOTCHY_QA_LOG=1 NOTCHY_QA_UPDATE=install "$exe" >> "$LOG" 2>&1 &
     pid=$!
@@ -870,7 +877,8 @@ try_update() { # installed dir: sets UPD_RESULT and RELAUNCHED
     done
     kill "$pid" 2>/dev/null; pkill -f "$exe" 2>/dev/null; sleep 1
 }
-disk_version() { $PB -c 'Print CFBundleShortVersionString' "$1/Notchy.app/Contents/Info.plist" 2>/dev/null; }
+disk_version() { $PB -c 'Print CFBundleShortVersionString' "$1/ponyhub.app/Contents/Info.plist" 2>/dev/null; }
+disk_version_of() { $PB -c 'Print CFBundleShortVersionString' "$1/Contents/Info.plist" 2>/dev/null; }
 
 python3 -m http.server 8765 --bind 127.0.0.1 --directory "$UPD/feed" > "$UPD/http.log" 2>&1 &
 HTTP_PID=$!
@@ -883,10 +891,49 @@ make_copy "$UPD/new" 9.9.9 -
 publish "$UPD/new"
 try_update "$UPD/installed"
 V=$(disk_version "$UPD/installed")
-if echo "$UPD_RESULT" | grep -q '^installed 9.9.9' && [ "$V" = 9.9.9 ] && [ -n "$RELAUNCHED" ] && codesign --verify --deep --strict "$UPD/installed/Notchy.app" 2>/dev/null; then
+if echo "$UPD_RESULT" | grep -q '^installed 9.9.9' && [ "$V" = 9.9.9 ] && [ -n "$RELAUNCHED" ] && codesign --verify --deep --strict "$UPD/installed/ponyhub.app" 2>/dev/null; then
     pass QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "1.0.0 → 9.9.9 from the release feed; signature valid; new copy running (pid $RELAUNCHED)"
 else
     fail QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "result: $UPD_RESULT; on disk: ${V:-?}; relaunched: ${RELAUNCHED:-no}"
+fi
+
+# QA-44: a friend's copy from before the rename. The real Notchy 1.0.2 from GitHub Releases (its
+# updater only knows Notchy.zip and Notchy.app) is pointed at the local feed and installs this
+# build from the legacy asset; the new build then renames itself to ponyhub.app and starts again.
+LEG="$UPD/legacy"; rm -rf "$LEG"; mkdir -p "$LEG"
+if lim 60 curl -sSfL -o "$LEG/old.zip" "https://github.com/samidun26/dynamic-island-mac/releases/download/v1.0.2/Notchy.zip"; then
+    ditto -x -k "$LEG/old.zip" "$LEG"
+    OLDP="$LEG/Notchy.app/Contents/Info.plist"
+    $PB -c "Add :NotchyUpdateFeed string http://127.0.0.1:8765/latest.json" "$OLDP"
+    $PB -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$OLDP"
+    codesign --force --timestamp=none --options runtime --entitlements "$SRC/Resources/Notchy.entitlements" --sign - "$LEG/Notchy.app" 2>> "$UPD/codesign.log"
+    make_copy "$UPD/new" 9.9.9 -
+    publish "$UPD/new"
+    OLDV=$(disk_version_of "$LEG/Notchy.app")
+    mark "$LOG"
+    NOTCHY_QA_LOG=1 NOTCHY_QA_UPDATE=install "$LEG/Notchy.app/Contents/MacOS/Notchy" >> "$LOG" 2>&1 &
+    OLDPID=$!
+    R44="no answer"
+    wait_for "$LOG" "UPDATE (installed|failed)" 45 && R44=$(after "$LOG" | grep -E 'UPDATE (installed|failed)' | tail -1 | sed -E 's/.*UPDATE //; s/ at \/.*//')
+    # The old copy quits and opens the installed build, which renames itself and opens again.
+    RENAMED=no; RUNNING=""
+    for _ in $(seq 1 40); do
+        if [ -d "$LEG/ponyhub.app" ] && [ ! -e "$LEG/Notchy.app" ]; then
+            RENAMED=yes
+            RUNNING=$(pgrep -f "$LEG/ponyhub.app/Contents/MacOS/ponyhub" | head -1)
+            [ -n "$RUNNING" ] && break
+        fi
+        sleep 0.5
+    done
+    NEWV=$(disk_version_of "$LEG/ponyhub.app")
+    kill "$OLDPID" 2>/dev/null; pkill -f "$LEG/" 2>/dev/null; sleep 1
+    if echo "$R44" | grep -q '^installed 9.9.9' && [ $RENAMED = yes ] && [ "$NEWV" = 9.9.9 ] && [ -n "$RUNNING" ]; then
+        pass QA-44 "Update from before the rename: Notchy 1.0.2 installs it and it becomes ponyhub.app (FR-S8)" "Notchy ${OLDV:-1.0.2} (the real release) installed 9.9.9 from Notchy.zip; it renamed itself to ponyhub.app and is running from there (pid $RUNNING)"
+    else
+        fail QA-44 "Update from before the rename: Notchy 1.0.2 installs it and it becomes ponyhub.app (FR-S8)" "old copy: $R44; renamed: $RENAMED (folder: $(ls "$LEG" | tr '\n' ' ')); version: ${NEWV:-?}; running: ${RUNNING:-no}"
+    fi
+else
+    skip QA-44 "Update from before the rename: Notchy 1.0.2 installs it and it becomes ponyhub.app (FR-S8)" "could not download Notchy 1.0.2 from GitHub"
 fi
 
 # QA-38: a download that doesn't match the published checksum.
@@ -910,17 +957,17 @@ if [ "${CI:-}" = true ]; then
     security unlock-keychain -p qa "$QA_KEYCHAIN"
     LEGACY=""; openssl pkcs12 -help 2>&1 | grep -q -- '-legacy' && LEGACY="-legacy"
     for who in A B; do
-        printf '[req]\ndistinguished_name = dn\nx509_extensions = ext\nprompt = no\n[dn]\nCN = Notchy QA %s\n[ext]\nbasicConstraints = critical, CA:false\nkeyUsage = critical, digitalSignature\nextendedKeyUsage = critical, codeSigning\n' "$who" > "$UPD/$who.cnf"
+        printf '[req]\ndistinguished_name = dn\nx509_extensions = ext\nprompt = no\n[dn]\nCN = ponyhub QA %s\n[ext]\nbasicConstraints = critical, CA:false\nkeyUsage = critical, digitalSignature\nextendedKeyUsage = critical, codeSigning\n' "$who" > "$UPD/$who.cnf"
         openssl req -x509 -newkey rsa:2048 -sha256 -days 2 -nodes -config "$UPD/$who.cnf" -keyout "$UPD/$who.key" -out "$UPD/$who.pem" 2>/dev/null
         # shellcheck disable=SC2086
-        openssl pkcs12 -export $LEGACY -inkey "$UPD/$who.key" -in "$UPD/$who.pem" -name "Notchy QA $who" -out "$UPD/$who.p12" -passout pass:qa
+        openssl pkcs12 -export $LEGACY -inkey "$UPD/$who.key" -in "$UPD/$who.pem" -name "ponyhub QA $who" -out "$UPD/$who.p12" -passout pass:qa
         security import "$UPD/$who.p12" -k "$QA_KEYCHAIN" -P qa -T /usr/bin/codesign >/dev/null
     done
     security set-key-partition-list -S apple-tool:,apple: -s -k qa "$QA_KEYCHAIN" >/dev/null
     # shellcheck disable=SC2086
     security list-keychains -d user -s "$QA_KEYCHAIN" $OLD_KEYCHAINS
-    IDA=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA A/ {print $2; exit}')
-    IDB=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA B/ {print $2; exit}')
+    IDA=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/ponyhub QA A/ {print $2; exit}')
+    IDB=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/ponyhub QA B/ {print $2; exit}')
     if [ -n "$IDA" ] && [ -n "$IDB" ]; then
         make_copy "$UPD/installed" 1.0.0 "$IDA"
         make_copy "$UPD/new" 9.9.9 "$IDB"
@@ -945,10 +992,10 @@ fi
 kill "$HTTP_PID" 2>/dev/null; HTTP_PID=""
 
 # ---------------------------------------------------------------- security
-# Another program running as the user must not be able to borrow Notchy's permissions
+# Another program running as the user must not be able to borrow ponyhub's permissions
 # (Accessibility, Calendars, Automation) by starting it with an environment that loads its code:
-# DYLD_INSERT_LIBRARIES into Notchy, or PERL5OPT/PERL5LIB into its Now Playing helper (perl).
-# Each attack is first shown to work on an unprotected program, then tried on Notchy.
+# DYLD_INSERT_LIBRARIES into ponyhub, or PERL5OPT/PERL5LIB into its Now Playing helper (perl).
+# Each attack is first shown to work on an unprotected program, then tried on ponyhub.
 echo "== security: code injection through the launch environment"
 SEC="$OUT/sec"; rm -rf "$SEC"; mkdir -p "$SEC/perl"
 printf '#include <stdio.h>\n#include <stdlib.h>\n#include <unistd.h>\n__attribute__((constructor)) static void injected(void) { FILE *f = fopen("%s", "a"); if (f) { fprintf(f, "%%s(%%d) ", getprogname(), getpid()); fclose(f); } }\n' "$SEC/marker-dylib" > "$SEC/inject.c"
@@ -966,7 +1013,7 @@ note "attacks work on unprotected programs: dylib $CTRL_DYLIB, perl $CTRL_PERL"
 defaults write "$BID" nonNotchMode whenActive
 mark "$LOG"
 DYLD_INSERT_LIBRARIES="$SEC/inject.dylib" PERL5LIB="$SEC/perl" PERL5OPT=-MQAInject NOTCHY_QA_LOG=1 \
-    "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 &
+    "$APP/Contents/MacOS/ponyhub" >> "$LOG" 2>&1 &
 NOTCHY_PID=$!
 STARTED=no; wait_for "$LOG" "LAUNCH" 15 && STARTED=yes
 ADAPTER=no; wait_for "$LOG" "NOWPLAYING title=QA" 10 && ADAPTER=yes
@@ -975,9 +1022,9 @@ FLAGS=$(codesign -dv "$APP" 2>&1 | grep -o 'flags=[^ ]*')
 if [ $CTRL_DYLIB = no ]; then
     skip QA-33 "Libraries injected at launch are refused (NFR-10)" "the injection does not work here even on an unprotected program"
 elif [ $STARTED = yes ] && [ ! -e "$SEC/marker-dylib" ] && echo "$FLAGS" | grep -q runtime; then
-    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy ($FLAGS, __RESTRICT segment)"
+    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "DYLD_INSERT_LIBRARIES ran in a plain program, not in ponyhub ($FLAGS, __RESTRICT segment)"
 else
-    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected into: $(cat "$SEC/marker-dylib" 2>/dev/null || echo nothing); $FLAGS; restrict segment: $(otool -l "$APP/Contents/MacOS/Notchy" | grep -c __RESTRICT)"
+    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected into: $(cat "$SEC/marker-dylib" 2>/dev/null || echo nothing); $FLAGS; restrict segment: $(otool -l "$APP/Contents/MacOS/ponyhub" | grep -c __RESTRICT)"
 fi
 if [ $CTRL_PERL = no ]; then
     skip QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT has no effect here even on plain perl"
@@ -993,38 +1040,38 @@ quit_notchy
 echo "== downloaded copy"
 LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 DL="$OUT/download"; rm -rf "$DL"; mkdir -p "$DL/a" "$DL/b"
-ditto -c -k --keepParent "$APP" "$DL/Notchy.zip"
-ditto -x -k "$DL/Notchy.zip" "$DL/a"; ditto -x -k "$DL/Notchy.zip" "$DL/b"
+ditto -c -k --keepParent "$APP" "$DL/ponyhub.zip"
+ditto -x -k "$DL/ponyhub.zip" "$DL/a"; ditto -x -k "$DL/ponyhub.zip" "$DL/b"
 QUAR="0081;$(printf %x "$(date +%s)");Safari;"
-xattr -w com.apple.quarantine "$QUAR" "$DL/a/Notchy.app"
-xattr -w com.apple.quarantine "$QUAR" "$DL/b/Notchy.app"
+xattr -w com.apple.quarantine "$QUAR" "$DL/a/ponyhub.app"
+xattr -w com.apple.quarantine "$QUAR" "$DL/b/ponyhub.app"
 if spctl --status 2>/dev/null | grep -q disabled; then
     skip QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "Gatekeeper is disabled on this machine"
 else
     # a) opened as downloaded: must be blocked (LaunchServices waits on the dialog: do not wait for it)
-    ( lim 6 open "$DL/a/Notchy.app" >/dev/null 2>&1 & ); sleep 6
-    BLOCKED=yes; pgrep -f "$DL/a/Notchy.app/Contents/MacOS/Notchy" >/dev/null && BLOCKED=no
+    ( lim 6 open "$DL/a/ponyhub.app" >/dev/null 2>&1 & ); sleep 6
+    BLOCKED=yes; pgrep -f "$DL/a/ponyhub.app/Contents/MacOS/ponyhub" >/dev/null && BLOCKED=no
     shot qa02-gatekeeper 700
     # b) the user guide's step first, then open: must run
-    xattr -dr com.apple.quarantine "$DL/b/Notchy.app"
-    ( lim 10 open "$DL/b/Notchy.app" >/dev/null 2>&1 & )
+    xattr -dr com.apple.quarantine "$DL/b/ponyhub.app"
+    ( lim 10 open "$DL/b/ponyhub.app" >/dev/null 2>&1 & )
     RUNS=no
-    for _ in $(seq 1 20); do pgrep -f "$DL/b/Notchy.app/Contents/MacOS/Notchy" >/dev/null && { RUNS=yes; break; }; sleep 0.5; done
+    for _ in $(seq 1 20); do pgrep -f "$DL/b/ponyhub.app/Contents/MacOS/ponyhub" >/dev/null && { RUNS=yes; break; }; sleep 0.5; done
     if [ $BLOCKED = yes ] && [ $RUNS = yes ]; then
         pass QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "blocked as downloaded ([shot](shots/qa02-gatekeeper.png)); after xattr -dr it opens"
     else
-        fail QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "blocked=$BLOCKED, opens after xattr=$RUNS; $(spctl -a -t exec -vv "$DL/b/Notchy.app" 2>&1 | tr '\n' ' ' | cut -c1-160)"
+        fail QA-02 "Downloaded build: blocked while quarantined, opens after the guide's xattr step" "blocked=$BLOCKED, opens after xattr=$RUNS; $(spctl -a -t exec -vv "$DL/b/ponyhub.app" 2>&1 | tr '\n' ' ' | cut -c1-160)"
     fi
-    pkill -f "$DL/a/Notchy.app/Contents/MacOS/Notchy"; pkill -f "$DL/b/Notchy.app/Contents/MacOS/Notchy"
+    pkill -f "$DL/a/ponyhub.app/Contents/MacOS/ponyhub"; pkill -f "$DL/b/ponyhub.app/Contents/MacOS/ponyhub"
 fi
-$LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/null
+$LSREG -u "$DL/a/ponyhub.app" 2>/dev/null; $LSREG -u "$DL/b/ponyhub.app" 2>/dev/null
 
 # ---------------------------------------------------------------- summary
 {
     echo
     echo "**$PASS passed, $FAIL failed, $SKIP skipped.**"
     echo
-    echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
+    echo "CPU of ponyhub (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, notch: $([ "${HASNOTCH:-no}" = yes ] && echo "${NW}×${NH} pt" || echo none)."
 } >> "$REPORT"

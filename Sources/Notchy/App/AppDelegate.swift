@@ -111,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if visible, statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.button?.image = Self.statusIcon(badge: updates.available != nil)
-            item.button?.toolTip = "Notchy"
+            item.button?.toolTip = AppInfo.name
             let menu = buildMenu()
             menu.delegate = self
             item.menu = menu
@@ -127,7 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         let release = updates.available
         for tag in [Self.updateItemTag, Self.updateSeparatorTag] { menu.item(withTag: tag)?.isHidden = release == nil }
-        if let release { menu.item(withTag: Self.updateItemTag)?.title = "Update to Notchy \(release.version.description)…" }
+        if let release { menu.item(withTag: Self.updateItemTag)?.title = "Update to \(AppInfo.name) \(release.version.description)…" }
     }
 
     private static let updateItemTag = 100, updateSeparatorTag = 101
@@ -137,7 +137,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-        let update = menuItem("Update to Notchy…", #selector(showUpdate))
+        let update = menuItem("Update to \(AppInfo.name)…", #selector(showUpdate))
         update.tag = Self.updateItemTag
         update.isHidden = true
         menu.addItem(update)
@@ -162,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(menuItem("Settings…", #selector(openSettings), key: ","))
         menu.addItem(menuItem("Check for Updates…", #selector(checkForUpdates)))
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Notchy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
     }
 
@@ -199,8 +199,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let app = NSMenu()
         app.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         app.addItem(.separator())
-        app.addItem(withTitle: "Hide Notchy", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        app.addItem(withTitle: "Quit Notchy", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        app.addItem(withTitle: "Hide \(AppInfo.name)", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        app.addItem(withTitle: "Quit \(AppInfo.name)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
@@ -209,7 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let window = NSMenu(title: "Window")
         window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        for (title, sub) in [("Notchy", app), ("Edit", edit), ("Window", window)] {
+        for (title, sub) in [(AppInfo.name, app), ("Edit", edit), ("Window", window)] {
             let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
             item.submenu = sub
             main.addItem(item)

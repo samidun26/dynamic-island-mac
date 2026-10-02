@@ -141,24 +141,28 @@ final class NowPlayingTests: XCTestCase {
 
 final class UtilityTests: XCTestCase {
     func testDeepLinks() {
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?minutes=5")!), .startTimer(300))
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?seconds=90")!), .startTimer(90))
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer/cancel")!), .cancelTimer)
-        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer")!))
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://update")!), .update)
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://pomodoro")!), .pomodoro)
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://shelf")!), .shelf)
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://clipboard")!), .clipboard)
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://timer?minutes=5")!), .startTimer(300))
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://timer?seconds=90")!), .startTimer(90))
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://timer/cancel")!), .cancelTimer)
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhub://timer")!))
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://update")!), .update)
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://pomodoro")!), .pomodoro)
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://shelf")!), .shelf)
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://clipboard")!), .clipboard)
         XCTAssertNil(DeepLink(url: URL(string: "https://timer?minutes=5")!))
+        // Links from before the rename keep working.
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?minutes=5")!), .startTimer(300))
+        XCTAssertEqual(DeepLink(url: URL(string: "NOTCHY://pomodoro")!), .pomodoro)
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhubx://open")!))
     }
 
     func testDeepLinksRejectOrClampHostileNumbers() {
-        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=nan")!))
-        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=-5")!))
-        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=inf&seconds=-inf")!))
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?minutes=1e308")!), .startTimer(24 * 3600))
-        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?seconds=inf")!), .startTimer(24 * 3600))
-        XCTAssertNil(DeepLink(url: URL(string: "notchy://unknown")!))
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhub://timer?minutes=nan")!))
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhub://timer?minutes=-5")!))
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhub://timer?minutes=inf&seconds=-inf")!))
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://timer?minutes=1e308")!), .startTimer(24 * 3600))
+        XCTAssertEqual(DeepLink(url: URL(string: "ponyhub://timer?seconds=inf")!), .startTimer(24 * 3600))
+        XCTAssertNil(DeepLink(url: URL(string: "ponyhub://unknown")!))
     }
 
     func testMeetingLinksIgnoreLookalikesAndOtherSchemes() {

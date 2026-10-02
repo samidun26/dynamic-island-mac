@@ -45,12 +45,20 @@ public struct ReleaseInfo: Equatable, Sendable {
     public var checksumURL: URL?
 }
 
+/// The app's name. It was called Notchy up to 1.0.2.
+public enum AppInfo {
+    public static let name = "ponyhub"
+    /// The old name: copies up to 1.0.2 only install a release asset called Notchy.zip that holds
+    /// a Notchy.app, so every release carries one (see .github/workflows/release.yml).
+    public static let legacyName = "Notchy"
+}
+
 public enum UpdateFeed {
     /// Where shipped builds look for updates.
     public static let defaultURL = URL(string: "https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest")!
     /// The release asset that holds the app, and its SHA-256 next to it.
-    public static let zipName = "Notchy.zip"
-    public static let checksumName = "Notchy.zip.sha256"
+    public static let zipName = "\(AppInfo.name).zip"
+    public static let checksumName = "\(AppInfo.name).zip.sha256"
     /// Refuse anything bigger: the app is a few MB.
     public static let maxDownloadSize = 100 << 20
 
@@ -69,7 +77,7 @@ public enum UpdateFeed {
     }
 
     /// Reads GitHub's release JSON. Nil for drafts, pre-releases, a tag that isn't a version,
-    /// or a release without Notchy.zip from a trusted place.
+    /// or a release without the app's zip from a trusted place.
     public static func parse(_ data: Data, localFeed: Bool = false) -> ReleaseInfo? {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               (json["draft"] as? Bool) != true, (json["prerelease"] as? Bool) != true,
@@ -87,7 +95,7 @@ public enum UpdateFeed {
                            zipURL: zip.0, zipSize: zip.1, checksumURL: asset(checksumName)?.0)
     }
 
-    /// The hash in a `shasum -a 256` line ("<64 hex>  Notchy.zip"), lowercased.
+    /// The hash in a `shasum -a 256` line ("<64 hex>  ponyhub.zip"), lowercased.
     public static func checksum(in text: String) -> String? {
         guard let first = text.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).first else { return nil }
         let hex = first.lowercased()

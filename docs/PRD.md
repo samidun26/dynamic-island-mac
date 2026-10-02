@@ -1,8 +1,8 @@
-# Notchy: Product Requirements Document
+# ponyhub: Product Requirements Document
 
 | | |
 |---|---|
-| Product | Notchy, a Dynamic Island for the Mac notch |
+| Product | ponyhub, a Dynamic Island for the Mac notch |
 | Version | 1.0 |
 | Platform | macOS 14 Sonoma and later, Apple silicon and Intel |
 | Status | v1.0 built, verified on CI and QA-tested end to end on a macOS session ([QA report](QA_REPORT.md)); hands-on testing on a notched MacBook still pending (see §12) |
@@ -11,7 +11,7 @@
 
 ## 1. Summary
 
-MacBooks since 2021 have a camera notch that sits in the menu bar and does nothing. Notchy turns it into a live, glanceable surface, like the iPhone's Dynamic Island: music, timers, meetings, charging and volume appear around the notch, and a hover or click expands it into small controls. The reference for quality is Alcove (tryalcove.com). It has to feel like part of macOS: no visible window, no stray clicks, no lag, near-zero idle CPU.
+MacBooks since 2021 have a camera notch that sits in the menu bar and does nothing. ponyhub turns it into a live, glanceable surface, like the iPhone's Dynamic Island: music, timers, meetings, charging and volume appear around the notch, and a hover or click expands it into small controls. The reference for quality is Alcove (tryalcove.com). It has to feel like part of macOS: no visible window, no stray clicks, no lag, near-zero idle CPU.
 
 ## 2. Problem
 
@@ -143,11 +143,11 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-T1 | Start from Home (1/5/10 min), the menu bar (1/5/10/15/25/60 min) or `notchy://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R, Q |
+| FR-T1 | Start from Home (1/5/10 min), the menu bar (1/5/10/15/25/60 min) or `ponyhub://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R, Q |
 | FR-T2 | Compact countdown; expanded ring, big countdown, +1 min, pause/resume, cancel. | P0 | ✅ | R, Q |
 | FR-T3 | On completion: "Glass" sound (toggle), peek, then dismiss itself after 8 s. | P0 | ✅ | Q, H (sound) |
 | FR-T4 | App Intent for Shortcuts and Spotlight. | P2 | ⛔ | (see §9) |
-| FR-T5 | Pomodoro: focus and breaks in turn (25/5 min by default, a 15 min long break after every 4th focus; lengths in Settings), each phase starting the next with a sound and a peek. Started from Home ("Focus"), the menu bar or `notchy://pomodoro`; Skip moves to the next phase. Focus and break have their own colours and icons. | P1 | ✅ | T, R, Q |
+| FR-T5 | Pomodoro: focus and breaks in turn (25/5 min by default, a 15 min long break after every 4th focus; lengths in Settings), each phase starting the next with a sound and a peek. Started from Home ("Focus"), the menu bar or `ponyhub://pomodoro`; Skip moves to the next phase. Focus and break have their own colours and icons. | P1 | ✅ | T, R, Q |
 
 ### 7.7 Battery
 
@@ -184,12 +184,12 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-S1 | Menu bar icon (can be hidden; reopening the app shows Settings). | P1 | ✅ | L, Q |
 | FR-S2 | Settings window with General, Activities, Motion and About tabs (see the user guide). | P0 | ✅ | Q |
 | FR-S3 | Launch at login (`SMAppService`). | P1 | ✅ | H |
-| FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `pomodoro`, `shelf`, `clipboard`, `open`, `settings`, `update`. | P1 | ✅ | T, Q |
+| FR-S4 | `ponyhub://` URLs: `timer`, `timer/cancel`, `pomodoro`, `shelf`, `clipboard`, `open`, `settings`, `update`. | P1 | ✅ | T, Q |
 | FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L, Q |
 | FR-S6 | CI builds, tests and renders every state on each push; every app change on `main` publishes a numbered GitHub Release with its SHA-256. | P1 | ✅ | L |
 | FR-S7 | `--demo <scenario>` and `--snapshot <dir>` for verification without a mouse. | P1 | ✅ | L |
 | FR-S9 | Style: Classic (system font, smooth shapes) or Retro (bundled OFL pixel fonts Pixelify Sans and VT323, pixel-stepped corners, block meters, pixel-art covers), with a full-colour, green or amber screen and optional scanlines. | P2 | ✅ | R, Q |
-| FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. | P1 | ✅ | T, Q |
+| FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. Copies from before the rename (Notchy ≤ 1.0.2) update from a `Notchy.zip` asset with the same app, which then renames itself to ponyhub.app once, keeping settings and launch at login; `notchy://` links keep working. | P1 | ✅ | T, Q |
 
 ### 7.11 Shelf and clipboard
 
@@ -212,7 +212,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Area | Requirement | Measured |
 |---|---|---|---|
-| NFR-1 | CPU | 0% when idle; animations and timelines run only while visible. | 0.0% Notchy, 0.0% adapter, 0 idle wake-ups/s (CI, all services on) |
+| NFR-1 | CPU | 0% when idle; animations and timelines run only while visible. | 0.0% ponyhub, 0.0% adapter, 0 idle wake-ups/s (CI, all services on) |
 | NFR-2 | Memory | Small and stable. | 12 MB app + 14 MB adapter process |
 | NFR-3 | Latency | Hover-to-open ≈ dwell delay + one frame; no window resizes. | By design; H for feel |
 | NFR-4 | Reliability | Adapter restarts with backoff, falls back if fatal, never outlives the app; orphans from a crash are cleaned up at launch. | L (exits with app), Q (restart without flicker, exits on quit) |
@@ -221,16 +221,16 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | NFR-7 | Accessibility | VoiceOver labels on controls; Reduce Motion honoured; text meets contrast on black. | Partly H |
 | NFR-8 | Code quality | Swift 6 language mode; geometry, priority, hover intent and parsing unit-tested. | T |
 | NFR-9 | Licensing | Third-party code BSD-3 only, credited in-app; no GPL code or Alcove assets. | Code review |
-| NFR-10 | Security | Nobody can borrow Notchy's permissions: hardened runtime on every build, the Now Playing helper starts with a minimal environment, data from other apps, web pages and calendar invitations is never run as code or opened unless it is a known meeting link. See the [security review](SECURITY_REVIEW.md). | Q (injection attempts refused), T (hostile URLs) |
+| NFR-10 | Security | Nobody can borrow ponyhub's permissions: hardened runtime on every build, the Now Playing helper starts with a minimal environment, data from other apps, web pages and calendar invitations is never run as code or opened unless it is a known meeting link. See the [security review](SECURITY_REVIEW.md). | Q (injection attempts refused), T (hostile URLs) |
 
 ## 9. Constraints and things that are not possible
 
-- **Now Playing on macOS 15.4+** works only because Apple's own `/usr/bin/perl` is still allowed to use MediaRemote. Apple could close this; Notchy then degrades to Music and Spotify.
-- **System HUD suppression** is possible only by consuming the media key in an active event tap (Accessibility permission), and Notchy must then apply the change itself.
+- **Now Playing on macOS 15.4+** works only because Apple's own `/usr/bin/perl` is still allowed to use MediaRemote. Apple could close this; ponyhub then degrades to Music and Spotify.
+- **System HUD suppression** is possible only by consuming the media key in an active event tap (Accessibility permission), and ponyhub must then apply the change itself.
 - **Brightness** has no public API on Apple silicon: it uses private DisplayServices, loaded with `dlopen`, built-in display only, with its own switch. **Keyboard backlight**: not implemented.
 - **Focus:** `INFocusStatusCenter` needs a provisioned entitlement and only says yes or no; the alternative needs Full Disk Access. Not implemented.
 - **Notifications and lock screen** need private SkyLight/CGS APIs or notification-database access. They would break with OS updates and are not App Store eligible, so they are not implemented.
-- **App Intents** need Xcode's metadata extraction, which the SwiftPM build does not run. The `notchy://` URL from Shortcuts' "Open URLs" action covers the use case.
+- **App Intents** need Xcode's metadata extraction, which the SwiftPM build does not run. The `ponyhub://` URL from Shortcuts' "Open URLs" action covers the use case.
 - **`sharingType = .none`** is honoured by system capture, but some third-party capture tools ignore it.
 
 ## 10. UX specification
@@ -263,7 +263,7 @@ Screens: see `docs/screenshots/` ([all states](screenshots/sheet-notch.png), [no
 ## 11. Architecture (summary)
 
 - `NotchyCore` (plain Foundation, unit-tested): `NotchMetrics` (geometry), `ActivityQueue` (priority), `HoverIntent`, `AdapterStreamState` (Now Playing parsing), deep links, meeting links, spring curve, artwork tint.
-- `Notchy` app: `IslandPanel` (window, click-through, mouse and trackpad), `IslandShape`, `IslandModel` (derives state and geometry and commits each change in one spring transaction), `IslandView`, services (Now Playing, Timer, Battery, Calendar, HUD), Settings.
+- `ponyhub` app: `IslandPanel` (window, click-through, mouse and trackpad), `IslandShape`, `IslandModel` (derives state and geometry and commits each change in one spring transaction), `IslandView`, services (Now Playing, Timer, Battery, Calendar, HUD), Settings.
 - Details: [README → How it works](../README.md#how-it-works).
 
 ## 12. Success metrics and verification plan
@@ -298,6 +298,6 @@ Screens: see `docs/screenshots/` ([all states](screenshots/sheet-notch.png), [no
 
 ## 15. Open questions
 
-1. Should Notchy ship notarized builds (needs an Apple Developer ID, $99/year)?
+1. Should ponyhub ship notarized builds (needs an Apple Developer ID, $99/year)?
 2. Should hover-to-open stay the default, or should click-only be the default as on some competitors?
 3. Which extra activities matter most next: AirPods/Bluetooth battery, file tray, weather, or system stats?

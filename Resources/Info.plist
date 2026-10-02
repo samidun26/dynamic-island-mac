@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key><string>dev.local.notchy</string>
-	<key>CFBundleName</key><string>Notchy</string>
-	<key>CFBundleDisplayName</key><string>Notchy</string>
-	<key>CFBundleExecutable</key><string>Notchy</string>
+	<key>CFBundleName</key><string>ponyhub</string>
+	<key>CFBundleDisplayName</key><string>ponyhub</string>
+	<key>CFBundleExecutable</key><string>ponyhub</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleShortVersionString</key><string>__VERSION__</string>
 	<key>CFBundleVersion</key><string>__BUILD__</string>
@@ -14,15 +14,15 @@
 	<key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
 	<key>LSUIElement</key><true/>
 	<key>NSHighResolutionCapable</key><true/>
-	<key>NSHumanReadableCopyright</key><string>Notchy. Includes mediaremote-adapter (BSD-3-Clause) by Jonas van den Berg.</string>
-	<key>NSAppleEventsUsageDescription</key><string>Notchy reads the current track and sends play/pause to Music and Spotify when the system Now Playing bridge is unavailable.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key><string>Notchy shows your next event and alerts you a few minutes before it starts.</string>
-	<key>NSCalendarsUsageDescription</key><string>Notchy shows your next event and alerts you a few minutes before it starts.</string>
+	<key>NSHumanReadableCopyright</key><string>ponyhub (formerly Notchy). Includes mediaremote-adapter (BSD-3-Clause) by Jonas van den Berg.</string>
+	<key>NSAppleEventsUsageDescription</key><string>ponyhub reads the current track and sends play/pause to Music and Spotify when the system Now Playing bridge is unavailable.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key><string>ponyhub shows your next event and alerts you a few minutes before it starts.</string>
+	<key>NSCalendarsUsageDescription</key><string>ponyhub shows your next event and alerts you a few minutes before it starts.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key><string>dev.local.notchy</string>
-			<key>CFBundleURLSchemes</key><array><string>notchy</string></array>
+			<key>CFBundleURLSchemes</key><array><string>ponyhub</string><string>notchy</string></array>
 		</dict>
 	</array>
 </dict>
