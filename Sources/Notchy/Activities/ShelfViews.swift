@@ -13,25 +13,20 @@ struct ShelfPage: View {
         if model.fileDragNear || model.dropTargeted {
             DropZones(model: model)
         } else {
-            page.overlay(alignment: .top) {
-                if let notice = model.shelfNotice { NoticeChip(text: notice).transition(.move(edge: .top).combined(with: .opacity)) }
-            }
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.shelfNotice)
+            page.animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.shelfNotice)
         }
     }
 
     private var page: some View {
         let tab = model.shelfTab
         return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                TabChip(title: "Files", count: model.shelf.files.count, on: tab == .files) { model.shelfTab = .files }
-                TabChip(title: "Clipboard", count: model.clipboard.history.items.count, on: tab == .clipboard) { model.shelfTab = .clipboard }
-                Spacer()
-                if tab == .files, !model.shelf.files.isEmpty {
-                    PillButton(title: "Clear", tint: .white.opacity(0.7)) { model.shelf.clear() }
-                } else if tab == .clipboard, model.clipboard.history.items.contains(where: { !$0.pinned }) {
-                    PillButton(title: "Clear", tint: .white.opacity(0.7)) { model.clipboard.clear() }
-                }
+            // A confirmation takes the tab row's place for a moment, so it covers nothing.
+            if let notice = model.shelfNotice {
+                NoticeChip(text: notice)
+                    .frame(maxWidth: .infinity)
+                    .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .opacity))
+            } else {
+                tabRow(tab)
             }
             Group {
                 switch tab {
@@ -40,6 +35,19 @@ struct ShelfPage: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private func tabRow(_ tab: ShelfTab) -> some View {
+        HStack(spacing: 6) {
+            TabChip(title: "Files", count: model.shelf.files.count, on: tab == .files) { model.shelfTab = .files }
+            TabChip(title: "Clipboard", count: model.clipboard.history.items.count, on: tab == .clipboard) { model.shelfTab = .clipboard }
+            Spacer()
+            if tab == .files, !model.shelf.files.isEmpty {
+                PillButton(title: "Clear", tint: .white.opacity(0.7)) { model.shelf.clear() }
+            } else if tab == .clipboard, model.clipboard.history.items.contains(where: { !$0.pinned }) {
+                PillButton(title: "Clear", tint: .white.opacity(0.7)) { model.clipboard.clear() }
+            }
         }
     }
 }
