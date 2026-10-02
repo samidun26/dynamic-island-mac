@@ -3,7 +3,7 @@
 End-to-end QA of ponyhub, installed from this repository the way the [user guide](USER_GUIDE.md) describes and then used on a real macOS session: a script moves the pointer, clicks, scrolls and swipes like a person would, plays music from a test app, and checks what happens on screen, in the accessibility tree, and in the music app.
 
 - **Latest run:** [docs/qa/results.md](qa/results.md), with [screenshots](qa/shots/), ponyhub's [test trace](qa/notchy-trace.log) and the [test player's log](qa/fakeplayer.log).
-- **Result:** **47 of 47 cases pass** (macOS 15.7.9, commit `5ee4d17`: volume and brightness glyphs that show the level, and the volume HUD for changes made elsewhere). Ten bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
+- **Result:** **47 of 47 cases pass** (macOS 15.7.9, commit `48748de`: volume and brightness keys taken at the HID level, so macOS 26 shows no pop-up of its own). Ten bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
 - **Re-run it:** see [How to run it](#how-to-run-it). It runs on every push to a working branch, and on demand from the Actions tab.
 
 ## Environment
