@@ -889,6 +889,48 @@ if [ "$INPUT" = yes ]; then
 else
     skip QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "needs input synthesis"
 fi
+
+# QA-48 and QA-49: while something is dragged to the notch, the island offers two drop targets:
+# Keep on Shelf (left) and Copy (right, 140 pt). Here the expanded island is 484 pt wide from
+# CX - 242; its page runs 22 pt in from each side, 41 to 145 pt from the top.
+SHOT="$OUT/qa-screenshot.png"; lim 10 screencapture -x -R 0,300,240,160 "$SHOT"
+STORE="$HOME/Library/Application Support/ponyhub/Shelf"
+if [ "$INPUT" = yes ] && [ -s "$SHOT" ]; then
+    # QA-48: a screenshot's thumbnail (a promised PNG file, as macOS's floating thumbnail offers
+    # it) dropped on Copy: the picture goes on the clipboard, ready to paste, and nothing is kept.
+    rm -rf "$STORE"; "$D" pasteboard "before the drop" >/dev/null
+    "$D" jump "$CX" 500 >/dev/null; sleep 0.3
+    mark "$LOG"
+    R48=$(lim 25 "$D" file-drag promise "$SHOT" $((CX - 300)) 420 "$CX" $((MB / 2)) 900 $((CX + 150)) 93 2>&1 | tr '\n' ' ')
+    COPIED=no; wait_for "$LOG" "SHELF copied image" 5 && COPIED=yes
+    sleep 0.3; shot qa48-copied 240
+    TYPES=$("$D" pasteboard-types)
+    LEFT=$(ls "$STORE" 2>/dev/null | wc -l | tr -d ' ')
+    if echo "$R48" | grep -q "drop accepted" && [ $COPIED = yes ] && echo "$TYPES" | grep -q "public.png" && [ "${LEFT:-0}" = 0 ]; then
+        pass QA-48 "A screenshot dragged to the notch and dropped on Copy goes on the clipboard (FR-F3)" "promised PNG received and copied as an image (clipboard: $(echo "$TYPES" | tr ' ' '\n' | grep -E 'png|tiff' | tr '\n' ' ')); nothing left on the shelf ([shot](shots/qa48-copied.png))"
+    else
+        fail QA-48 "A screenshot dragged to the notch and dropped on Copy goes on the clipboard (FR-F3)" "driver: $R48; copied: $COPIED; clipboard: $TYPES; kept files: ${LEFT:-?}; $(after "$LOG" | grep -E 'DROP|DRAG|SHELF' | tail -4 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1.2
+
+    # QA-49: an image dragged out of an app (image data, no file) dropped on Keep on Shelf is
+    # saved into the shelf's folder and listed.
+    mark "$LOG"
+    R49=$(lim 25 "$D" file-drag image "$SHOT" $((CX - 300)) 420 "$CX" $((MB / 2)) 900 $((CX - 74)) 93 2>&1 | tr '\n' ' ')
+    KEPT=no; wait_for "$LOG" "SHELF added 1" 5 && KEPT=yes
+    sleep 0.6; shot qa49-kept 240
+    STORED=$(ls "$STORE" 2>/dev/null | head -1)
+    if echo "$R49" | grep -q "drop accepted" && [ $KEPT = yes ] && [ -n "$STORED" ]; then
+        pass QA-49 "An image dragged to the notch and dropped on Keep on Shelf is saved there (FR-F1)" "saved as \"$STORED\" in the shelf's folder and listed ([shot](shots/qa49-kept.png))"
+    else
+        fail QA-49 "An image dragged to the notch and dropped on Keep on Shelf is saved there (FR-F1)" "driver: $R49; added: $KEPT; stored: ${STORED:-nothing}; $(after "$LOG" | grep -E 'DROP|DRAG|SHELF' | tail -4 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1.2
+    rm -rf "$STORE"
+else
+    skip QA-48 "A screenshot dragged to the notch and dropped on Copy goes on the clipboard (FR-F3)" "needs input synthesis"
+    skip QA-49 "An image dragged to the notch and dropped on Keep on Shelf is saved there (FR-F1)" "needs input synthesis"
+fi
 quit_notchy
 defaults delete "$BID" shelfFiles 2>/dev/null
 

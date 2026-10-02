@@ -125,7 +125,8 @@ Added after the review above, at the owner's request (features in the spirit of 
 | A web page copies something hostile onto your clipboard | Shown as plain text (no Markdown, HTML or rich text); only `http`/`https` links get an ↗ button, so `javascript:`, `file:` and custom schemes are never opened; at most 20,000 characters per item and 30 items. Clicking an item copies back plain text only |
 | Contents in logs | The QA trace logs only the length of a copy ("CLIP added 12 characters"), never its text |
 | Reading the clipboard when nothing changed | ponyhub reads only the clipboard's change counter twice a second, and reads the contents only after a change. Newer macOS versions may ask whether ponyhub may read what other apps copied; say no, or turn history off, and ponyhub never reads it |
-| Dropped files | ponyhub remembers where they are (bookmarks), never reads, copies or uploads them; opening one goes through Finder's usual checks (Gatekeeper and quarantine still apply). The drop target reacts only to file drags that start while the button is held, and only near the notch |
+| Dropped files and screenshots | ponyhub remembers where dropped files are (bookmarks) and never uploads anything. Screenshots and images that arrive without a lasting file (the screenshot thumbnail's temporary file, image data from an app) are saved in `~/Library/Application Support/ponyhub/Shelf`, readable only by you, and deleted when removed from the shelf or dropped on Copy. Opening a file goes through Finder's usual checks (Gatekeeper and quarantine still apply). The drop target reacts only to drags that start while the button is held, and only near the notch |
+| Allow… resets this app's Accessibility entry | `tccutil reset Accessibility dev.local.notchy`, run only when the permission is missing, removes only ponyhub's own (stale) entry before macOS asks again; nothing else in Privacy & Security is touched |
 
 ## Informational (by design)
 

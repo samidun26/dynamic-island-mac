@@ -21,9 +21,12 @@
 //   qa-driver media-key volume-up|volume-down|mute|brightness-up|brightness-down
 //                                          press a media key (a system-defined event, as the keyboard sends)
 //   qa-driver pasteboard TEXT [TYPE…]      put TEXT on the clipboard, with extra (empty) marker types
-//   qa-driver file-drag PATH X1 Y1 X2 Y2 [HOLD_MS]
-//                                          drag PATH from a small window at X1,Y1 and drop it at X2,Y2,
-//                                          as from Finder (a real drag session); prints the drop result
+//   qa-driver file-drag [url|image|promise] PATH X1 Y1 X2 Y2 [HOLD_MS [X3 Y3]]
+//                                          drag PATH from a small window at X1,Y1 to X2,Y2 (then on to
+//                                          X3,Y3) and drop it, with a real drag session: as a file
+//                                          (Finder), as image data (an image from an app), or as a
+//                                          promised file (the screenshot thumbnail); prints the result
+//   qa-driver pasteboard-types             the types on the clipboard now
 //   qa-driver pixel PNG X Y                "dark" or "light" and the RGB at a point (points)
 //   qa-driver dark-run PNG Y               longest run of near-black pixels on row Y (points): "x width"
 //   qa-driver dark-box PNG                 bounding box of the near-black blob touching the top centre: "x y w h"
@@ -207,13 +210,16 @@ func isDark(_ px: [UInt8], _ w: Int, _ x: Int, _ y: Int) -> Bool {
 
 /// A small window holding one file; scripted mouse events drag it out with a real drag session,
 /// the way Finder would, so the destination sees an ordinary file drop.
-final class DragSource: NSView, NSDraggingSource {
+final class DragSource: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     let url: URL
+    let mode: String
     var started = false
+    var finished = false
     var ended: ((NSDragOperation) -> Void)?
 
-    init(url: URL, frame: NSRect) {
+    init(url: URL, mode: String, frame: NSRect) {
         self.url = url
+        self.mode = mode
         super.init(frame: frame)
     }
 
@@ -228,7 +234,13 @@ final class DragSource: NSView, NSDraggingSource {
     override func mouseDragged(with event: NSEvent) {
         guard !started else { return }
         started = true
-        let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+        let writer: NSPasteboardWriting
+        switch mode {
+        case "image": writer = NSImage(contentsOf: url) ?? NSImage()
+        case "promise": writer = NSFilePromiseProvider(fileType: "public.png", delegate: self)
+        default: writer = url as NSURL
+        }
+        let item = NSDraggingItem(pasteboardWriter: writer)
         item.setDraggingFrame(bounds, contents: NSWorkspace.shared.icon(forFile: url.path))
         beginDraggingSession(with: [item], event: event, source: self)
         print("drag started")
@@ -236,9 +248,26 @@ final class DragSource: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) { ended?(operation) }
+
+    // The promise, kept as the screenshot thumbnail does: the file is written when the drop asks.
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
+        url.lastPathComponent
+    }
+
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, writePromiseTo dest: URL, completionHandler: @escaping (Error?) -> Void) {
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            print("promise written")
+            completionHandler(nil)
+            // The receiver has its file: done.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { exit(0) }
+        } catch {
+            completionHandler(error)
+        }
+    }
 }
 
-@MainActor func fileDrag(path: String, from a: CGPoint, to b: CGPoint, hold: Double) -> Never {
+@MainActor func fileDrag(path: String, mode: String, from a: CGPoint, to b: CGPoint, then c: CGPoint?, hold: Double) -> Never {
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
     let side: CGFloat = 64
@@ -246,10 +275,16 @@ final class DragSource: NSView, NSDraggingSource {
     let window = NSWindow(contentRect: NSRect(x: a.x - side / 2, y: top - a.y - side / 2, width: side, height: side),
                           styleMask: [.borderless], backing: .buffered, defer: false)
     window.level = .floating
-    let view = DragSource(url: URL(fileURLWithPath: path), frame: NSRect(x: 0, y: 0, width: side, height: side))
+    let view = DragSource(url: URL(fileURLWithPath: path), mode: mode, frame: NSRect(x: 0, y: 0, width: side, height: side))
     view.ended = { op in
+        view.finished = true
         print("drop \(op.isEmpty ? "refused" : "accepted")")
-        exit(op.isEmpty ? 3 : 0)
+        // A promise is fulfilled after the drop, when the receiver asks: stay until then.
+        if mode == "promise", !op.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { print("promise never requested"); exit(5) }
+        } else {
+            exit(op.isEmpty ? 3 : 0)
+        }
     }
     window.contentView = view
     window.orderFrontRegardless()
@@ -262,15 +297,26 @@ final class DragSource: NSView, NSDraggingSource {
         glide(to: CGPoint(x: a.x + 12, y: a.y - 12), ms: 120, dragging: true)
         glide(to: b, ms: 700, dragging: true)
         // Wiggle in place while holding, as a hand does, so the destination keeps getting updates.
-        let steps = max(1, Int(hold / 50))
-        for i in 0..<steps {
-            moveEvent(CGPoint(x: b.x + (i % 2 == 0 ? 1 : -1), y: b.y), dragging: true)
-            usleep(50_000)
+        func hover(_ p: CGPoint) {
+            for i in 0..<max(1, Int(hold / 50)) {
+                moveEvent(CGPoint(x: p.x + (i % 2 == 0 ? 1 : -1), y: p.y), dragging: true)
+                usleep(50_000)
+            }
         }
-        button(.leftMouseUp, b)
+        hover(b)
+        var end = b
+        if let c {
+            glide(to: c, ms: 400, dragging: true)
+            hover(c)
+            end = c
+        }
+        button(.leftMouseUp, end)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            MainActor.assumeIsolated { print(view.started ? "drop: no answer from the drag session" : "drag never started") }
-            exit(4)
+            MainActor.assumeIsolated {
+                guard !view.finished else { return }
+                print(view.started ? "drop: no answer from the drag session" : "drag never started")
+                exit(4)
+            }
         }
     }
     app.run()
@@ -463,9 +509,16 @@ case "pasteboard":
     for t in args.dropFirst(2) { pb.setData(Data(), forType: NSPasteboard.PasteboardType(t)) }
     print("changeCount=\(pb.changeCount)")
 case "file-drag":
+    let modes = ["url", "image", "promise"]
+    let mode = modes.contains(arg(1)) ? arg(1) : "url"
+    let o = modes.contains(arg(1)) ? 2 : 1
+    let then: CGPoint? = args.count > o + 6 ? CGPoint(x: num(o + 6), y: num(o + 7)) : nil
     MainActor.assumeIsolated {
-        fileDrag(path: arg(1), from: CGPoint(x: num(2), y: num(3)), to: CGPoint(x: num(4), y: num(5)), hold: num(6, 1200))
+        fileDrag(path: arg(o), mode: mode, from: CGPoint(x: num(o + 1), y: num(o + 2)), to: CGPoint(x: num(o + 3), y: num(o + 4)),
+                 then: then, hold: num(o + 5, 1200))
     }
+case "pasteboard-types":
+    print((NSPasteboard.general.types ?? []).map(\.rawValue).joined(separator: " "))
 default:
     fail("unknown command \(arg(0)); see the header of QA/Driver/main.swift")
 }

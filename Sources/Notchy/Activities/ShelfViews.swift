@@ -10,8 +10,19 @@ struct ShelfPage: View {
     let model: IslandModel
 
     var body: some View {
+        if model.fileDragNear || model.dropTargeted {
+            DropZones(model: model)
+        } else {
+            page.overlay(alignment: .top) {
+                if let notice = model.shelfNotice { NoticeChip(text: notice).transition(.move(edge: .top).combined(with: .opacity)) }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.shelfNotice)
+        }
+    }
+
+    private var page: some View {
         let tab = model.shelfTab
-        VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 TabChip(title: "Files", count: model.shelf.files.count, on: tab == .files) { model.shelfTab = .files }
                 TabChip(title: "Clipboard", count: model.clipboard.history.items.count, on: tab == .clipboard) { model.shelfTab = .clipboard }
@@ -24,7 +35,7 @@ struct ShelfPage: View {
             }
             Group {
                 switch tab {
-                case .files: FilesShelf(shelf: model.shelf, dropping: model.fileDragNear || model.dropTargeted, targeted: model.dropTargeted)
+                case .files: FilesShelf(shelf: model.shelf)
                 case .clipboard: ClipboardShelf(clipboard: model.clipboard, enabled: model.settings.clipboardHistory)
                 }
             }
@@ -62,26 +73,10 @@ private struct TabChip: View {
 
 private struct FilesShelf: View {
     let shelf: ShelfModel
-    /// Files are being dragged here; `targeted` once they are over the island.
-    let dropping: Bool
-    let targeted: Bool
-    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         Group {
-            if dropping {
-                VStack(spacing: 6) {
-                    Image(systemName: "tray.and.arrow.down.fill").font(.system(size: 22, weight: .semibold))
-                    Text(targeted ? "Let go to keep it here" : "Drop on the island").islandFont(12, .semibold)
-                }
-                .foregroundStyle(.cyan.opacity(targeted ? 1 : 0.7))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background {
-                    let shape = RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 14, style: .continuous)
-                    shape.fill(.cyan.opacity(targeted ? 0.14 : 0.05))
-                    shape.strokeBorder(.cyan.opacity(targeted ? 0.9 : 0.45), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                }
-            } else if shelf.files.isEmpty {
+            if shelf.files.isEmpty {
                 Hint(symbol: "tray.and.arrow.down", text: "Drag files onto the notch to keep them here, then drag them out wherever you need them.")
             } else {
                 ShelfRow {
@@ -91,7 +86,88 @@ private struct FilesShelf: View {
                 }
             }
         }
-        .animation(.easeOut(duration: 0.15), value: targeted)
+    }
+}
+
+/// While something is dragged to the notch: drop it on the left to keep it on the shelf, or on
+/// Copy to put it on the clipboard (a screenshot then pastes straight into a chat or document).
+private struct DropZones: View {
+    let model: IslandModel
+    @State private var copyTargeted = false
+    @Environment(\.staticRender) private var staticRender
+
+    var body: some View {
+        let keep = model.dropTargeted && !copyTargeted
+        HStack(spacing: 8) {
+            DropZone(symbol: "tray.and.arrow.down.fill", title: keep ? "Let go to keep it" : "Keep on Shelf", tint: .cyan, targeted: keep)
+            DropZone(symbol: "doc.on.clipboard.fill", title: copyTargeted ? "Let go to copy" : "Copy", tint: .orange, targeted: copyTargeted)
+                .frame(width: 140)
+                .modifier(CopyDropTarget(model: model, targeted: $copyTargeted, enabled: !staticRender))
+        }
+        .animation(.easeOut(duration: 0.15), value: keep)
+        .animation(.easeOut(duration: 0.15), value: copyTargeted)
+    }
+}
+
+private struct DropZone: View {
+    let symbol: String
+    let title: String
+    let tint: Color
+    let targeted: Bool
+    @Environment(\.islandTheme) private var theme
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol).font(.system(size: 20, weight: .semibold))
+                .scaleEffect(targeted ? 1.12 : 1)
+            Text(title).islandFont(12, .semibold)
+        }
+        .foregroundStyle(tint.opacity(targeted ? 1 : 0.7))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 14, style: .continuous)
+            shape.fill(tint.opacity(targeted ? 0.16 : 0.05))
+            shape.strokeBorder(tint.opacity(targeted ? 0.9 : 0.45), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private struct CopyDropTarget: ViewModifier {
+    let model: IslandModel
+    @Binding var targeted: Bool
+    let enabled: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if enabled {
+            content.onDrop(of: ShelfDrop.utTypes, isTargeted: $targeted) { providers in
+                QALog.log("DROP copy")
+                Task { @MainActor in
+                    let urls = await ShelfDrop.files(from: providers, storage: model.shelf.storage)
+                    model.droppedForCopy(urls)
+                }
+                return true
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private struct NoticeChip: View {
+    let text: String
+    @Environment(\.islandTheme) private var theme
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .bold)).foregroundStyle(.green)
+            Text(text).islandFont(11.5, .semibold)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 20, style: .continuous).fill(Color(white: 0.16)))
+        .overlay(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 20, style: .continuous).strokeBorder(.white.opacity(0.12)))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -99,14 +175,24 @@ private struct FileTile: View {
     let file: ShelfModel.File
     let shelf: ShelfModel
     @State private var hovering = false
+    @State private var thumbnail: CGImage?
     @Environment(\.islandTheme) private var theme
 
     var body: some View {
         VStack(spacing: 3) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path))
-                .resizable()
-                .interpolation(theme.isRetro ? .none : .high)
-                .frame(width: 34, height: 34)
+            Group {
+                if let thumbnail {
+                    Image(decorative: thumbnail, scale: 2)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 4, style: .continuous))
+                } else {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path)).resizable()
+                }
+            }
+            .interpolation(theme.isRetro ? .none : .high)
+            .frame(width: 34, height: 34)
+            .task(id: file.url) { thumbnail = await Thumbnails.make(for: file.url, side: 34) }
             Text(file.name)
                 .islandFont(10, .medium)
                 .lineLimit(2)
@@ -285,13 +371,11 @@ struct ShelfDropTarget: ViewModifier {
     }
 
     private func dropTarget(_ content: Content) -> some View {
-        content.onDrop(of: [.fileURL], isTargeted: Binding(get: { model.dropTargeted }, set: { model.setDropTargeted($0) })) { providers in
+        content.onDrop(of: ShelfDrop.utTypes, isTargeted: Binding(get: { model.dropTargeted }, set: { model.setDropTargeted($0) })) { providers in
             guard model.settings.shelfEnabled else { return false }
-            for p in providers where p.canLoadObject(ofClass: URL.self) {
-                _ = p.loadObject(ofClass: URL.self) { url, _ in
-                    guard let url else { return }
-                    Task { @MainActor in model.droppedOnShelf([url]) }
-                }
+            Task { @MainActor in
+                let urls = await ShelfDrop.files(from: providers, storage: model.shelf.storage)
+                if !urls.isEmpty { model.droppedOnShelf(urls) }
             }
             return true
         }

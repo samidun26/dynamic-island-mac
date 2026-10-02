@@ -197,6 +197,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 |---|---|---|---|---|
 | FR-F1 | Files dragged to the notch open the island on the shelf, with a drop zone; dropping keeps them there (references only, never copies), and the shelf stays open to show them. | P1 | ✅ | R, Q |
 | FR-F2 | Shelf files drag out to any app, open on double-click, and have Show in Finder / Remove; the list survives relaunches (bookmarks that follow moved files), up to 40. | P1 | ✅ | H |
+| FR-F3 | Screenshots and images too: the floating screenshot thumbnail (a promised file), images dragged out of apps, and files all open the island. While dragging, two drop targets: **Keep on Shelf** (screenshots and images are saved in the app's Shelf folder, deleted again when removed) and **Copy** (an image goes on the clipboard as PNG and TIFF, ready to paste; other files as files), confirmed with a short notice. Shelf tiles show Quick Look thumbnails. | P1 | ✅ | Q, H |
 | FR-CB1 | Clipboard history: the last 30 copied texts, newest first; click to copy back, pin to keep (pins survive relaunches), links open, colours show a swatch. | P1 | ✅ | T, R, Q |
 | FR-CB2 | Privacy: history lives in memory only (only pins are saved); copies that apps mark private or temporary (the nspasteboard.org markers that password managers use) are never recorded; turning history off clears it; the QA trace never logs contents. | P0 | ✅ | T, Q |
 

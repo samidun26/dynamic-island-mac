@@ -1,6 +1,7 @@
 import AppKit
 import NotchyCore
 import Observation
+import UniformTypeIdentifiers
 
 /// Files dropped on the notch, kept until removed (also across relaunches, as bookmarks that
 /// follow a file when it moves). Notchy only remembers where the files are; it never copies them.
@@ -16,6 +17,22 @@ final class ShelfModel {
     @ObservationIgnored private let persists: Bool
     private static let key = "shelfFiles"
     static let limit = 40
+
+    /// Where screenshots and images dropped on the island are kept (macOS deletes a screenshot's
+    /// temporary file once it's been dragged somewhere). Files dropped from elsewhere stay put.
+    let storage: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent(AppInfo.name, isDirectory: true)
+        .appendingPathComponent("Shelf", isDirectory: true)
+
+    func isStored(_ url: URL) -> Bool {
+        url.standardizedFileURL.path.hasPrefix(storage.standardizedFileURL.path + "/")
+    }
+
+    /// Deletes a copy kept in `storage` once nothing refers to it any more.
+    func discardIfStored(_ url: URL) {
+        guard isStored(url), !files.contains(where: { $0.url.standardizedFileURL == url.standardizedFileURL }) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
 
     init(persists: Bool) {
         self.persists = persists
@@ -38,12 +55,16 @@ final class ShelfModel {
     }
 
     func remove(_ id: UUID) {
+        let gone = files.filter { $0.id == id }.map(\.url)
         files.removeAll { $0.id == id }
+        gone.forEach(discardIfStored)
         save()
     }
 
     func clear() {
+        let gone = files.map(\.url)
         files.removeAll()
+        gone.forEach(discardIfStored)
         save()
     }
 
@@ -115,6 +136,34 @@ final class ClipboardModel {
         guard let text = pb.string(forType: .string) else { return }
         history.add(text)
         QALog.log("CLIP added \(text.count) characters")
+    }
+
+    /// Copies dropped files: one image goes on as the picture itself (PNG and TIFF, as macOS's own
+    /// screenshot-to-clipboard does), so it pastes into chats and documents; anything else goes on
+    /// as files, as Finder's Copy does. Returns what was copied, for the confirmation.
+    @discardableResult
+    func copyFiles(_ urls: [URL]) -> String? {
+        guard !urls.isEmpty else { return nil }
+        let pb = NSPasteboard.general
+        let copied: String
+        if urls.count == 1, let url = urls.first,
+           UTType(filenameExtension: url.pathExtension)?.conforms(to: .image) == true,
+           let image = NSImage(contentsOf: url), let tiff = image.tiffRepresentation {
+            let item = NSPasteboardItem()
+            if let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) { item.setData(png, forType: .png) }
+            item.setData(tiff, forType: .tiff)
+            pb.clearContents()
+            pb.writeObjects([item])
+            copied = "image"
+        } else {
+            pb.clearContents()
+            pb.writeObjects(urls.map { $0 as NSURL })
+            copied = urls.count == 1 ? "file" : "\(urls.count) files"
+        }
+        ownChange = pb.changeCount
+        lastChange = pb.changeCount
+        QALog.log("SHELF copied \(copied)")
+        return copied
     }
 
     /// Puts an item back on the clipboard (and at the top of the history).

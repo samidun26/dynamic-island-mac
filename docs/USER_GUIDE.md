@@ -129,6 +129,10 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - **Drag files to the notch** (from Finder, the desktop, Mail…). The island opens on the shelf with a drop zone; let go and the files stay there. The shelf stays open until you move the pointer away, so you can see what landed.
 - **Drag them out** to any app or folder when you need them; double-click opens one; right-click for **Show in Finder** and **Remove from Shelf**; **Clear** empties it.
 - ponyhub keeps a reference to each file, never a copy. The shelf survives restarts and follows files you move. Up to 40 files.
+- **Screenshots:** take one (⌘⇧3, ⌘⇧4 or ⌘⇧5) and drag the thumbnail that appears in the corner up to the notch. Images dragged out of apps and browsers work too. While you drag, the island shows two targets:
+  - **Keep on Shelf** (left): it stays on the shelf. ponyhub keeps its own copy, since macOS deletes the screenshot's temporary file once it's dragged away.
+  - **Copy** (right): the picture goes on the clipboard, ready to paste into a chat, an email or a document. *Image copied to clipboard* confirms it; nothing is kept on the shelf.
+- Shelf tiles show a preview of images, PDFs and documents.
 - Open it any time: swipe to the last page of the island, or `ponyhub://shelf`.
 
 ### Shelf: clipboard history
