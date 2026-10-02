@@ -146,6 +146,9 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer/cancel")!), .cancelTimer)
         XCTAssertNil(DeepLink(url: URL(string: "notchy://timer")!))
         XCTAssertEqual(DeepLink(url: URL(string: "notchy://update")!), .update)
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://pomodoro")!), .pomodoro)
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://shelf")!), .shelf)
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://clipboard")!), .clipboard)
         XCTAssertNil(DeepLink(url: URL(string: "https://timer?minutes=5")!))
     }
 

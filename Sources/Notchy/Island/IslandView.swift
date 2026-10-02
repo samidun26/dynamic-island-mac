@@ -33,6 +33,7 @@ struct IslandCanvas: View {
                 .offset(x: geometry.offsetX)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
+        .modifier(ShelfDropTarget(model: model))
         .environment(\.colorScheme, .dark)
         .environment(\.islandTheme, theme)
         .ignoresSafeArea()
@@ -185,7 +186,7 @@ struct CompactLip: View {
         case .nowPlaying:
             // Streams and radio have no duration: a full line.
             (model.nowPlaying.info.map { ($0.duration ?? 0) > 0 ? $0.progress(at: date) : 1 } ?? 1, model.nowPlaying.tint)
-        case .timer: (model.timer.progress(at: date), .orange)
+        case .timer: (model.timer.progress(at: date), model.timer.accent)
         case .calendar: (1, model.calendar.phase.event?.color ?? .red)
         case .hud: (model.hud.current.map { $0.muted ? 0 : $0.level } ?? 0, .white)
         case .battery: (Double(model.battery.level ?? 100) / 100, .green)
@@ -226,6 +227,7 @@ struct ExpandedContent: View {
         case .activity(.timer): TimerPage(timer: model.timer)
         case .activity(.calendar): CalendarPage(calendar: model.calendar)
         case .activity(.battery), .activity(.hud), .home: HomePage(model: model)
+        case .shelf: ShelfPage(model: model)
         }
     }
 }
@@ -285,11 +287,14 @@ struct ExpandedHeader: View {
                 }
                 Text(model.nowPlaying.appName.isEmpty ? "Now Playing" : model.nowPlaying.appName)
             case .activity(.timer):
-                Image(systemName: "timer").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange)
-                Text("Timer")
+                Image(systemName: model.timer.symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(model.timer.accent)
+                Text(model.timer.pomodoro == nil ? "Timer" : "Pomodoro")
             case .activity(.calendar):
                 Image(systemName: "calendar").font(.system(size: 11, weight: .bold)).foregroundStyle(.red)
                 Text("Up Next")
+            case .shelf:
+                Image(systemName: "tray.full.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(.cyan)
+                Text("Shelf")
             default:
                 TimelineView(.everyMinute) { ctx in
                     Text(ctx.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))

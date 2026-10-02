@@ -10,7 +10,7 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 |---|---|---|
 | ![](docs/screenshots/notch-compact.png) | ![](docs/screenshots/notch-multi.png) | ![](docs/screenshots/notch-home.png) |
 
-All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
+All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [Retro style](docs/screenshots/sheet-retro.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
 
 <sub>Screenshots are rendered by the app itself on CI (`Notchy --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 
@@ -19,8 +19,11 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 - **Invisible until needed.** When nothing is happening the island is exactly the size and position of the notch, pure black, so you cannot see it.
 - **Live activities beside the notch.** Music shows the album art on the left and an equaliser tinted with the artwork's colour on the right. A running timer, an imminent meeting, a volume change or plugging in the charger all take the same two "wings".
 - **One priority queue, like iOS.** The most important activity owns the wings; others shrink to a small glyph next to it. Swipe sideways on the island to bring another one to the front.
-- **Expands on hover, click or swipe down.** Album art, title, a scrubbable progress bar, previous / play-pause / next, and a volume slider. Swipe sideways between pages: Now Playing, Timer, Up Next, and Home (clock, next event, one-click timers).
+- **Expands on hover, click or swipe down.** Album art, title, a scrubbable progress bar, previous / play-pause / next, and a volume slider. Swipe sideways between pages: Now Playing, Timer, Up Next, Home (clock, next event, one-click timers and a Pomodoro) and the Shelf.
 - **Moves like the iPhone island.** The shape is one animatable outline (width, height, bottom corners and the small concave "ears" that fuse it into the bezel) driven by springs. Content fades in with a blur a beat after the shape starts, and leaves before it shrinks. Reversing mid-animation never snaps.
+- **A shelf in the notch.** Drag files to the notch to park them, drag them out where you need them. Next to them, your clipboard history: click to copy again, pin what you reuse. Passwords from password managers are never kept, and the history never touches the disk.
+- **Pomodoro.** Focus and breaks in turn, with their own colours, sounds and a peek when each one starts.
+- **Classic or Retro.** The system font and smooth curves, or pixel type, stepped corners, block meters and pixel-art covers, in colour or on a green or amber "monitor" ([see it](docs/screenshots/sheet-retro.png)).
 - **Stays out of the way.** Live activities only use free menu bar space: they never cover an app's menus or the icons next to the notch, moving to the free side or shrinking to a thin line under the notch when there's no room ([see how](docs/screenshots/sheet-menubar.png)). The window never takes focus, clicks outside the island go straight through to the menu bar and other apps, sweeping the pointer across the notch to reach the menu bar does not open it, and it is hidden from screen sharing by default.
 
 ### Activities
@@ -29,6 +32,8 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 |---|---|---|---|
 | Now Playing | art · equaliser | art, title, artist, scrubber, controls, volume, source app | Any app that reports to macOS Now Playing (Music, Spotify, Safari, Chrome, …) via the bundled [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter). Falls back to Music and Spotify only if macOS blocks it. |
 | Timer | ⏱ · countdown | ring, countdown, +1 min, pause, cancel | Built in. Plays a sound, pops open and fades away when done. |
+| Pomodoro | 🧠 / ☕ · countdown | ring, "Focus 2 of 4", Skip, pause, cancel | Built in. 25 / 5 min with a 15 min long break after every fourth focus (adjustable). |
+| Shelf | – | dropped files, clipboard history | Files you drag to the notch (references only); text you copy (memory only, private copies skipped). |
 | Calendar | 📅 · "in 4m" | next three events with **Join** for Zoom / Meet / Teams / Webex links | EventKit. Counts down from 15 min, alerts at 5 min. |
 | Battery | ⚡ Charging · 76% | – | IOKit power-source notifications (no polling). Also warns at 20% and 10%. |
 | Volume HUD | 🔊 · level | – | Replaces the system volume HUD (opt-in, needs Accessibility). |

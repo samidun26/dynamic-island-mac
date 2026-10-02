@@ -20,6 +20,8 @@ final class IslandModel {
     let calendar = CalendarModel()
     let hud = HUDModel()
     let menuBar = MenuBarSpace()
+    let shelf: ShelfModel
+    let clipboard: ClipboardModel
 
     var metrics: NotchMetrics {
         didSet { menuBar.update(metrics: metrics) }
@@ -40,6 +42,12 @@ final class IslandModel {
     private(set) var pinned = false
     private(set) var hovering = false
     private(set) var peekKind: ActivityKind?
+    /// Files are being dragged near the notch: the island opens on the shelf to take them.
+    private(set) var fileDragNear = false
+    /// …and are over the island, where letting go drops them on the shelf.
+    private(set) var dropTargeted = false
+    /// Which half of the shelf is showing.
+    var shelfTab = ShelfTab.files
     private(set) var selectedPage: Page?
     private(set) var preferred: ActivityKind?
 
@@ -51,6 +59,8 @@ final class IslandModel {
     init(settings: AppSettings, metrics: NotchMetrics) {
         self.settings = settings
         self.metrics = metrics
+        shelf = ShelfModel(persists: settings.persists)
+        clipboard = ClipboardModel(persists: settings.persists)
         geometry = metrics.idle(hidden: !metrics.hasNotch)
         nowPlaying.onTrackChange = { [weak self] _ in
             guard let self, self.settings.peekOnTrackChange else { return }
@@ -59,6 +69,11 @@ final class IslandModel {
         timer.onFinish = { [weak self] in
             QALog.log("TIMER done")
             self?.peek(.timer, seconds: 6)
+        }
+        timer.onPhaseChange = { [weak self] phase in
+            guard let self else { return }
+            QALog.log("POMODORO \(phase.title(rounds: self.timer.pomodoro?.plan.rounds ?? 4))")
+            self.peek(.timer, seconds: 4)
         }
         calendar.onAlert = { [weak self] _ in self?.peek(.calendar, seconds: 6) }
         refresh()
@@ -142,10 +157,12 @@ final class IslandModel {
 
     private func derive() -> Presentation {
         let entries = activityEntries()
-        let queue = ActivityQueue(entries: entries, preferred: preferred)
+        let queue = ActivityQueue(entries: entries, preferred: preferred, shelf: settings.shelfEnabled)
         let pages = queue.pages
         let state: IslandState
-        if hoverOpen || pinned {
+        if fileDragNear || dropTargeted, settings.shelfEnabled {
+            state = .expanded(.shelf)
+        } else if hoverOpen || pinned {
             let page = selectedPage.flatMap { pages.contains($0) ? $0 : nil } ?? pages.first ?? .home
             state = .expanded(page)
         } else if let p = peekKind, entries.contains(where: { $0.kind == p }) {
@@ -232,6 +249,44 @@ final class IslandModel {
         peekKind = nil
     }
 
+    /// Opens the island on the shelf and keeps it open.
+    func openShelf(_ tab: ShelfTab = .files) {
+        guard settings.shelfEnabled else { return }
+        shelfTab = tab
+        select(.shelf)
+        click()
+    }
+
+    func setFileDragNear(_ near: Bool) {
+        guard fileDragNear != near else { return }
+        fileDragNear = near
+        QALog.log("DRAG files \(near ? "near" : "gone")")
+        if near {
+            selectedPage = .shelf
+            shelfTab = .files
+        }
+    }
+
+    func setDropTargeted(_ on: Bool) {
+        guard dropTargeted != on else { return }
+        dropTargeted = on
+        QALog.log("DROP \(on ? "over" : "left")")
+        if on {
+            selectedPage = .shelf
+            shelfTab = .files
+        }
+    }
+
+    /// After a drop the shelf stays open to show what landed: until the pointer leaves, or in
+    /// click-to-open mode until a click elsewhere.
+    func droppedOnShelf(_ urls: [URL]) {
+        shelf.add(urls)
+        selectedPage = .shelf
+        shelfTab = .files
+        peekKind = nil
+        if settings.openOnHover { hoverOpen = true } else { pinned = true }
+    }
+
     func dismiss() {
         QALog.log("DISMISS")
         pinned = false
@@ -302,6 +357,9 @@ final class IslandModel {
             if v.0 { self?.hud.enableKeys(brightness: v.1) } else { self?.hud.disableKeys() }
         }
         hud.startVolumeMirror()
+        observeChanges({ s.clipboardHistory && s.shelfEnabled }) { [weak self] on in
+            if on { self?.clipboard.start() } else { self?.clipboard.stop() }
+        }
         observeChanges({ s.keepClearOfMenuBar }) { [weak self] on in
             guard let self else { return }
             if on { self.menuBar.start(metrics: self.metrics) } else { self.menuBar.stop() }

@@ -14,9 +14,9 @@ struct CompactLeading: View {
         case .nowPlaying:
             ArtworkView(image: model.nowPlaying.artwork, fallback: model.nowPlaying.appIcon, side: max(16, h - 12))
         case .timer:
-            Image(systemName: model.timer.isDone ? "bell.fill" : "timer")
+            Image(systemName: model.timer.symbol)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.orange)
+                .foregroundStyle(model.timer.accent)
                 .symbolEffect(.pulse, isActive: model.timer.isDone)
         case .calendar:
             Image(systemName: "calendar")
@@ -76,7 +76,7 @@ struct MinimalGlyph: View {
                 ArtworkView(image: model.nowPlaying.artwork, fallback: model.nowPlaying.appIcon, side: 15)
             case .timer:
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                    Ring(progress: model.timer.progress(at: ctx.date), tint: .orange, lineWidth: 2.2)
+                    Ring(progress: model.timer.progress(at: ctx.date), tint: model.timer.accent, lineWidth: 2.2)
                 }
                 .frame(width: 14, height: 14)
             case .calendar:
@@ -107,7 +107,7 @@ struct TimerText: View {
             }
         }
         .countdownFont(size)
-        .foregroundStyle(.orange)
+        .foregroundStyle(timer.accent)
         .lineLimit(1)
         .fixedSize()
     }
@@ -254,18 +254,18 @@ struct TimerPage: View {
         HStack(spacing: 18) {
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 ZStack {
-                    Ring(progress: timer.progress(at: ctx.date), tint: .orange, lineWidth: 6)
+                    Ring(progress: timer.progress(at: ctx.date), tint: timer.accent, lineWidth: 6)
                         .animation(.linear(duration: 0.5), value: timer.progress(at: ctx.date))
-                    Image(systemName: timer.isDone ? "bell.fill" : "timer")
+                    Image(systemName: timer.symbol)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(timer.accent)
                         .symbolEffect(.bounce, value: timer.finishedAt)
                 }
             }
             .frame(width: 68, height: 68)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(timer.isDone ? "Time's up" : timer.isPaused ? "Paused" : "Timer")
+                Text(timer.title)
                     .islandFont(12, .semibold)
                     .foregroundStyle(.white.opacity(0.55))
                 TimerText(timer: timer, size: 36)
@@ -275,13 +275,17 @@ struct TimerPage: View {
 
             HStack(spacing: 8) {
                 if timer.isDone {
-                    PillButton(title: "Dismiss", tint: .orange) { timer.cancel() }
+                    PillButton(title: "Dismiss", tint: timer.accent) { timer.cancel() }
                 } else {
-                    PillButton(title: "+1 min", tint: .orange) { timer.add(60) }
-                    IconButton(symbol: timer.isPaused ? "play.fill" : "pause.fill", label: timer.isPaused ? "Resume timer" : "Pause timer", size: 14, box: 32, tint: .orange) {
+                    if timer.pomodoro != nil {
+                        PillButton(title: "Skip", symbol: "forward.end.fill", tint: timer.accent) { timer.skipPhase() }
+                    } else {
+                        PillButton(title: "+1 min", tint: timer.accent) { timer.add(60) }
+                    }
+                    IconButton(symbol: timer.isPaused ? "play.fill" : "pause.fill", label: timer.isPaused ? "Resume timer" : "Pause timer", size: 14, box: 32, tint: timer.accent) {
                         if timer.isPaused { timer.resume() } else { timer.pause() }
                     }
-                    .background(Circle().fill(.orange.opacity(0.16)))
+                    .background(Circle().fill(timer.accent.opacity(0.16)))
                     IconButton(symbol: "xmark", label: "Cancel timer", size: 12, box: 32, tint: .white.opacity(0.8)) { timer.cancel() }
                         .background(Circle().fill(.white.opacity(0.1)))
                 }
@@ -353,9 +357,10 @@ struct HomePage: View {
                 if model.settings.timerEnabled {
                     HStack(spacing: 6) {
                         Image(systemName: "timer").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange)
-                        ForEach([1, 5, 10, 25], id: \.self) { m in
+                        ForEach([1, 5, 10], id: \.self) { m in
                             PillButton(title: "\(m)m", tint: .orange) { model.timer.start(TimeInterval(m * 60)) }
                         }
+                        PillButton(title: "Focus", tint: TimerModel.focusColor) { model.timer.startPomodoro(model.settings.pomodoroPlan) }
                     }
                 }
             }
@@ -410,5 +415,29 @@ struct NextUpCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.white.opacity(0.07)))
+    }
+}
+
+extension TimerModel {
+    static let focusColor = Color(red: 1, green: 0.42, blue: 0.33)
+    static let breakColor = Color(red: 0.36, green: 0.86, blue: 0.62)
+
+    /// Colour of what is counting down: a timer, a Pomodoro focus or a break.
+    var accent: Color {
+        guard let p = pomodoro?.phase else { return .orange }
+        return p.isBreak ? Self.breakColor : Self.focusColor
+    }
+
+    var symbol: String {
+        if isDone { return "bell.fill" }
+        guard let p = pomodoro?.phase else { return "timer" }
+        return p.isBreak ? "cup.and.saucer.fill" : "brain.head.profile"
+    }
+
+    var title: String {
+        if isDone { return "Time's up" }
+        if isPaused { return "Paused" }
+        if let p = pomodoro { return p.phase.title(rounds: p.plan.rounds) }
+        return "Timer"
     }
 }

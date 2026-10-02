@@ -175,8 +175,22 @@ private struct ActivitiesTab: View {
             Section {
                 Toggle("Timer", isOn: $settings.timerEnabled)
                 Toggle("Play a sound when it ends", isOn: $settings.timerSound).disabled(!settings.timerEnabled)
+                LabeledContent("Pomodoro") {
+                    HStack(spacing: 10) {
+                        Stepper("Focus \(settings.pomodoroFocus) min", value: $settings.pomodoroFocus, in: 5...90, step: 5)
+                        Stepper("Break \(settings.pomodoroBreak) min", value: $settings.pomodoroBreak, in: 1...30)
+                    }
+                    .fixedSize()
+                }
+                .disabled(!settings.timerEnabled)
             } footer: {
-                Text("Start one from the island, the menu bar, or a URL: open notchy://timer?minutes=5")
+                Text("Start one from the island, the menu bar, or a URL: open notchy://timer?minutes=5 or notchy://pomodoro. A pomodoro runs focus and breaks in turn, with a long break after every fourth focus.")
+            }
+            Section {
+                Toggle("Shelf", isOn: $settings.shelfEnabled)
+                Toggle("Clipboard history", isOn: $settings.clipboardHistory).disabled(!settings.shelfEnabled)
+            } footer: {
+                Text("Drag files onto the notch to keep them on the shelf, then drag them out wherever you need them. Clipboard history holds the last 30 copied texts in memory only; pinned items are saved. Copies that password managers mark as private are never kept.")
             }
             Section {
                 Toggle("Charging and low battery", isOn: $settings.batteryEnabled)

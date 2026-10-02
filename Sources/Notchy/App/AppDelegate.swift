@@ -99,6 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case .open: model.click()
         case .settings: openSettings()
         case .update: checkForUpdates()
+        case .pomodoro: model.timer.startPomodoro(settings.pomodoroPlan)
+        case .shelf: model.openShelf(.files)
+        case .clipboard: model.openShelf(.clipboard)
         }
     }
 
@@ -151,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             sub.addItem(i)
         }
         sub.addItem(.separator())
+        sub.addItem(menuItem("Pomodoro", #selector(startPomodoro)))
         sub.addItem(menuItem("Cancel Timer", #selector(cancelTimer)))
         timer.submenu = sub
         menu.addItem(timer)
@@ -171,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func openIsland() { model.click() }
     @objc private func startTimer(_ sender: NSMenuItem) { model.timer.start(TimeInterval(sender.tag * 60)) }
     @objc private func cancelTimer() { model.timer.cancel() }
+    @objc private func startPomodoro() { model.timer.startPomodoro(settings.pomodoroPlan) }
     @objc private func openSettings() {
         QALog.log("SETTINGS shown")
         settingsWindow.show(settings: settings, model: model, updates: updates)

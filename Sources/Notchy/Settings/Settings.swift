@@ -1,4 +1,5 @@
 import Foundation
+import NotchyCore
 import Observation
 
 /// User preferences, persisted in UserDefaults. Every property writes through on change.
@@ -30,7 +31,7 @@ final class AppSettings {
 
     @ObservationIgnored private let defaults: UserDefaults
     /// False for demo/snapshot instances: they must never write to disk.
-    @ObservationIgnored private let persists: Bool
+    @ObservationIgnored let persists: Bool
 
     private func save(_ value: Any, _ key: String) {
         if persists { defaults.set(value, forKey: key) }
@@ -62,6 +63,17 @@ final class AppSettings {
     var peekOnTrackChange: Bool { didSet { save(peekOnTrackChange, "peekOnTrackChange") } }
     var timerEnabled: Bool { didSet { save(timerEnabled, "timerEnabled") } }
     var timerSound: Bool { didSet { save(timerSound, "timerSound") } }
+    /// Pomodoro lengths, in minutes.
+    var pomodoroFocus: Int { didSet { save(pomodoroFocus, "pomodoroFocus") } }
+    var pomodoroBreak: Int { didSet { save(pomodoroBreak, "pomodoroBreak") } }
+    var pomodoroLongBreak: Int { didSet { save(pomodoroLongBreak, "pomodoroLongBreak") } }
+    var pomodoroPlan: PomodoroPlan {
+        PomodoroPlan(focus: TimeInterval(pomodoroFocus * 60), shortBreak: TimeInterval(pomodoroBreak * 60),
+                     longBreak: TimeInterval(pomodoroLongBreak * 60), rounds: 4)
+    }
+    /// Shelf page: files dropped on the notch, and clipboard history.
+    var shelfEnabled: Bool { didSet { save(shelfEnabled, "shelfEnabled") } }
+    var clipboardHistory: Bool { didSet { save(clipboardHistory, "clipboardHistory") } }
     var batteryEnabled: Bool { didSet { save(batteryEnabled, "batteryEnabled") } }
     var calendarEnabled: Bool { didSet { save(calendarEnabled, "calendarEnabled") } }
     var hudEnabled: Bool { didSet { save(hudEnabled, "hudEnabled") } }
@@ -81,6 +93,7 @@ final class AppSettings {
         self.persists = persists
         func bool(_ k: String, _ d: Bool) -> Bool { defaults.object(forKey: k) as? Bool ?? d }
         func double(_ k: String, _ d: Double) -> Double { defaults.object(forKey: k) as? Double ?? d }
+        func int(_ k: String, _ d: Int) -> Int { defaults.object(forKey: k) as? Int ?? d }
         openOnHover = bool("openOnHover", true)
         hoverDelay = double("hoverDelay", 0.12)
         haptics = bool("haptics", true)
@@ -97,6 +110,11 @@ final class AppSettings {
         peekOnTrackChange = bool("peekOnTrackChange", true)
         timerEnabled = bool("timerEnabled", true)
         timerSound = bool("timerSound", true)
+        pomodoroFocus = int("pomodoroFocus", 25)
+        pomodoroBreak = int("pomodoroBreak", 5)
+        pomodoroLongBreak = int("pomodoroLongBreak", 15)
+        shelfEnabled = bool("shelfEnabled", true)
+        clipboardHistory = bool("clipboardHistory", true)
         batteryEnabled = bool("batteryEnabled", true)
         calendarEnabled = bool("calendarEnabled", true)
         hudEnabled = bool("hudEnabled", false)

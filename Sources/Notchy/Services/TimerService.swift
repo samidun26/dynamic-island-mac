@@ -1,4 +1,5 @@
 import AppKit
+import NotchyCore
 import Observation
 
 /// A single countdown. No ticking timer runs: views draw the countdown with
@@ -10,6 +11,8 @@ final class TimerModel {
     private(set) var duration: TimeInterval = 0
     private(set) var finishedAt: Date?
     private(set) var startedAt = Date()
+    /// Set while a Pomodoro is running: which phase, under which plan.
+    private(set) var pomodoro: (phase: PomodoroPhase, plan: PomodoroPlan)?
 
     var isRunning: Bool { endDate != nil }
     var isPaused: Bool { pausedRemaining != nil }
@@ -18,11 +21,34 @@ final class TimerModel {
 
     @ObservationIgnored var playSound = true
     @ObservationIgnored var onFinish: (() -> Void)?
+    /// A Pomodoro phase ended and the next one started.
+    @ObservationIgnored var onPhaseChange: ((PomodoroPhase) -> Void)?
     @ObservationIgnored private var fireTask: Task<Void, Never>?
     @ObservationIgnored private var dismissTask: Task<Void, Never>?
 
     func start(_ seconds: TimeInterval) {
         cancel()
+        begin(seconds)
+    }
+
+    /// Focus and break in turns until cancelled; each phase starts the next.
+    func startPomodoro(_ plan: PomodoroPlan) {
+        cancel()
+        pomodoro = (.focus(round: 1), plan)
+        begin(plan.focus)
+    }
+
+    /// Ends the current Pomodoro phase now and starts the next.
+    func skipPhase() {
+        guard let p = pomodoro else { return }
+        advance(from: p.phase, plan: p.plan, sound: false)
+    }
+
+    private func begin(_ seconds: TimeInterval) {
+        fireTask?.cancel()
+        dismissTask?.cancel()
+        pausedRemaining = nil
+        finishedAt = nil
         duration = seconds
         startedAt = Date()
         endDate = Date().addingTimeInterval(seconds)
@@ -74,6 +100,7 @@ final class TimerModel {
         endDate = nil
         pausedRemaining = nil
         finishedAt = nil
+        pomodoro = nil
     }
 
     private func schedule() {
@@ -87,6 +114,10 @@ final class TimerModel {
     }
 
     private func finish() {
+        if let p = pomodoro {
+            advance(from: p.phase, plan: p.plan, sound: true)
+            return
+        }
         endDate = nil
         finishedAt = Date()
         if playSound { NSSound(named: "Glass")?.play() }
@@ -98,8 +129,17 @@ final class TimerModel {
         }
     }
 
+    private func advance(from phase: PomodoroPhase, plan: PomodoroPlan, sound: Bool) {
+        let next = plan.next(after: phase)
+        pomodoro = (next, plan)
+        begin(plan.duration(of: next))
+        if sound, playSound { NSSound(named: next.isBreak ? "Glass" : "Hero")?.play() }
+        onPhaseChange?(next)
+    }
+
     // Demo
-    func showDemo(remaining: TimeInterval, total: TimeInterval) {
+    func showDemo(remaining: TimeInterval, total: TimeInterval, pomodoro phase: PomodoroPhase? = nil) {
+        pomodoro = phase.map { ($0, PomodoroPlan()) }
         duration = total
         endDate = Date().addingTimeInterval(remaining)
         startedAt = Date().addingTimeInterval(remaining - total)

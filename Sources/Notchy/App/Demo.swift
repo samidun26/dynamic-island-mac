@@ -6,6 +6,7 @@ import SwiftUI
 /// (`--demo <scenario>` for a live panel, `--snapshot <dir>` for PNGs).
 enum DemoScenario: String, CaseIterable {
     case idle, compact, expanded, peek, multi, timer, timerExpanded, hud, battery, calendar, calendarExpanded, home
+    case pomodoro, pomodoroExpanded, shelf, clipboard
 }
 
 @MainActor
@@ -40,6 +41,13 @@ enum Demo {
         ]
     }
 
+    /// Files on the shelf: real paths that exist on every Mac, so Finder icons render.
+    static let shelfFiles = ["/Applications/Safari.app", "/System/Library/CoreServices/Finder.app",
+                             "/Library/Desktop Pictures", "/etc/hosts", "/usr/share/dict/words"].map { URL(fileURLWithPath: $0) }
+
+    static let clips = ["https://github.com/samidun26/dynamic-island-mac", "#FF6B54", "Meeting moved to 3:30, same room",
+                        "hello@example.com", "let island = IslandModel(settings: settings, metrics: metrics)"]
+
     static func apply(_ scenario: DemoScenario, to model: IslandModel) {
         let art = artwork()
         let tint = Color(red: 0.99, green: 0.5, blue: 0.6)
@@ -64,6 +72,16 @@ enum Demo {
         case .calendar: calendar(true)
         case .calendarExpanded: calendar(true); model.click()
         case .home: calendar(false); model.click()
+        case .pomodoro: music(); model.timer.showDemo(remaining: 1104, total: 1500, pomodoro: .focus(round: 2))
+        case .pomodoroExpanded: model.timer.showDemo(remaining: 1104, total: 1500, pomodoro: .focus(round: 2)); model.click()
+        case .shelf:
+            model.shelf.showDemo(shelfFiles)
+            model.clipboard.showDemo(clips, pinned: ["#FF6B54"])
+            model.openShelf(.files)
+        case .clipboard:
+            model.shelf.showDemo(shelfFiles)
+            model.clipboard.showDemo(clips, pinned: ["#FF6B54"])
+            model.openShelf(.clipboard)
         }
         model.refresh()
     }
@@ -143,6 +161,9 @@ enum Snapshots {
             ("retro · timer", .timerExpanded, roomy, .color),
             ("retro · up next", .calendarExpanded, roomy, .color),
             ("retro · home", .home, roomy, .color),
+            ("retro · pomodoro", .pomodoroExpanded, roomy, .color),
+            ("retro · shelf", .shelf, roomy, .color),
+            ("retro · clipboard", .clipboard, roomy, .color),
             ("retro · volume", .hud, roomy, .color),
             ("retro · no room beside the notch", .compact, MenuBarClearance(left: 8, right: 10), .color),
             ("retro · green screen", .expanded, roomy, .green),

@@ -62,6 +62,10 @@ final class IslandController {
     private var closeCheck: Task<Void, Never>?
     private var scroll = CGSize.zero
     private var scrollFired = false
+    private var dragHasFiles: Bool?
+    /// The drag pasteboard's change count at the last mouse down: a drag that started since
+    /// then has written to it.
+    private var dragBaseline = 0
     /// Set when the island closes under the pointer (swipe up, peek ending): hovering must not
     /// reopen it until the pointer has left once.
     private var requireExit = false
@@ -161,6 +165,7 @@ final class IslandController {
         if let g = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] _ in
             MainActor.assumeIsolated {
                 QALog.log("MOUSEDOWN elsewhere at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))")
+                self?.markDragBaseline()
                 self?.clickedOutside()
             }
         }) { monitors.append(g) }
@@ -172,6 +177,7 @@ final class IslandController {
         // Clicks and trackpad swipes on the island itself.
         if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel], handler: { [weak self] e in
             let consumed = MainActor.assumeIsolated { () -> Bool in
+                if e.type == .leftMouseDown { self?.markDragBaseline() }
                 if e.type == .leftMouseDown, e.window !== self?.panel {
                     QALog.log("MOUSEDOWN own window \(e.window.map { String(describing: type(of: $0)) } ?? "none") at \(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y)) active=\(NSApp.isActive)")
                 }
@@ -202,17 +208,22 @@ final class IslandController {
         let body = m.islandRect(g)
         let overBody = g.size.height > 0.5 && CGRect(x: body.minX, y: body.minY, width: body.width, height: body.height + 4).contains(p)
         let overZone = m.hitRect(g).contains(p)
+        if NSEvent.pressedMouseButtons == 0 { dragHasFiles = nil }
         // Far from the island with nothing pending: nothing to do.
         if !overZone && !intent.isInside && !model.hovering && panel.ignoresMouseEvents { return }
 
-        if panel.ignoresMouseEvents == overBody {
-            panel.ignoresMouseEvents = !overBody
-            QALog.log("CLICKTHROUGH \(!overBody)")
+        let open = model.state.isOpen
+        let inside = open ? m.hitRect(g, grace: NotchMetrics.hoverGrace).contains(p) : overZone
+        // Files dragged to the notch: the island opens on the shelf and the panel takes the drop.
+        let fileDrag = inside && isDraggingFiles()
+        model.setFileDragNear(fileDrag)
+        let takesMouse = overBody || fileDrag
+        if panel.ignoresMouseEvents == takesMouse {
+            panel.ignoresMouseEvents = !takesMouse
+            QALog.log("CLICKTHROUGH \(!takesMouse)")
         }
         model.setHovering(overZone)
 
-        let open = model.state.isOpen
-        let inside = open ? m.hitRect(g, grace: NotchMetrics.hoverGrace).contains(p) : overZone
         let held = !NSEvent.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty || NSEvent.pressedMouseButtons != 0
         if !inside { requireExit = false }
         intent.track(p, at: ProcessInfo.processInfo.systemUptime, inside: inside, suppressed: held && !open)
@@ -246,6 +257,22 @@ final class IslandController {
             guard !Task.isCancelled else { return }
             body()
         }
+    }
+
+    /// A drag in progress carries files (checked once per drag, only near the island). The drag
+    /// pasteboard keeps the last drag's contents, so a drag counts only if it wrote there after
+    /// the button went down.
+    private func isDraggingFiles() -> Bool {
+        guard settings.shelfEnabled, NSEvent.pressedMouseButtons & 1 != 0 else { return false }
+        if let dragHasFiles { return dragHasFiles }
+        let pb = NSPasteboard(name: .drag)
+        let files = pb.changeCount != dragBaseline && pb.types?.contains(.fileURL) == true
+        dragHasFiles = files
+        return files
+    }
+
+    private func markDragBaseline() {
+        if settings.shelfEnabled { dragBaseline = NSPasteboard(name: .drag).changeCount }
     }
 
     /// A click on a closed (or peeking) island opens and pins it, and so does a click on the notch

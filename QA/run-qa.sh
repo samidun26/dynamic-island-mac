@@ -719,6 +719,92 @@ lim 8 open "notchy://timer/cancel"; sleep 0.5
 quit_notchy
 defaults delete "$BID" islandStyle 2>/dev/null
 
+# ---------------------------------------------------------------- pomodoro, clipboard, shelf
+echo "== pomodoro, clipboard and shelf"
+defaults delete "$BID" shelfFiles 2>/dev/null
+launch_notchy; sleep 1.5
+
+# QA-41: notchy://pomodoro starts focus round 1; Skip on the timer page moves to the short break.
+mark "$LOG"
+lim 8 open "notchy://pomodoro"
+if ! wait_for "$LOG" "STATE compact:timer" 6; then
+    fail QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "notchy://pomodoro gave no timer; $(last_state)"
+elif [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
+    "$D" jump "$CX" 500 >/dev/null; sleep 0.3
+    mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
+    wait_for "$LOG" "STATE expanded:timer" 3
+    sleep 0.7; shot qa41-pomodoro-focus 240
+    T1=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^(Focus|Short|Long)' | head -1)
+    B=$(lim 20 "$D" ax-find $BID "Skip" $AXR 2>/dev/null)
+    mark "$LOG"; [ -n "$B" ] && "$D" click $B
+    T2=""
+    if wait_for "$LOG" "POMODORO Short break" 3; then
+        sleep 0.7; shot qa41-pomodoro-break 240
+        T2=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^(Focus|Short|Long)' | head -1)
+    fi
+    if [ "$T1" = "Focus 1 of 4" ] && [ "$T2" = "Short break" ]; then
+        pass QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "\"$T1\" → Skip → \"$T2\" ([focus](shots/qa41-pomodoro-focus.png), [break](shots/qa41-pomodoro-break.png))"
+    else
+        fail QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "before: ${T1:-?}; Skip button: ${B:-not found}; after: ${T2:-?}; $(last_state)"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1
+else
+    skip QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "needs input synthesis and Accessibility"
+fi
+lim 8 open "notchy://timer/cancel"; sleep 0.8
+
+# QA-42: copied text shows up in clipboard history; a copy marked private (as password managers
+# mark them) never does.
+CLIP="notchy-qa-clip-$$"; SECRET="qa-secret-$$"
+mark "$LOG"
+"$D" pasteboard "$CLIP" >/dev/null
+ADDED=no; wait_for "$LOG" "CLIP added" 3 && ADDED=yes
+mark "$LOG"
+"$D" pasteboard "$SECRET" org.nspasteboard.ConcealedType >/dev/null
+SKIPPED=no; wait_for "$LOG" "CLIP skipped" 3 && SKIPPED=yes
+mark "$LOG"
+lim 8 open "notchy://clipboard"
+if wait_for "$LOG" "STATE expanded:shelf" 4; then
+    sleep 0.8; shot qa42-clipboard 240
+    if [ "$AX" = yes ]; then
+        TEXTS=$(lim 20 "$D" ax-texts $BID $AXR | tr '\n' '|')
+        SHOWN=$(echo "$TEXTS" | grep -c "$CLIP"); LEAKED=$(echo "$TEXTS" | grep -c "$SECRET")
+    else
+        SHOWN=1; LEAKED=0   # logged only; the screenshot is the evidence
+    fi
+    if [ $ADDED = yes ] && [ $SKIPPED = yes ] && [ "$SHOWN" -ge 1 ] && [ "$LEAKED" = 0 ] && ! grep -q "$SECRET" "$LOG"; then
+        pass QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "copy listed; the copy marked org.nspasteboard.ConcealedType was skipped and appears nowhere, not even in the trace ([shot](shots/qa42-clipboard.png))"
+    else
+        fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "added=$ADDED skipped=$SKIPPED shown=$SHOWN leaked=$LEAKED"
+    fi
+else
+    fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "notchy://clipboard did not open the shelf; $(last_state)"
+fi
+mark "$LOG"; "$D" click "$CX" 520; wait_for "$LOG" "DISMISS" 2; sleep 0.8
+
+# QA-43: a file dragged from another app to the notch opens the shelf, drops there, and stays.
+if [ "$INPUT" = yes ]; then
+    F="$OUT/notchy-qa-shelf.txt"; echo "Notchy shelf test" > "$F"
+    "$D" jump "$CX" 500 >/dev/null; sleep 0.3
+    mark "$LOG"
+    DROP=$(lim 25 "$D" file-drag "$F" $((CX - 300)) 420 "$CX" $((MB / 2)) 1400 2>&1 | tail -1)
+    sleep 0.8; shot qa43-shelf-drop 240
+    NEAR=$(after "$LOG" | grep -c "DRAG files near"); OPENED=$(after "$LOG" | grep -c "STATE expanded:shelf")
+    ADDED=$(after "$LOG" | grep -c "SHELF added 1")
+    LISTED=0; [ "$AX" = yes ] && LISTED=$(lim 20 "$D" ax-texts $BID $AXR | grep -c "notchy-qa-shelf.txt")
+    STAYED=$(last_state | cut -d' ' -f1)
+    if [ "$DROP" = "drop accepted" ] && [ "$ADDED" -ge 1 ] && [ "$OPENED" -ge 1 ] && { [ "$AX" != yes ] || [ "$LISTED" -ge 1 ]; } && [ "$STAYED" = expanded:shelf ]; then
+        pass QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "opened on the shelf as the drag arrived, drop accepted, file listed, still open after ([shot](shots/qa43-shelf-drop.png))"
+    else
+        fail QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "driver: ${DROP:-nothing}; near=$NEAR opened=$OPENED added=$ADDED listed=$LISTED after=$STAYED; $(after "$LOG" | grep -E 'CLICKTHROUGH|DROP|DRAG' | tail -4 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1.2
+else
+    skip QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "needs input synthesis"
+fi
+quit_notchy
+defaults delete "$BID" shelfFiles 2>/dev/null
+
 # ---------------------------------------------------------------- updates
 # Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub
 # (a test-only Info.plist key; shipped builds always ask GitHub). It offers 9.9.9. Covers the

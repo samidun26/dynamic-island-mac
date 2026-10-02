@@ -10,9 +10,14 @@ public enum DeepLink: Equatable, Sendable {
     case open
     case settings
     case update
+    case pomodoro
+    case shelf
+    case clipboard
 
     /// notchy://timer?minutes=5, notchy://timer?seconds=90, notchy://timer/cancel,
-    /// notchy://open, notchy://settings, notchy://update (shows the update section and checks)
+    /// notchy://open, notchy://settings, notchy://update (shows the update section and checks),
+    /// notchy://pomodoro (starts focus and break rounds), notchy://shelf (opens the shelf),
+    /// notchy://clipboard (opens the shelf on clipboard history)
     public init?(url: URL) {
         guard url.scheme?.lowercased() == "notchy" else { return nil }
         let host = url.host?.lowercased() ?? ""
@@ -30,6 +35,9 @@ public enum DeepLink: Equatable, Sendable {
         case "open", "expand": self = .open
         case "settings", "preferences": self = .settings
         case "update", "updates": self = .update
+        case "pomodoro", "focus": self = .pomodoro
+        case "shelf", "files": self = .shelf
+        case "clipboard": self = .clipboard
         default: return nil
         }
     }

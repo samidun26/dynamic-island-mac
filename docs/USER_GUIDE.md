@@ -113,9 +113,27 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - Paused music leaves the wings after a couple of seconds but stays as a page when you open the island, so you can resume it.
 
 ### Timer
-- **Start:** Home page (1, 5, 10, 25 min), the menu bar (1, 5, 10, 15, 25, 60 min), or a URL/Shortcut (§5).
+- **Start:** Home page (1, 5, 10 min), the menu bar (1, 5, 10, 15, 25, 60 min), or a URL/Shortcut (§5).
 - **Compact:** ⏱ · countdown. **Expanded:** progress ring, big countdown, **+1 min**, pause/resume, cancel.
 - **When it ends:** a "Glass" sound (can be turned off), the island opens with *Time's up*, then clears itself after 8 seconds or when you click **Dismiss**.
+
+### Pomodoro
+- **Start:** **Focus** on the Home page, menu bar icon → **Start Timer → Pomodoro**, or `notchy://pomodoro`.
+- Runs **25 minutes of focus, then a 5-minute break**, and after every fourth focus a **15-minute long break**, round after round until you cancel. Each change plays a sound and shows the island for a moment.
+- Focus is coral with a 🧠, breaks are green with a ☕. The timer page says where you are ("Focus 2 of 4", "Short break"); **Skip** jumps to the next phase, and pause and cancel work as for any timer.
+- Change the focus and break lengths in **Settings → Activities**.
+
+### Shelf: files
+- **Drag files to the notch** (from Finder, the desktop, Mail…). The island opens on the shelf with a drop zone; let go and the files stay there. The shelf stays open until you move the pointer away, so you can see what landed.
+- **Drag them out** to any app or folder when you need them; double-click opens one; right-click for **Show in Finder** and **Remove from Shelf**; **Clear** empties it.
+- Notchy keeps a reference to each file, never a copy. The shelf survives restarts and follows files you move. Up to 40 files.
+- Open it any time: swipe to the last page of the island, or `notchy://shelf`.
+
+### Shelf: clipboard history
+- The **Clipboard** tab lists the last 30 texts you copied, newest first. **Click one to copy it again.**
+- 📌 **Pin** keeps an item at hand (pins survive restarts); **Clear** removes everything except pins. Links get an ↗ button to open them; colour codes like `#FF6B54` show a swatch.
+- **Privacy:** the history lives in memory only and is gone when Notchy quits (only pins are saved). Copies that apps mark as private, such as passwords from 1Password, Bitwarden, KeePassXC or Keychain Access, are never recorded. Turning clipboard history off clears it. Notchy is hidden from screen sharing by default, so the shelf doesn't show up in recordings either.
+- Open it directly: `notchy://clipboard`. Turn it off in **Settings → Activities**.
 
 ### Calendar (Up Next)
 - From 15 minutes before an event: a quiet countdown ("in 12m").
@@ -136,11 +154,11 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - If your output device has no software volume (some HDMI/USB devices), Notchy leaves the keys to macOS.
 
 ### Home
-The page you see when nothing else is running: a large clock and date, one-click timers, and an **Up Next** card with your next event and its Join button.
+The page you see when nothing else is running: a large clock and date, one-click timers and **Focus** (a Pomodoro), and an **Up Next** card with your next event and its Join button. The shelf is the page after it.
 
 ## 5. Menu bar, URLs and Shortcuts
 
-**Menu bar icon:** Open Island · Start Timer ▸ (1, 5, 10, 15, 25 min, 1 hour, Cancel Timer) · Settings… · Check for Updates… · Quit Notchy. When an update is waiting, the icon gets a dot and the menu starts with **Update to Notchy x.y.z…**.
+**Menu bar icon:** Open Island · Start Timer ▸ (1, 5, 10, 15, 25 min, 1 hour, Pomodoro, Cancel Timer) · Settings… · Check for Updates… · Quit Notchy. When an update is waiting, the icon gets a dot and the menu starts with **Update to Notchy x.y.z…**.
 
 **URLs** (Terminal, scripts, launchers, Shortcuts):
 
@@ -148,7 +166,10 @@ The page you see when nothing else is running: a large clock and date, one-click
 |---|---|
 | `notchy://timer?minutes=25` | Start a 25-minute timer |
 | `notchy://timer?seconds=90` | Start a 90-second timer (`minutes` and `seconds` can be combined) |
-| `notchy://timer/cancel` | Cancel the timer |
+| `notchy://timer/cancel` | Cancel the timer (or the Pomodoro) |
+| `notchy://pomodoro` | Start a Pomodoro |
+| `notchy://shelf` | Open the island on the shelf's files |
+| `notchy://clipboard` | Open the island on clipboard history |
 | `notchy://open` | Open the island and keep it open |
 | `notchy://settings` | Open Settings |
 | `notchy://update` | Open Settings → About and check for an update |
@@ -177,6 +198,9 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Show menu bar icon | On |
 | Activities | Now Playing, and its track-change preview | On, on |
 | | Timer, and its end sound | On, on |
+| | Pomodoro focus and break lengths (focus 5–90 min, break 1–30 min) | 25 min, 5 min |
+| | Shelf (files dropped on the notch) | On |
+| | Clipboard history (memory only; private copies never kept) | On |
 | | Charging and low battery | On |
 | | Calendar (shows access status) | On |
 | | Volume HUD in the island (shows Accessibility status) | Off |
