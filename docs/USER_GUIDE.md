@@ -196,7 +196,7 @@ Open with the menu bar icon → **Settings…**, or `ponyhub://settings`, or by 
 | | Show the island on: built-in display (notch) / main display / display with the pointer | Built-in |
 | | On displays without a notch: only when something is happening / always (fake notch) / never | Only when active |
 | | Style: **Classic** or **Retro** (pixel type, stepped corners, block meters, pixel-art album covers); in Retro, the screen in full colour, green or amber, and scanlines on or off | Classic |
-| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room. Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
+| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room (volume, brightness and charging always show in full, for a moment). Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
 | | Launch at login | Off |
 | | Show menu bar icon | On |
 | Activities | Now Playing, and its track-change preview | On, on |

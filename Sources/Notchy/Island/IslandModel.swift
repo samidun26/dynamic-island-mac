@@ -206,10 +206,14 @@ final class IslandModel {
     /// Where the compact activity goes so it covers no menu or menu bar icon: both wings when
     /// there is room, everything on one side when only one side is free, or a slim lip under the
     /// notch when neither is. With "Keep clear of the menu bar" off, it always uses both wings.
+    /// Volume, brightness and the charging banner are answers to something you just did and last
+    /// under two seconds, so they always show in full, briefly covering what's beside the notch
+    /// (as macOS's own pop-up covers what's under it).
     func fit(for kind: ActivityKind, secondaries: Int) -> WingFit {
         let base = wing(for: kind)
         let extra = CGFloat(secondaries) * Self.minimalSlot
-        let clearance = settings.keepClearOfMenuBar ? menuBar.clearance : .unlimited
+        let brief = kind == .hud || kind == .battery
+        let clearance = settings.keepClearOfMenuBar && !brief ? menuBar.clearance : .unlimited
         return WingFit.fit(wing: base + extra, minWing: (base * 0.78).rounded() + extra,
                            single: (base * 1.55).rounded() + extra, clearance: clearance)
     }

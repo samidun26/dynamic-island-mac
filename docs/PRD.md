@@ -93,7 +93,7 @@ Verified: **T** unit-tested · **R** rendered and inspected on CI · **L** runni
 | FR-W6 | Display choice: built-in (notch), main display, or the display with the pointer. Re-measure on hot-plug, resolution change, Space change and wake. | P1 | ✅ | H |
 | FR-W7 | Above the menu bar and full-screen apps, on all Spaces; never key, never main; first click works. | P0 | ✅ | L, Q, H (full screen) |
 | FR-W8 | Hidden from screen sharing and recordings (`sharingType = .none`), on by default, toggle in Settings. | P1 | ✅ | Q (`screencapture`), H (Zoom, Meet) |
-| FR-W9 | Compact activities never cover app menus or menu bar icons beside the notch: they fit the free space (icons measured from the window list; menus via Accessibility when allowed), move to the free side, or fold into a thin progress line under the notch. On by default, toggle in Settings. | P0 | ✅ | T, Q |
+| FR-W9 | Compact activities never cover app menus or menu bar icons beside the notch: they fit the free space (icons measured from the window list; menus via Accessibility when allowed), move to the free side, or fold into a thin progress line under the notch. Volume, brightness and charging, which last under two seconds and answer a key press, always show in full. On by default, toggle in Settings. | P0 | ✅ | T, Q |
 
 ### 7.2 Motion
 
