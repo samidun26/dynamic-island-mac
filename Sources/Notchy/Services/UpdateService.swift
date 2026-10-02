@@ -64,7 +64,10 @@ final class UpdateService {
             await self?.check(userInitiated: false)
         }
         let t = Timer(timeInterval: 6 * 3600, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { Task { await self?.check(userInitiated: false) } }
+            Task { @MainActor in
+                guard let self else { return }
+                await self.check(userInitiated: false)
+            }
         }
         t.tolerance = 600
         RunLoop.main.add(t, forMode: .common)
