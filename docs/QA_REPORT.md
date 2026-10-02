@@ -3,7 +3,7 @@
 End-to-end QA of ponyhub, installed from this repository the way the [user guide](USER_GUIDE.md) describes and then used on a real macOS session: a script moves the pointer, clicks, scrolls and swipes like a person would, plays music from a test app, and checks what happens on screen, in the accessibility tree, and in the music app.
 
 - **Latest run:** [docs/qa/results.md](qa/results.md), with [screenshots](qa/shots/), ponyhub's [test trace](qa/notchy-trace.log) and the [test player's log](qa/fakeplayer.log).
-- **Result:** **43 of 43 cases pass** (macOS 15.7.9, commit `7ae7599`, which adds Retro style, Pomodoro, the file shelf and clipboard history). Ten bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
+- **Result:** **44 of 44 cases pass** (macOS 15.7.9, commit `bb5bc11`, which renames the app to ponyhub). Ten bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
 - **Re-run it:** see [How to run it](#how-to-run-it). It runs on every push to a working branch, and on demand from the Actions tab.
 
 ## Environment
@@ -48,7 +48,7 @@ Grouped by area. Every case's evidence (numbers, screenshots, trace excerpts) is
 | Clipboard | QA-42 | A copied text appears in the shelf's Clipboard tab. A text copied with the `org.nspasteboard.ConcealedType` marker (as password managers do) is skipped: it is not in the island, the accessibility tree or the trace |
 | File shelf | QA-43 | A file dragged from another app with a real drag session (as from Finder) opens the island on the shelf as it reaches the notch; the drop is accepted, the file is listed, and the shelf stays open afterwards |
 | Shutdown | QA-28 | Quitting stops the Now Playing helper |
-| Updates | QA-37, QA-38, QA-39 | A copy that thinks it is 1.0.0 is offered 9.9.9 by a local stand-in for GitHub's release API: it downloads, verifies, swaps itself in place and relaunches as 9.9.9. A download that doesn't match its checksum is refused, and so is an update signed by a different identity (with two throwaway signing identities in a temporary keychain), while the same identity installs. The installed copy is untouched whenever an update is refused. The main QA copy also asks the real GitHub API and correctly finds no release yet |
+| Updates | QA-37, QA-38, QA-39, QA-44 | A copy that thinks it is 1.0.0 is offered 9.9.9 by a local stand-in for GitHub's release API: it downloads, verifies, swaps itself in place and relaunches as 9.9.9. A download that doesn't match its checksum is refused, and so is an update signed by a different identity (with two throwaway signing identities in a temporary keychain), while the same identity installs. The installed copy is untouched whenever an update is refused. The main QA copy (built as 1.0.0) also asks the real GitHub API and is offered the latest published release. QA-44 downloads the real Notchy 1.0.2 (what people installed before the rename), lets it update to this build from the `Notchy.zip` asset, and checks the new app renames itself to ponyhub.app and runs from there |
 | Security | QA-33, QA-34 | Code injection through the launch environment is refused, both into ponyhub and into its helper; see the [security review](SECURITY_REVIEW.md) |
 | Performance | QA-06, QA-31 | CPU and memory, below |
 
