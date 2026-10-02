@@ -234,7 +234,11 @@ private struct ShelfRow<Content: View>: View {
 
     var body: some View {
         if staticRender {
-            content.fixedSize().frame(maxWidth: .infinity, alignment: .leading).clipped()
+            // In an overlay, the row's full width can't widen the page.
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .topLeading) { content.fixedSize() }
+                .clipped()
         } else {
             ScrollView(.horizontal, showsIndicators: false) { content }
         }
@@ -266,11 +270,21 @@ private struct Hint: View {
     }
 }
 
-/// Files dragged onto the island land on the shelf.
+/// Files dragged onto the island land on the shelf. Left out of snapshots: ImageRenderer draws
+/// the AppKit drop target behind `onDrop` as a placeholder over the whole canvas.
 struct ShelfDropTarget: ViewModifier {
     let model: IslandModel
+    @Environment(\.staticRender) private var staticRender
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
+        if staticRender {
+            content
+        } else {
+            dropTarget(content)
+        }
+    }
+
+    private func dropTarget(_ content: Content) -> some View {
         content.onDrop(of: [.fileURL], isTargeted: Binding(get: { model.dropTargeted }, set: { model.setDropTargeted($0) })) { providers in
             guard model.settings.shelfEnabled else { return false }
             for p in providers where p.canLoadObject(ofClass: URL.self) {
