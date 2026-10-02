@@ -536,7 +536,14 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
                 WX=$(echo "$WIN" | sed -E 's/.* x=([0-9]+).*/\1/'); WY=$(echo "$WIN" | sed -E 's/.* y=([0-9]+).*/\1/'); WW=$(echo "$WIN" | sed -E 's/.* w=([0-9]+).*/\1/')
                 "$D" click $((WX + WW / 2)) $((WY + 12)); sleep 0.4
                 mark "$LOG"; "$D" key cmd-w; sleep 0.8
-                settings_open && CLOSED=no || CLOSED="after clicking the window (the first press went astray: $WENT)"
+                if settings_open; then
+                    # The VM sometimes drops synthetic key presses before any app gets them (the
+                    # trace shows Notchy never received one). Hand ⌘W straight to Notchy instead.
+                    mark "$LOG"; "$D" key cmd-w "$NOTCHY_PID"; sleep 0.8
+                    settings_open && CLOSED=no || CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                else
+                    CLOSED="after clicking the window (the first press went astray: $WENT)"
+                fi
             fi
         fi
         if [ "$CLOSED" != no ]; then

@@ -44,6 +44,7 @@ Grouped by area. Every case's evidence (numbers, screenshots, trace excerpts) is
 | Timer | QA-21, QA-22, QA-23 | `notchy://timer` starts it in the wings with the music as a glyph; finishing peeks then clears; +1 min, pause and cancel work |
 | Settings and menu | QA-24, QA-26, QA-32 | Settings opens focused and ⌘W closes it; the menu bar menu opens, and still opens after Settings was used |
 | Shutdown | QA-28 | Quitting stops the Now Playing helper |
+| Updates | QA-37, QA-38, QA-39 | A copy that thinks it is 1.0.0 is offered 9.9.9 by a local stand-in for GitHub's release API: it downloads, verifies, swaps itself in place and relaunches as 9.9.9. A download that doesn't match its checksum is refused, and so is an update signed by a different identity (with two throwaway signing identities in a temporary keychain), while the same identity installs. The installed copy is untouched whenever an update is refused. The main QA copy also asks the real GitHub API and correctly finds no release yet |
 | Security | QA-33, QA-34 | Code injection through the launch environment is refused, both into Notchy and into its helper; see the [security review](SECURITY_REVIEW.md) |
 | Performance | QA-06, QA-31 | CPU and memory, below |
 

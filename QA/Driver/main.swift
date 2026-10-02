@@ -229,8 +229,14 @@ case "key":
     let flags: CGEventFlags = arg(1).hasPrefix("cmd-") ? .maskCommand : []
     down?.flags = flags
     up?.flags = flags
-    post(down)
-    post(up)
+    if args.count > 2, let pid = pid_t(arg(2)) {
+        // Straight to one process, past the window server's keyboard focus.
+        down?.postToPid(pid)
+        up?.postToPid(pid)
+    } else {
+        post(down)
+        post(up)
+    }
 case "windows":
     let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
     for w in list where (w[kCGWindowOwnerName as String] as? String) == arg(1) {
