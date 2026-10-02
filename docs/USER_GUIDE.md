@@ -150,7 +150,7 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 1. **Settings → Activities → Volume HUD in the island**.
 2. Click **Grant Accessibility…**, switch Notchy on in *Privacy & Security → Accessibility*. Notchy picks it up automatically.
 3. The volume keys now show a level in the island instead of the big system HUD. **⌥⇧ + volume** changes in quarter steps.
-- *Brightness keys too (experimental)* uses a private Apple framework and may stop working after a macOS update. Keyboard backlight keys always use the system HUD.
+- **Brightness works the same way:** the brightness keys show a sun and a level in the island instead of the system HUD, and Now Playing has a brightness slider under the volume one. This is for the built-in display and uses a private Apple framework (there is no public way), so a macOS update could break it; the keys then go back to macOS. Turn it off with *Brightness in the island*. Keyboard backlight keys always use the system HUD.
 - If your output device has no software volume (some HDMI/USB devices), Notchy leaves the keys to macOS.
 
 ### Home
@@ -204,7 +204,7 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Charging and low battery | On |
 | | Calendar (shows access status) | On |
 | | Volume HUD in the island (shows Accessibility status) | Off |
-| | Brightness keys too (experimental) | Off |
+| | Brightness in the island (keys and slider, built-in display) | On |
 | Motion | Open and close spring response and damping, Preview, Reset | 0.42 s / 0.80, 0.36 s / 0.90 |
 | About | Version, update status (**Check for Updates**, **What's New**, **Install and Relaunch**), credits, the mediaremote-adapter license | — |
 | | Check for updates automatically (on launch and every 6 hours) | On |
@@ -224,7 +224,7 @@ If **Reduce motion** is on in *System Settings → Accessibility → Display*, N
 | **Fallback mode has no artwork or controls** | Allow Notchy under *Privacy & Security → Automation* for Music/Spotify. |
 | **No meetings** | Settings → Activities → Calendar → Allow, or enable Notchy in *Privacy & Security → Calendars*. Only timed events in the next 36 hours are shown. |
 | **Volume keys still show the system HUD** | Grant Accessibility (§4). After rebuilding or updating the app, switch Notchy off and on in the Accessibility list: macOS ties the grant to the app's signature. |
-| **Brightness keys do nothing in the island** | They are experimental and only work on the built-in display. Turn the option off to give them back to macOS. |
+| **Brightness keys or slider do nothing** | Brightness works only on the built-in display, and only while macOS's private brightness framework is there. Turn off *Brightness in the island* to give the keys back to macOS. |
 | **The island doesn't appear in screenshots or screen sharing** | That's the privacy default. Turn off *Hide from screen sharing and recordings*. |
 | **"Launch at login" shows an error** | Move Notchy.app to /Applications first, then toggle it again. |
 | **Hover opens it by accident** | Increase the hover delay, or turn off hover-to-open and use clicks. |

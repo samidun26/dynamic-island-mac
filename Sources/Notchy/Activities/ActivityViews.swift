@@ -221,8 +221,13 @@ struct NowPlayingPage: View {
                         IconButton(symbol: info.isPlaying ? "pause.fill" : "play.fill", label: info.isPlaying ? "Pause" : "Play", size: 21, box: 34) { np.send(.togglePlayPause) }
                         IconButton(symbol: "forward.fill", label: "Next track", size: 15) { np.send(.next) }
                         Spacer(minLength: 12)
-                        VolumeControl(hud: model.hud)
-                            .frame(width: 112)
+                        VStack(spacing: 0) {
+                            VolumeControl(hud: model.hud)
+                            if model.settings.brightnessEnabled, model.hud.brightnessAvailable {
+                                BrightnessControl(hud: model.hud)
+                            }
+                        }
+                        .frame(width: 112)
                     }
                     .padding(.leading, -6)
                 }
@@ -244,6 +249,21 @@ struct VolumeControl: View {
                 .frame(width: 16)
             LevelSlider(value: hud.muted ? 0 : hud.volume, label: "Volume", tint: .white.opacity(0.9)) { hud.setVolume($0) }
         }
+    }
+}
+
+struct BrightnessControl: View {
+    let hud: HUDModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: hud.brightnessLevel < 0.5 ? "sun.min.fill" : "sun.max.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+                .frame(width: 16)
+            LevelSlider(value: hud.brightnessLevel, label: "Brightness", tint: .white.opacity(0.9)) { hud.setBrightness($0) }
+        }
+        .onAppear { hud.syncBrightness() }
     }
 }
 

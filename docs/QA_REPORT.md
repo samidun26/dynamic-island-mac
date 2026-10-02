@@ -97,7 +97,7 @@ Install as in the [user guide](USER_GUIDE.md), then:
 - [ ] **Real players.** Music, Spotify, Safari (YouTube), Chrome, Firefox, VLC, Podcasts: title, artist, artwork, play/pause, next and previous, scrubbing. Also quitting the player while it plays.
 - [ ] **Calendar.** Turn on Calendar in Settings → Activities, allow access when asked, and check the next event on the Home page; for a meeting with a Zoom/Meet/Teams link, the **Join** button opens it, and the island peeks before it starts.
 - [ ] **Volume keys.** Turn on "Replace the volume HUD", grant Accessibility when asked: the volume keys show the level in the island and the system HUD doesn't appear; mute works. With Accessibility denied, macOS shows its own HUD and nothing breaks.
-- [ ] **Brightness keys** (experimental switch): the level shows in the island; with it off, macOS handles the keys.
+- [ ] **Brightness.** With the HUD on, the brightness keys show a sun and a level in the island and the system HUD doesn't appear; the brightness slider in Now Playing changes the screen and follows the keys. With *Brightness in the island* off, macOS handles the keys and the slider is gone.
 - [ ] **Battery.** Plug in and unplug: the charging banner appears briefly; below 20% the low battery banner appears once.
 - [ ] **Displays.** Connect and disconnect an external display, change resolution, close the lid with an external display: the island stays on the chosen display and re-aligns.
 - [ ] **Spaces and full screen.** Switch Spaces and use a full-screen app: the island stays above it and keeps working.

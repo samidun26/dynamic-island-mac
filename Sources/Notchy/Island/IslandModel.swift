@@ -353,8 +353,9 @@ final class IslandModel {
             if on { self?.calendar.start() } else { self?.calendar.stop() }
         }
         observeChanges({ s.timerSound }) { [weak self] on in self?.timer.playSound = on }
-        observeChanges({ (s.hudEnabled, s.hudBrightnessExperimental) }) { [weak self] v in
-            if v.0 { self?.hud.enableKeys(brightness: v.1) } else { self?.hud.disableKeys() }
+        observeChanges({ s.brightnessEnabled }) { [weak self] on in self?.hud.setBrightnessEnabled(on) }
+        observeChanges({ s.hudEnabled }) { [weak self] on in
+            if on { self?.hud.enableKeys() } else { self?.hud.disableKeys() }
         }
         hud.startVolumeMirror()
         observeChanges({ s.clipboardHistory && s.shelfEnabled }) { [weak self] on in

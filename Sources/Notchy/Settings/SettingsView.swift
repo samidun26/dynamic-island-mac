@@ -214,7 +214,7 @@ private struct ActivitiesTab: View {
                 Text("Shows the next event, counts down from 15 minutes before it, and alerts you at 5.")
             }
             Section {
-                Toggle("Volume HUD in the island", isOn: $settings.hudEnabled)
+                Toggle("Volume and brightness keys in the island", isOn: $settings.hudEnabled)
                 if settings.hudEnabled {
                     switch model.hud.tapState {
                     case .active: LabeledContent("Media keys", value: "Active")
@@ -223,10 +223,10 @@ private struct ActivitiesTab: View {
                             Button("Grant Accessibility…") { model.hud.openAccessibilitySettings() }
                         }
                     }
-                    Toggle("Brightness keys too (experimental)", isOn: $settings.hudBrightnessExperimental)
                 }
+                Toggle("Brightness in the island", isOn: $settings.brightnessEnabled)
             } footer: {
-                Text("Replacing the system HUD means intercepting the media keys, which needs Accessibility access. Volume uses public CoreAudio. Brightness uses Apple's private DisplayServices framework and may break with any macOS update. Keyboard backlight keys are left to macOS.")
+                Text("Replacing the system HUD means intercepting the volume and brightness keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
             }
         }
         .formStyle(.grouped)

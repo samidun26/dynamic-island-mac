@@ -77,8 +77,9 @@ final class AppSettings {
     var batteryEnabled: Bool { didSet { save(batteryEnabled, "batteryEnabled") } }
     var calendarEnabled: Bool { didSet { save(calendarEnabled, "calendarEnabled") } }
     var hudEnabled: Bool { didSet { save(hudEnabled, "hudEnabled") } }
-    /// Brightness keys need the private DisplayServices framework. Off unless the user opts in.
-    var hudBrightnessExperimental: Bool { didSet { save(hudBrightnessExperimental, "hudBrightnessExperimental") } }
+    /// Brightness like volume: keys shown in the island and a slider. Built-in display only, through
+    /// the private DisplayServices framework (the only way on Apple silicon).
+    var brightnessEnabled: Bool { didSet { save(brightnessEnabled, "brightnessEnabled") } }
 
     // Motion (tunable from the Settings window's Motion section)
     var openResponse: Double { didSet { save(openResponse, "openResponse") } }
@@ -118,7 +119,7 @@ final class AppSettings {
         batteryEnabled = bool("batteryEnabled", true)
         calendarEnabled = bool("calendarEnabled", true)
         hudEnabled = bool("hudEnabled", false)
-        hudBrightnessExperimental = bool("hudBrightnessExperimental", false)
+        brightnessEnabled = bool("brightnessEnabled", true)
         openResponse = double("openResponse", Self.motionDefaults.openResponse)
         openDamping = double("openDamping", Self.motionDefaults.openDamping)
         closeResponse = double("closeResponse", Self.motionDefaults.closeResponse)

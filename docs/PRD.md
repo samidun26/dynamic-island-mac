@@ -174,7 +174,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-H1 | Volume up/down/mute shown in the island instead of the system HUD (needs Accessibility; consumes the key and applies the change via CoreAudio). Option+Shift for quarter steps. | P1 | ✅ | H |
 | FR-H2 | Devices without software volume, or no permission: pass the key through untouched. | P0 | ✅ | H |
 | FR-H3 | While the island is open, show the level in the header. | P2 | ✅ | H |
-| FR-H4 | Brightness keys (private DisplayServices). | P2 | 🧪 | H |
+| FR-H4 | Brightness like volume: keys shown in the island instead of the system HUD, and a slider under the volume slider in Now Playing. Built-in display, private DisplayServices; on by default, its own switch; keys pass through when unavailable. | P1 | ✅ | H |
 | FR-H5 | Keyboard backlight keys. | P2 | ⛔ | — |
 
 ### 7.10 App, settings and distribution
@@ -227,7 +227,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 - **Now Playing on macOS 15.4+** works only because Apple's own `/usr/bin/perl` is still allowed to use MediaRemote. Apple could close this; Notchy then degrades to Music and Spotify.
 - **System HUD suppression** is possible only by consuming the media key in an active event tap (Accessibility permission), and Notchy must then apply the change itself.
-- **Brightness** has no public API on Apple silicon: it uses private DisplayServices, so it is opt-in and labelled experimental. **Keyboard backlight**: not implemented.
+- **Brightness** has no public API on Apple silicon: it uses private DisplayServices, loaded with `dlopen`, built-in display only, with its own switch. **Keyboard backlight**: not implemented.
 - **Focus:** `INFocusStatusCenter` needs a provisioned entitlement and only says yes or no; the alternative needs Full Disk Access. Not implemented.
 - **Notifications and lock screen** need private SkyLight/CGS APIs or notification-database access. They would break with OS updates and are not App Store eligible, so they are not implemented.
 - **App Intents** need Xcode's metadata extraction, which the SwiftPM build does not run. The `notchy://` URL from Shortcuts' "Open URLs" action covers the use case.
