@@ -21,6 +21,11 @@ public enum IslandState: Equatable, Sendable {
         case .idle, .compact: false
         }
     }
+
+    public var isCompact: Bool {
+        if case .compact = self { return true }
+        return false
+    }
 }
 
 /// A page in the expanded island. `home` (clock, next event, quick timers) is always last.

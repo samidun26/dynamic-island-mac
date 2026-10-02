@@ -3,18 +3,22 @@ import Foundation
 import CoreGraphics
 #endif
 
-/// Everything the island shape animates: size plus corner radii.
+/// Everything the island shape animates: size, corner radii and position.
 /// `earRadius` is the small concave flare at the top corners that fuses the
 /// black shape into the bezel; `bottomRadius` is the convex bottom corner.
+/// `offsetX` shifts the body's centre from the notch's centre, for a compact activity shown
+/// on one side of the notch only (the other side's menu bar is taken).
 public struct IslandGeometry: Equatable, Sendable {
     public var size: CGSize
     public var bottomRadius: CGFloat
     public var earRadius: CGFloat
+    public var offsetX: CGFloat
 
-    public init(size: CGSize, bottomRadius: CGFloat, earRadius: CGFloat) {
+    public init(size: CGSize, bottomRadius: CGFloat, earRadius: CGFloat, offsetX: CGFloat = 0) {
         self.size = size
         self.bottomRadius = bottomRadius
         self.earRadius = earRadius
+        self.offsetX = offsetX
     }
 
     public static func lerp(_ a: IslandGeometry, _ b: IslandGeometry, _ t: CGFloat) -> IslandGeometry {
@@ -22,7 +26,8 @@ public struct IslandGeometry: Equatable, Sendable {
         return IslandGeometry(
             size: CGSize(width: mix(a.size.width, b.size.width), height: mix(a.size.height, b.size.height)),
             bottomRadius: mix(a.bottomRadius, b.bottomRadius),
-            earRadius: mix(a.earRadius, b.earRadius)
+            earRadius: mix(a.earRadius, b.earRadius),
+            offsetX: mix(a.offsetX, b.offsetX)
         )
     }
 }
@@ -77,18 +82,36 @@ public struct NotchMetrics: Equatable, Sendable {
 
     /// Compact live activity: equal wings either side so the notch stays centred.
     public func compact(wing: CGFloat) -> IslandGeometry {
-        let w = max(0, wing)
+        compact(left: wing, right: wing)
+    }
+
+    /// Compact live activity with a wing of its own width on each side. Unequal wings shift the
+    /// body, so the part in the middle always stays exactly over the notch.
+    public func compact(left: CGFloat, right: CGFloat) -> IslandGeometry {
+        let l = max(0, left), r = max(0, right)
         return IslandGeometry(
-            size: CGSize(width: notchSize.width + 2 * w, height: notchSize.height),
+            size: CGSize(width: notchSize.width + l + r, height: notchSize.height),
             bottomRadius: (notchSize.height * 0.42).rounded(),
-            earRadius: 6
+            earRadius: 6,
+            offsetX: (r - l) / 2
         )
     }
 
-    /// Subtle grow on hover so the island feels touchable before it opens.
-    public func bumped(_ g: IslandGeometry) -> IslandGeometry {
+    /// Height of the lip under the notch that carries a live activity when there is no room
+    /// beside the notch.
+    public static let lipHeight: CGFloat = 6
+
+    /// No room beside the notch: the island stays notch-wide and grows a slim lip below it.
+    public func folded() -> IslandGeometry {
+        IslandGeometry(size: CGSize(width: notchSize.width, height: notchSize.height + Self.lipHeight),
+                       bottomRadius: min(10, notchSize.height * 0.32), earRadius: hasNotch ? 4 : 6)
+    }
+
+    /// Subtle grow on hover so the island feels touchable before it opens. `widen: false` grows
+    /// only downward, for an island fitted between menu bar items.
+    public func bumped(_ g: IslandGeometry, widen: Bool = true) -> IslandGeometry {
         var b = g
-        b.size.width += 14
+        if widen { b.size.width += 14 }
         b.size.height += 4
         b.bottomRadius += 2
         return b
@@ -121,7 +144,7 @@ public struct NotchMetrics: Equatable, Sendable {
 
     /// Where the island body is on screen for a geometry.
     public func islandRect(_ g: IslandGeometry) -> CGRect {
-        CGRect(x: notchRect.midX - g.size.width / 2, y: screenFrame.maxY - g.size.height,
+        CGRect(x: notchRect.midX + g.offsetX - g.size.width / 2, y: screenFrame.maxY - g.size.height,
                width: g.size.width, height: g.size.height)
     }
 

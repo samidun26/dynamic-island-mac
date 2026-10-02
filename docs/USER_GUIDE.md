@@ -7,7 +7,8 @@
 - [5. Menu bar, URLs and Shortcuts](#5-menu-bar-urls-and-shortcuts)
 - [6. Settings](#6-settings)
 - [7. Troubleshooting](#7-troubleshooting)
-- [8. Uninstall](#8-uninstall)
+- [8. Updating](#8-updating)
+- [9. Uninstall](#9-uninstall)
 
 Check the [requirements](REQUIREMENTS.md) first: macOS 14 or later, ideally a MacBook with a notch.
 
@@ -18,7 +19,7 @@ Pick one of three ways.
 ### A. Download a release (easiest)
 
 1. Open the repository's [Releases](https://github.com/samidun26/dynamic-island-mac/releases) page and download **Notchy.zip** from the latest release.
-   (No release yet? Use option B or C. A maintainer publishes one by pushing a version tag, see §1.D.)
+   (No release yet? Use option B or C. Releases are published automatically when the app changes on `main`, see §1.D.)
 2. Double-click the zip, then drag **Notchy.app** into **Applications**.
 3. Open it once (see "Allow it to open" below).
 
@@ -43,7 +44,14 @@ A build you made yourself is not quarantined, so it opens without the Gatekeeper
 
 ### Allow it to open (downloads only)
 
-Downloaded builds are signed but not notarized, so macOS blocks the first launch. Do **one** of these:
+Downloaded builds are signed but not notarized, so macOS blocks the first launch. Allowing it tells macOS to trust that copy, so first check it is the file CI built. Each release lists its SHA-256 checksum and has a `Notchy.zip.sha256` file next to the zip:
+
+```sh
+cd ~/Downloads
+shasum -a 256 -c Notchy.zip.sha256    # must print "Notchy.zip: OK"
+```
+
+Then do **one** of these:
 
 - **System Settings:** try to open Notchy, dismiss the warning, then go to **System Settings → Privacy & Security**, scroll to *"Notchy" was blocked…* and click **Open Anyway**.
 - **Terminal:**
@@ -54,12 +62,15 @@ Downloaded builds are signed but not notarized, so macOS blocks the first launch
 
 ### D. Publish a release (maintainers)
 
-```sh
-git tag v1.0.0
-git push origin v1.0.0
-```
+Nothing to do by hand: whenever a change to the app (`Sources/`, `Resources/`, `Vendor/`, `Package.swift`, `build.sh` or `VERSION`) lands on `main`, the **release** workflow builds the universal app, numbers it (`VERSION` + a running number: 1.0.1, 1.0.2, …) and publishes a GitHub Release with `Notchy.zip`, its SHA-256 and notes listing the changes. Everyone who has Notchy is then offered the update (see §8).
 
-CI builds the universal app, stamps it with version 1.0.0, and attaches `Notchy.zip` to a new GitHub Release.
+- **A bigger step:** change `VERSION` (for example to `1.1` or `2.0`) in the same change.
+- **Publish again without a change:** Actions → **release** → Run workflow (on `main`).
+- **Recommended once: a release signing identity.** On your Mac, with the [GitHub CLI](https://cli.github.com) logged in:
+  ```sh
+  scripts/setup-signing.sh
+  ```
+  It creates a code signing identity and stores it in the repository's secrets; every release is then signed with it. Without it, releases are ad-hoc signed and macOS treats each update as a new app, so people have to allow Calendars and Accessibility again after updating. With it, macOS keeps those permissions, and Notchy accepts only updates signed with that identity.
 
 ## 2. First launch
 
@@ -129,7 +140,7 @@ The page you see when nothing else is running: a large clock and date, one-click
 
 ## 5. Menu bar, URLs and Shortcuts
 
-**Menu bar icon:** Open Island · Start Timer ▸ (1, 5, 10, 15, 25 min, 1 hour, Cancel Timer) · Settings… · Quit Notchy.
+**Menu bar icon:** Open Island · Start Timer ▸ (1, 5, 10, 15, 25 min, 1 hour, Cancel Timer) · Settings… · Check for Updates… · Quit Notchy. When an update is waiting, the icon gets a dot and the menu starts with **Update to Notchy x.y.z…**.
 
 **URLs** (Terminal, scripts, launchers, Shortcuts):
 
@@ -140,6 +151,7 @@ The page you see when nothing else is running: a large clock and date, one-click
 | `notchy://timer/cancel` | Cancel the timer |
 | `notchy://open` | Open the island and keep it open |
 | `notchy://settings` | Open Settings |
+| `notchy://update` | Open Settings → About and check for an update |
 
 ```sh
 open "notchy://timer?minutes=25"
@@ -159,6 +171,7 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Hide from screen sharing and recordings | On |
 | | Show the island on: built-in display (notch) / main display / display with the pointer | Built-in |
 | | On displays without a notch: only when something is happening / always (fake notch) / never | Only when active |
+| | Keep clear of menus and menu bar icons: live activities fit into the free menu bar space beside the notch, move to the other side when one side is taken, and show as a thin line under the notch when there's no room. Seeing where app menus end needs Accessibility (*Allow Accessibility…*); until then activities stay right of the notch | On |
 | | Launch at login | Off |
 | | Show menu bar icon | On |
 | Activities | Now Playing, and its track-change preview | On, on |
@@ -168,7 +181,8 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Volume HUD in the island (shows Accessibility status) | Off |
 | | Brightness keys too (experimental) | Off |
 | Motion | Open and close spring response and damping, Preview, Reset | 0.42 s / 0.80, 0.36 s / 0.90 |
-| About | Version, credits, the mediaremote-adapter license | — |
+| About | Version, update status (**Check for Updates**, **What's New**, **Install and Relaunch**), credits, the mediaremote-adapter license | — |
+| | Check for updates automatically (on launch and every 6 hours) | On |
 
 If **Reduce motion** is on in *System Settings → Accessibility → Display*, Notchy uses short fades instead of springs.
 
@@ -179,6 +193,7 @@ If **Reduce motion** is on in *System Settings → Accessibility → Display*, N
 | **"Notchy is damaged" / "can't be opened"** | It's a downloaded build without notarization. Follow *Allow it to open* in §1. |
 | **Nothing shows at all** | It's idle, which is normal. Start a timer from the menu bar icon to check. On a display without a notch, the island only appears while something is happening; change *On displays without a notch* to *Always* to see it all the time. |
 | **It's on the wrong display** | Settings → General → *Show the island on*. |
+| **Music shows only as a thin line under the notch** | There's no free menu bar space next to the notch: menus or menu bar icons reach it. Hover the notch to open it as usual. Fewer menu bar icons (or allowing Accessibility, so Notchy can use the space left of the notch) gives the wings room. To let the wings cover menu bar items instead, turn off Settings → General → *Keep clear of menus and menu bar icons*. |
 | **No menu bar icon** | You hid it. Open Notchy.app again from Applications or Spotlight to get Settings. |
 | **Now Playing shows nothing** | Check Settings → Activities → *Source*. "System Now Playing" means the bridge works; the player must report to macOS Now Playing (most do; in browsers, media must be playing in a tab). "Music and Spotify (fallback)" means macOS blocked the bridge, so other players can't be shown. |
 | **Fallback mode has no artwork or controls** | Allow Notchy under *Privacy & Security → Automation* for Music/Spotify. |
@@ -189,7 +204,22 @@ If **Reduce motion** is on in *System Settings → Accessibility → Display*, N
 | **"Launch at login" shows an error** | Move Notchy.app to /Applications first, then toggle it again. |
 | **Hover opens it by accident** | Increase the hover delay, or turn off hover-to-open and use clicks. |
 
-## 8. Uninstall
+## 8. Updating
+
+Notchy looks for a new release on GitHub shortly after it starts and every 6 hours. When there is one:
+
+1. The menu bar icon gets a small dot, and its menu starts with **Update to Notchy x.y.z…**.
+2. That opens **Settings → About**: **What's New** lists the changes, **Install and Relaunch** updates.
+3. Notchy downloads the release, checks it, replaces itself and starts again, about ten seconds in all. Your settings stay as they were.
+
+Before replacing anything, Notchy checks that the download comes from GitHub over HTTPS, matches the release's SHA-256, is a validly signed Notchy of that version, and (once releases have a signing identity) is signed with the same identity as the copy you have. If any check fails nothing is changed, and Settings says why.
+
+- **Check now:** menu bar icon → **Check for Updates…**, or `notchy://update`.
+- **Turn automatic checks off:** Settings → About → *Check for updates automatically*. This is the only request Notchy makes to the internet on its own; it sends nothing about you.
+- **Notchy can't replace itself** (it's in a folder you can't write to): download the release from GitHub and replace the app by hand.
+- **After an update, the calendar or the volume keys stop working:** that happens with releases that are ad-hoc signed (see §1.D). Allow Notchy again in *System Settings → Privacy & Security* (*Calendars*, *Accessibility*); if Notchy is already listed and switched on, remove it with **−** and add it again.
+
+## 9. Uninstall
 
 1. Turn off **Launch at login** in Settings, then **Quit Notchy** from the menu bar icon.
 2. Delete **/Applications/Notchy.app**.

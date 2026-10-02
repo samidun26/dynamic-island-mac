@@ -79,11 +79,27 @@ enum Snapshots {
     static let plain = NotchMetrics(screenFrame: CGRect(x: 0, y: 0, width: 1920, height: 1080), safeAreaTop: 0,
                                     auxiliaryLeftWidth: nil, auxiliaryRightWidth: nil, menuBarHeight: 24)
 
-    static func model(_ metrics: NotchMetrics, _ scenario: DemoScenario) -> IslandModel {
+    /// Free menu bar beside the notch in the snapshots: the mock menus end, and the mock icons
+    /// start, this far from the notch.
+    nonisolated static let roomy = MenuBarClearance(left: 90, right: 90)
+
+    static func model(_ metrics: NotchMetrics, _ scenario: DemoScenario, clearance: MenuBarClearance = roomy) -> IslandModel {
         let m = IslandModel(settings: .ephemeral(), metrics: metrics)
+        m.menuBar.showDemo(clearance)
         Demo.apply(scenario, to: m)
         return m
     }
+
+    /// Menu bars crowded in different ways: the compact island never covers a menu or an icon.
+    static let crowded: [(String, DemoScenario, MenuBarClearance)] = [
+        ("room on both sides: wings either side", .compact, roomy),
+        ("menus 44 pt from the notch: narrower wings", .compact, MenuBarClearance(left: 44, right: 120)),
+        ("app menus reach the notch: everything moves right", .compact, MenuBarClearance(left: 8, right: 120)),
+        ("menu bar icons reach the notch: everything moves left", .compact, MenuBarClearance(left: 120, right: 8)),
+        ("no room either side: a progress line under the notch", .compact, MenuBarClearance(left: 8, right: 10)),
+        ("timer with music, app menus reach the notch", .multi, MenuBarClearance(left: 8, right: 160)),
+        ("timer, no room either side", .timer, MenuBarClearance(left: 8, right: 10)),
+    ]
 
     static func render(to dir: String) {
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
@@ -91,7 +107,7 @@ enum Snapshots {
             var rows: [(String, AnyView)] = []
             for s in DemoScenario.allCases {
                 let m = model(metrics, s)
-                let scene = AnyView(SnapshotScene(metrics: metrics) { IslandCanvas(model: m, state: m.state, geometry: m.geometry) })
+                let scene = AnyView(SnapshotScene(metrics: metrics, clearance: roomy) { IslandCanvas(model: m, state: m.state, geometry: m.geometry) })
                 write(scene, "\(dir)/\(name)-\(s.rawValue).png")
                 rows.append((s.rawValue, scene))
             }
@@ -100,11 +116,19 @@ enum Snapshots {
             bumped.settings.openOnHover = false
             bumped.setHovering(true)
             bumped.refresh()
-            rows.append(("compact + hover (click mode)", AnyView(SnapshotScene(metrics: metrics) {
+            rows.append(("compact + hover (click mode)", AnyView(SnapshotScene(metrics: metrics, clearance: roomy) {
                 IslandCanvas(model: bumped, state: bumped.state, geometry: bumped.geometry)
             })))
             write(Sheet(rows: rows), "\(dir)/sheet-\(name).png")
         }
+        var menuRows: [(String, AnyView)] = []
+        for (i, (title, scenario, clearance)) in crowded.enumerated() {
+            let m = model(notched, scenario, clearance: clearance)
+            let scene = AnyView(SnapshotScene(metrics: notched, clearance: clearance) { IslandCanvas(model: m, state: m.state, geometry: m.geometry) })
+            write(scene, "\(dir)/menubar-\(i + 1).png")
+            menuRows.append((title, scene))
+        }
+        write(Sheet(rows: menuRows), "\(dir)/sheet-menubar.png")
         filmstrip(opening: true, to: "\(dir)/filmstrip-open.png")
         filmstrip(opening: false, to: "\(dir)/filmstrip-close.png")
         write(AppIcon.IconView().frame(width: 256, height: 256), "\(dir)/app-icon.png")
@@ -146,27 +170,39 @@ enum Snapshots {
     }
 }
 
-/// Wallpaper and menu bar behind the canvas, so the fused edges are visible in snapshots.
+/// Wallpaper and menu bar behind the canvas, so the fused edges are visible in snapshots. The mock
+/// menus end, and the mock icons start, `clearance` points from the notch.
 private struct SnapshotScene<Content: View>: View {
     let metrics: NotchMetrics
+    var clearance = Snapshots.roomy
     @ViewBuilder let content: Content
 
     var body: some View {
         let c = metrics.canvasSize
         let bar = metrics.hasNotch ? metrics.notchSize.height : metrics.notchSize.height - 8
+        let notchLeft = (c.width - metrics.notchSize.width) / 2
+        let notchRight = notchLeft + metrics.notchSize.width
         ZStack(alignment: .top) {
             LinearGradient(colors: [Color(red: 0.13, green: 0.17, blue: 0.42), Color(red: 0.52, green: 0.3, blue: 0.62),
                                     Color(red: 0.96, green: 0.63, blue: 0.46)], startPoint: .top, endPoint: .bottom)
             Rectangle().fill(.white.opacity(0.16)).frame(height: bar)
-            HStack(spacing: 14) {
-                Text("View"); Text("Window"); Text("Help")
-                Spacer()
-                Image(systemName: "wifi"); Image(systemName: "battery.75percent"); Text("Wed 10:42")
+            ZStack(alignment: .topLeading) {
+                HStack(spacing: 14) {
+                    Text("File"); Text("Edit"); Text("View"); Text("Window"); Text("Help")
+                }
+                .fixedSize()
+                .frame(width: max(0, notchLeft - (clearance.left ?? 0)), height: bar, alignment: .trailing)
+                HStack(spacing: 14) {
+                    Image(systemName: "wifi"); Image(systemName: "battery.75percent"); Text("Wed 10:42")
+                }
+                .fixedSize()
+                .frame(height: bar)
+                .offset(x: notchRight + clearance.right)
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .frame(height: bar)
+            .frame(width: c.width, height: bar, alignment: .topLeading)
+            .clipped()
             if metrics.hasNotch {
                 // The physical notch: the idle island must cover it exactly.
                 IslandShape(metrics.idle()).fill(Color.black)

@@ -145,7 +145,35 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?seconds=90")!), .startTimer(90))
         XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer/cancel")!), .cancelTimer)
         XCTAssertNil(DeepLink(url: URL(string: "notchy://timer")!))
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://update")!), .update)
         XCTAssertNil(DeepLink(url: URL(string: "https://timer?minutes=5")!))
+    }
+
+    func testDeepLinksRejectOrClampHostileNumbers() {
+        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=nan")!))
+        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=-5")!))
+        XCTAssertNil(DeepLink(url: URL(string: "notchy://timer?minutes=inf&seconds=-inf")!))
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?minutes=1e308")!), .startTimer(24 * 3600))
+        XCTAssertEqual(DeepLink(url: URL(string: "notchy://timer?seconds=inf")!), .startTimer(24 * 3600))
+        XCTAssertNil(DeepLink(url: URL(string: "notchy://unknown")!))
+    }
+
+    func testMeetingLinksIgnoreLookalikesAndOtherSchemes() {
+        for text in ["https://zoom.us.evil.example/j/1", "https://zoom.us@evil.example/j/1", "https://evilzoom.us/j/1",
+                     "https://zoom.us:8443/j/1", "javascript:alert(1)//zoom.us/", "file:///zoom.us/j/1", "smb://zoom.us/j/1"] {
+            XCTAssertNil(MeetingLink.find(in: [text]), text)
+        }
+        // Only the real host is ever returned, even when it appears inside another URL.
+        XCTAssertEqual(MeetingLink.find(in: ["https://evil.example/?next=https://zoom.us/j/1"])?.host, "zoom.us")
+    }
+
+    func testSpotifyArtworkOnlyFromItsCDNOverHTTPS() {
+        XCTAssertNotNil(SpotifyArtwork.url("https://i.scdn.co/image/ab67616d0000b273"))
+        XCTAssertNotNil(SpotifyArtwork.url("https://image-cdn-ak.spotifycdn.com/image/ab67"))
+        for s in ["http://i.scdn.co/image/1", "file:///etc/hosts", "https://i.scdn.co.evil.example/1",
+                  "https://evil.example/i.scdn.co", "ftp://i.scdn.co/1", "not a url"] {
+            XCTAssertNil(SpotifyArtwork.url(s), s)
+        }
     }
 
     func testMeetingLinks() {

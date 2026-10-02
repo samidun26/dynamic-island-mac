@@ -5,9 +5,9 @@
 | Product | Notchy, a Dynamic Island for the Mac notch |
 | Version | 1.0 |
 | Platform | macOS 14 Sonoma and later, Apple silicon and Intel |
-| Status | v1.0 built and verified on CI; hands-on testing on a notched MacBook still pending (see §12) |
+| Status | v1.0 built, verified on CI and QA-tested end to end on a macOS session ([QA report](QA_REPORT.md)); hands-on testing on a notched MacBook still pending (see §12) |
 | Last updated | 1 October 2026 |
-| Related | [Requirements](REQUIREMENTS.md) · [Install and user guide](USER_GUIDE.md) · [README](../README.md) |
+| Related | [Requirements](REQUIREMENTS.md) · [Install and user guide](USER_GUIDE.md) · [QA report](QA_REPORT.md) · [Security review](SECURITY_REVIEW.md) · [README](../README.md) |
 
 ## 1. Summary
 
@@ -79,20 +79,21 @@ MacBooks since 2021 have a camera notch that sits in the menu bar and does nothi
 
 Priority: **P0** must have, **P1** should have, **P2** nice to have.
 Status: ✅ done · 🧪 done, experimental and opt-in · ⛔ not possible or not done (see §9).
-Verified: **T** unit-tested · **R** rendered and inspected on CI · **L** running app checked on CI · **H** needs a person on real hardware.
+Verified: **T** unit-tested · **R** rendered and inspected on CI · **L** running app checked on CI · **Q** passed the end-to-end QA run (installed per the user guide, driven with real input events and a test music app; [report](QA_REPORT.md)) · **H** needs a person on real hardware.
 
 ### 7.1 Window and shape
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-W1 | One transparent, borderless, non-activating panel, sized once for the largest state and pinned top-centre. It never moves or resizes during animation. | P0 | ✅ | L |
-| FR-W2 | Click-through: only the visible island takes mouse events; the rest of the panel passes clicks to the menu bar and apps. | P0 | ✅ | T, H |
+| FR-W1 | One transparent, borderless, non-activating panel, sized once for the largest state and pinned top-centre. It never moves or resizes during animation. | P0 | ✅ | L, Q |
+| FR-W2 | Click-through: only the visible island takes mouse events; the rest of the panel passes clicks to the menu bar and apps. | P0 | ✅ | T, Q |
 | FR-W3 | Shape: flat top flush with the screen edge, concave ears at the top corners, continuous convex bottom corners. Width, height and both radii animate as one value. | P0 | ✅ | R |
 | FR-W4 | Idle size and position come from `NSScreen.safeAreaInsets` and `auxiliaryTopLeftArea/RightArea`; pure black. | P0 | ✅ | T, R, H (alignment) |
-| FR-W5 | Displays without a notch: a synthetic notch. Setting: show only when active (default), always, or never. | P1 | ✅ | T, R |
+| FR-W5 | Displays without a notch: a synthetic notch. Setting: show only when active (default), always, or never. | P1 | ✅ | T, R, Q |
 | FR-W6 | Display choice: built-in (notch), main display, or the display with the pointer. Re-measure on hot-plug, resolution change, Space change and wake. | P1 | ✅ | H |
-| FR-W7 | Above the menu bar and full-screen apps, on all Spaces; never key, never main; first click works. | P0 | ✅ | L, H |
-| FR-W8 | Hidden from screen sharing and recordings (`sharingType = .none`), on by default, toggle in Settings. | P1 | ✅ | H |
+| FR-W7 | Above the menu bar and full-screen apps, on all Spaces; never key, never main; first click works. | P0 | ✅ | L, Q, H (full screen) |
+| FR-W8 | Hidden from screen sharing and recordings (`sharingType = .none`), on by default, toggle in Settings. | P1 | ✅ | Q (`screencapture`), H (Zoom, Meet) |
+| FR-W9 | Compact activities never cover app menus or menu bar icons beside the notch: they fit the free space (icons measured from the window list; menus via Accessibility when allowed), move to the free side, or fold into a thin progress line under the notch. On by default, toggle in Settings. | P0 | ✅ | T, Q |
 
 ### 7.2 Motion
 
@@ -108,11 +109,11 @@ Verified: **T** unit-tested · **R** rendered and inspected on CI · **L** runni
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-I1 | Hover opens after a dwell (default 120 ms, adjustable 50–500 ms); fast sweeps (> 900 pt/s) never open it. | P0 | ✅ | T, H |
-| FR-I2 | Leaving closes it after 250 ms, with a 12 pt grace margin; never closes during a drag (scrubbing, volume). | P0 | ✅ | T, H |
+| FR-I1 | Hover opens after a dwell (default 120 ms, adjustable 50–500 ms); fast sweeps (> 900 pt/s) never open it. | P0 | ✅ | T, Q, H (feel) |
+| FR-I2 | Leaving closes it after 250 ms, with a 12 pt grace margin; never closes during a drag (scrubbing, volume). | P0 | ✅ | T, Q |
 | FR-I3 | No hover-open while a modifier key or mouse button is held, or right after the island closed under the pointer. | P1 | ✅ | T, H |
-| FR-I4 | Click opens and pins it; a click anywhere else dismisses it. | P0 | ✅ | H |
-| FR-I5 | Two-finger swipe: down opens, up closes, left/right switches page (open) or activity (compact). | P1 | ✅ | H |
+| FR-I4 | Click opens and pins it; a click anywhere else dismisses it. | P0 | ✅ | Q |
+| FR-I5 | Two-finger swipe: down opens, up closes, left/right switches page (open) or activity (compact). | P1 | ✅ | Q, H (real trackpad) |
 | FR-I6 | Click-only mode: hovering only nudges the island (grows slightly) as an affordance. | P2 | ✅ | R |
 
 ### 7.4 Activity system
@@ -121,9 +122,9 @@ Verified: **T** unit-tested · **R** rendered and inspected on CI · **L** runni
 |---|---|---|---|---|
 | FR-A1 | Each activity has compact leading, compact trailing, minimal and expanded presentations. | P0 | ✅ | R |
 | FR-A2 | A priority queue picks the activity in the wings: transient banners (HUD, charging) first, then the user's swipe choice, then priority, then recency. | P0 | ✅ | T |
-| FR-A3 | Up to two other activities show as minimal glyphs next to the primary. | P1 | ✅ | R |
+| FR-A3 | Up to two other activities show as minimal glyphs next to the primary. | P1 | ✅ | R, Q |
 | FR-A4 | Expanded pages: one per activity, plus Home (clock, next event, quick timers); page dots in the header. | P1 | ✅ | R |
-| FR-A5 | Peek: auto-expand briefly on a track change (3 s), timer end (6 s) or meeting alert (6 s). | P1 | ✅ | R |
+| FR-A5 | Peek: auto-expand briefly on a track change (3 s), timer end (6 s) or meeting alert (6 s). | P1 | ✅ | R, Q |
 
 Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner 70, timer running 60, now playing 50, meeting in 5–15 min 30.
 
@@ -131,20 +132,20 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-N1 | Any app that reports to macOS Now Playing, browsers included, through the bundled mediaremote-adapter (one long-lived `perl` stream, JSON diffs). | P0 | ✅ | L (adapter answers), H (real playback) |
-| FR-N2 | Restart the stream with backoff (1, 2, 4… 30 s, at most 5 tries); after a fatal error fall back to Music and Spotify (their own notifications plus AppleScript). | P0 | ✅ | H |
-| FR-N3 | Compact: artwork left, equaliser tinted with the artwork's dominant colour right; stays 2.5 s after a pause so skipping does not flicker. | P0 | ✅ | R |
-| FR-N4 | Expanded: artwork, title, artist, source app, draggable scrubber (seek), elapsed/remaining, previous/play-pause/next, volume slider. | P0 | ✅ | R, L |
+| FR-N1 | Any app that reports to macOS Now Playing, browsers included, through the bundled mediaremote-adapter (one long-lived `perl` stream, JSON diffs). | P0 | ✅ | Q (test player through the system Now Playing), H (real players) |
+| FR-N2 | Restart the stream with backoff (1, 2, 4… 30 s, at most 5 tries); after a fatal error fall back to Music and Spotify (their own notifications plus AppleScript). | P0 | ✅ | Q (restart), H (fallback) |
+| FR-N3 | Compact: artwork left, equaliser tinted with the artwork's dominant colour right; stays 2.5 s after a pause so skipping does not flicker. | P0 | ✅ | R, Q |
+| FR-N4 | Expanded: artwork, title, artist, source app, draggable scrubber (seek), elapsed/remaining, previous/play-pause/next, volume slider. | P0 | ✅ | R, Q |
 | FR-N5 | Playhead interpolated locally from elapsed time, timestamp and playback rate; never polled. | P0 | ✅ | T |
-| FR-N6 | Artwork decoded off the main thread, cached by track (24 entries); falls back to the source app's icon. | P1 | ✅ | R |
+| FR-N6 | Artwork decoded off the main thread, cached by track (24 entries); falls back to the source app's icon. | P1 | ✅ | R, Q |
 
 ### 7.6 Timer
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-T1 | Start from Home (1/5/10/25 min), the menu bar (1/5/10/15/25/60 min) or `notchy://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R |
-| FR-T2 | Compact countdown; expanded ring, big countdown, +1 min, pause/resume, cancel. | P0 | ✅ | R |
-| FR-T3 | On completion: "Glass" sound (toggle), peek, then dismiss itself after 8 s. | P0 | ✅ | H |
+| FR-T1 | Start from Home (1/5/10/25 min), the menu bar (1/5/10/15/25/60 min) or `notchy://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R, Q |
+| FR-T2 | Compact countdown; expanded ring, big countdown, +1 min, pause/resume, cancel. | P0 | ✅ | R, Q |
+| FR-T3 | On completion: "Glass" sound (toggle), peek, then dismiss itself after 8 s. | P0 | ✅ | Q, H (sound) |
 | FR-T4 | App Intent for Shortcuts and Spotlight. | P2 | ⛔ | (see §9) |
 
 ### 7.7 Battery
@@ -179,13 +180,14 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-S1 | Menu bar icon (can be hidden; reopening the app shows Settings). | P1 | ✅ | L |
-| FR-S2 | Settings window with General, Activities, Motion and About tabs (see the user guide). | P0 | ✅ | H |
+| FR-S1 | Menu bar icon (can be hidden; reopening the app shows Settings). | P1 | ✅ | L, Q |
+| FR-S2 | Settings window with General, Activities, Motion and About tabs (see the user guide). | P0 | ✅ | Q |
 | FR-S3 | Launch at login (`SMAppService`). | P1 | ✅ | H |
-| FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `open`, `settings`. | P1 | ✅ | T |
-| FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L |
-| FR-S6 | CI builds, tests and renders every state on each push; version tags publish a GitHub Release. | P1 | ✅ | L |
+| FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `open`, `settings`. | P1 | ✅ | T, Q |
+| FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L, Q |
+| FR-S6 | CI builds, tests and renders every state on each push; every app change on `main` publishes a numbered GitHub Release with its SHA-256. | P1 | ✅ | L |
 | FR-S7 | `--demo <scenario>` and `--snapshot <dir>` for verification without a mouse. | P1 | ✅ | L |
+| FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. | P1 | ✅ | T, Q |
 
 ### 7.11 Explicitly out (see §9)
 
@@ -202,12 +204,13 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | NFR-1 | CPU | 0% when idle; animations and timelines run only while visible. | 0.0% Notchy, 0.0% adapter, 0 idle wake-ups/s (CI, all services on) |
 | NFR-2 | Memory | Small and stable. | 12 MB app + 14 MB adapter process |
 | NFR-3 | Latency | Hover-to-open ≈ dwell delay + one frame; no window resizes. | By design; H for feel |
-| NFR-4 | Reliability | Adapter restarts with backoff, falls back if fatal, never outlives the app; orphans from a crash are cleaned up at launch. | L (exits with app) |
-| NFR-5 | Privacy | No accounts, telemetry or analytics; no network use of its own (one exception: Spotify album art in fallback mode is loaded from the URL Spotify provides). Every permission is optional and requested only when its feature is on. | Code review |
+| NFR-4 | Reliability | Adapter restarts with backoff, falls back if fatal, never outlives the app; orphans from a crash are cleaned up at launch. | L (exits with app), Q (restart without flicker, exits on quit) |
+| NFR-5 | Privacy | No accounts, telemetry or analytics. Network use of its own: the update check on GitHub (can be turned off) and, in fallback mode, Spotify album art from Spotify's CDN. Every permission is optional and requested only when its feature is on. | Code review |
 | NFR-6 | Compatibility | macOS 14+, universal binary, notched and non-notched displays, multiple displays. | L (CI on macOS 15) |
 | NFR-7 | Accessibility | VoiceOver labels on controls; Reduce Motion honoured; text meets contrast on black. | Partly H |
 | NFR-8 | Code quality | Swift 6 language mode; geometry, priority, hover intent and parsing unit-tested. | T |
 | NFR-9 | Licensing | Third-party code BSD-3 only, credited in-app; no GPL code or Alcove assets. | Code review |
+| NFR-10 | Security | Nobody can borrow Notchy's permissions: hardened runtime on every build, the Now Playing helper starts with a minimal environment, data from other apps, web pages and calendar invitations is never run as code or opened unless it is a known meeting link. See the [security review](SECURITY_REVIEW.md). | Q (injection attempts refused), T (hostile URLs) |
 
 ## 9. Constraints and things that are not possible
 

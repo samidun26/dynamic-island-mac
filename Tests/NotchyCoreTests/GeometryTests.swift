@@ -54,6 +54,55 @@ final class GeometryTests: XCTestCase {
         XCTAssertTrue(mbp.hitRect(g, grace: NotchMetrics.hoverGrace).contains(justOutside))
     }
 
+    func testOneSidedWingsKeepTheNotchCovered() {
+        let g = mbp.compact(left: 0, right: 70)
+        let body = mbp.islandRect(g)
+        XCTAssertEqual(body.minX, mbp.notchRect.minX, accuracy: 0.01, "the left edge stays on the notch")
+        XCTAssertEqual(body.maxX, mbp.notchRect.maxX + 70, accuracy: 0.01)
+        XCTAssertEqual(mbp.compact(left: 44, right: 44), mbp.compact(wing: 44))
+        XCTAssertEqual(mbp.compact(wing: 44).offsetX, 0)
+        // The lip stays within the notch's width.
+        let lip = mbp.islandRect(mbp.folded())
+        XCTAssertEqual(lip.minX, mbp.notchRect.minX, accuracy: 0.01)
+        XCTAssertEqual(lip.width, mbp.notchRect.width, accuracy: 0.01)
+        XCTAssertEqual(lip.height, mbp.notchRect.height + NotchMetrics.lipHeight, accuracy: 0.01)
+    }
+
+    func testWingsFitTheFreeMenuBar() {
+        func fit(_ l: CGFloat?, _ r: CGFloat) -> WingFit {
+            WingFit.fit(wing: 45, minWing: 35, single: 70, clearance: MenuBarClearance(left: l, right: r))
+        }
+        // Plenty of room: the usual look.
+        XCTAssertEqual(fit(300, 300), WingFit(arrangement: .split, left: 45, right: 45))
+        // Tight on one side: both wings shrink together so the island stays centred.
+        XCTAssertEqual(fit(300, 46), WingFit(arrangement: .split, left: 40, right: 40))
+        // App menus reach the notch (the screenshot case): everything moves right.
+        XCTAssertEqual(fit(12, 120), WingFit(arrangement: .right, left: 0, right: 70))
+        // The left can't be seen (no Accessibility): treated as taken, never covered.
+        XCTAssertEqual(fit(nil, 120), WingFit(arrangement: .right, left: 0, right: 70))
+        // Icons reach the notch on the right, room on the left.
+        XCTAssertEqual(fit(200, 20), WingFit(arrangement: .left, left: 70, right: 0))
+        // No room anywhere: fold into the lip.
+        XCTAssertEqual(fit(nil, 30), WingFit(arrangement: .folded, left: 0, right: 0))
+        XCTAssertEqual(fit(20, 30).arrangement, .folded)
+        // No notch: an icon under the fake notch's spot. Nothing may be drawn over it.
+        XCTAssertEqual(fit(120, -4).arrangement, .hidden)
+        XCTAssertEqual(fit(-10, 120).arrangement, .hidden)
+        // Feature off / not measured.
+        XCTAssertEqual(WingFit.fit(wing: 45, minWing: 35, single: 70, clearance: .unlimited).arrangement, .split)
+    }
+
+    func testFittedIslandNeverReachesTheMeasuredItems() {
+        let menusEnd = mbp.notchRect.minX - 60          // last app menu ends 60 pt before the notch
+        let firstIcon = mbp.notchRect.maxX + 50         // first menu bar icon 50 pt after it
+        let f = WingFit.fit(wing: 45, minWing: 35, single: 70,
+                            clearance: MenuBarClearance(left: mbp.notchRect.minX - menusEnd, right: firstIcon - mbp.notchRect.maxX))
+        XCTAssertEqual(f.arrangement, .split)
+        let body = mbp.islandRect(mbp.compact(left: f.left, right: f.right))
+        XCTAssertGreaterThanOrEqual(body.minX, menusEnd)
+        XCTAssertLessThanOrEqual(body.maxX, firstIcon - WingFit.gap)
+    }
+
     func testSpringSettles() {
         let s = SpringCurve(response: 0.42, dampingFraction: 0.8)
         XCTAssertEqual(s.value(at: 0), 0)

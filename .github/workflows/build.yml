@@ -117,18 +117,9 @@ jobs:
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Package
-        run: ditto -c -k --keepParent build/Notchy.app Notchy.zip
-
-      - name: Publish GitHub Release (version tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" Notchy.zip \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Notchy $GITHUB_REF_NAME" \
-            --notes "Universal (Apple silicon + Intel), ad-hoc signed, not notarized. See docs/USER_GUIDE.md for install steps (you will need to allow it in System Settings > Privacy & Security the first time)." \
-            --verify-tag
+          ditto -c -k --keepParent build/Notchy.app Notchy.zip
+          shasum -a 256 Notchy.zip | tee Notchy.zip.sha256
 
       - uses: actions/upload-artifact@v4
         with:
@@ -137,4 +128,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Notchy-app
-          path: Notchy.zip
+          path: |
+            Notchy.zip
+            Notchy.zip.sha256

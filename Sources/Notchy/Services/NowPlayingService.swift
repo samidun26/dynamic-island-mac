@@ -20,6 +20,8 @@ enum ArtworkUpdate: Sendable {
 enum ArtworkDecoder {
     /// Decode off the main thread: thumbnail to 300 px and sample a 16x16 copy for the tint.
     static func decode(_ data: Data) -> DecodedArtwork? {
+        // Artwork can come from any app or web page that reports Now Playing; skip oversized data.
+        guard data.count <= 16 << 20 else { return nil }
         let opts: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceThumbnailMaxPixelSize: 300,
@@ -278,6 +280,15 @@ final class AdapterBackend: NowPlayingBackend {
 final class AdapterStream: @unchecked Sendable {
     private let queue = DispatchQueue(label: "notchy.nowplaying.adapter", qos: .utility)
     private let perl = URL(fileURLWithPath: "/usr/bin/perl")
+    /// perl honours PERL5OPT, PERL5LIB and similar variables, and its child process acts with
+    /// Notchy's permissions. Start it with a minimal environment, so nothing passed to Notchy
+    /// at launch can make it load other code.
+    private static let environment: [String: String] = {
+        let keep: Set = ["HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE"]
+        var env = ProcessInfo.processInfo.environment.filter { keep.contains($0.key) }
+        env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
+        return env
+    }()
     private let script: String
     private let framework: String
     private let onUpdate: @Sendable (NowPlayingInfo?, ArtworkUpdate) -> Void
@@ -343,6 +354,7 @@ final class AdapterStream: @unchecked Sendable {
             let p = Process()
             p.executableURL = perl
             p.arguments = [script, framework] + args
+            p.environment = Self.environment
             p.standardOutput = FileHandle.nullDevice
             p.standardError = FileHandle.nullDevice
             try? p.run()
@@ -356,6 +368,7 @@ final class AdapterStream: @unchecked Sendable {
         let p = Process()
         p.executableURL = perl
         p.arguments = [script, framework, "stream", "--micros", "--debounce=40"]
+        p.environment = Self.environment
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
@@ -464,8 +477,15 @@ final class LegacyBackend: NowPlayingBackend {
         observers.removeAll()
     }
 
+    /// The player to script: only Music or Spotify. The current track can still come from the
+    /// adapter right after a fallback, and its bundle ID must never reach AppleScript source.
+    private var target: String? {
+        guard let bundle = model?.info?.bundleID, bundle == Self.music || bundle == Self.spotify else { return nil }
+        return bundle
+    }
+
     func send(_ command: MediaCommand) {
-        guard let bundle = model?.info?.bundleID else { return }
+        guard let bundle = target else { return }
         let verb = switch command {
         case .togglePlayPause: "playpause"
         case .next: "next track"
@@ -475,7 +495,7 @@ final class LegacyBackend: NowPlayingBackend {
     }
 
     func seek(to seconds: TimeInterval) {
-        guard let bundle = model?.info?.bundleID else { return }
+        guard let bundle = target, seconds.isFinite else { return }
         scripts.run("tell application id \"\(bundle)\" to set player position to \(seconds)")
     }
 
@@ -573,17 +593,30 @@ final class AppleScriptRunner: @unchecked Sendable {
 
     func artwork(_ bundle: String, _ done: @escaping @MainActor @Sendable (DecodedArtwork?) -> Void) {
         queue.async { [self] in
-            var data: Data?
             if bundle == "com.spotify.client" {
-                if let s = eval("tell application id \"\(bundle)\" to return artwork url of current track")?.stringValue,
-                   let url = URL(string: s) {
-                    data = try? Data(contentsOf: url)
+                // Spotify only gives a URL. Fetch it only over HTTPS from Spotify's image CDN, off
+                // this queue and with a timeout, so a slow server never holds up the controls.
+                guard let s = eval("tell application id \"\(bundle)\" to return artwork url of current track")?.stringValue,
+                      let url = SpotifyArtwork.url(s) else {
+                    Task { @MainActor in done(nil) }
+                    return
                 }
-            } else {
-                data = eval("tell application id \"\(bundle)\" to return data of artwork 1 of current track")?.data
+                Self.session.dataTask(with: url) { data, _, _ in
+                    let art = data.flatMap(ArtworkDecoder.decode)
+                    Task { @MainActor in done(art) }
+                }.resume()
+                return
             }
+            let data = eval("tell application id \"\(bundle)\" to return data of artwork 1 of current track")?.data
             let art = data.flatMap(ArtworkDecoder.decode)
             Task { @MainActor in done(art) }
         }
     }
+
+    private static let session: URLSession = {
+        let c = URLSessionConfiguration.ephemeral
+        c.timeoutIntervalForRequest = 5
+        c.timeoutIntervalForResource = 10
+        return URLSession(configuration: c)
+    }()
 }

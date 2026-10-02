@@ -69,9 +69,17 @@ quit_notchy() {
     for _ in $(seq 1 30); do kill -0 "$NOTCHY_PID" 2>/dev/null || break; sleep 0.2; done
     NOTCHY_PID=""
 }
+HTTP_PID="" QA_KEYCHAIN="" OLD_KEYCHAINS=""
 cleanup() {
     quit_notchy
     [ -n "$FP_PID" ] && kill "$FP_PID" 2>/dev/null
+    [ -n "$HTTP_PID" ] && kill "$HTTP_PID" 2>/dev/null
+    pkill -f "$OUT/update/" 2>/dev/null
+    if [ -n "$QA_KEYCHAIN" ]; then
+        # shellcheck disable=SC2086
+        security list-keychains -d user -s $OLD_KEYCHAINS
+        security delete-keychain "$QA_KEYCHAIN" 2>/dev/null
+    fi
     defaults delete "$BID" >/dev/null 2>&1
     if [ -f "$OUT/defaults-backup.plist" ]; then defaults import "$BID" "$OUT/defaults-backup.plist"; fi
 }
@@ -226,7 +234,7 @@ fi
 # ---------------------------------------------------------------- now playing
 echo "== now playing (FakePlayer)"
 mark "$LOG"
-"$FP_APP/Contents/MacOS/FakePlayer" > "$FPLOG" 2>&1 &
+FP_CROWD_FILE="$OUT/crowd-width" "$FP_APP/Contents/MacOS/FakePlayer" > "$FPLOG" 2>&1 &
 FP_PID=$!
 sleep 0.5
 if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
@@ -244,11 +252,14 @@ if wait_for "$LOG" "NOWPLAYING title=QA Track One.*playing=true" 12; then
     fi
     sleep 1; shot qa09-compact
     W=$(island_width qa09-compact)
-    WANT=$((NW + 2 * (NH + 12)))   # notch + two wings of (notch height + 12)
-    if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "$WANT" 6; then
-        pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide, expected ${WANT} ([shot](shots/qa09-compact.png))"
+    # The width depends on how much menu bar is free beside the notch (QA-35): check the island on
+    # screen is the size Notchy says it drew.
+    WANT=$(logged_size | cut -dx -f1)
+    FIT=$(grep -E 'STATE compact:nowPlaying' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
+    if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ] && near "${W:-0}" "${WANT:-0}" 6; then
+        pass QA-09 "Compact wings: artwork + equaliser (FR-N3)" "${W} pt wide as drawn (${FIT}) ([shot](shots/qa09-compact.png))"
     else
-        fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide, expected ${WANT}"
+        fail QA-09 "Compact wings: artwork + equaliser (FR-N3)" "state $(last_state), ${W} pt wide on screen, ${WANT} drawn"
     fi
     "$D" jump "$CX" 500 >/dev/null; sleep 2
     CPU_COMPACT=$(cpu_avg)
@@ -475,13 +486,17 @@ menu_click() { # $1 = label for the evidence; prints yes/no and what was under t
     r=$(wait_menu)
     lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/qa26-menu-$1.png"
     "$D" key escape; sleep 0.4
-    echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '))"
+    local closed=yes; menu_open && closed=no
+    echo "$r (front: $(front_app); $(after "$LOG" | grep -oE 'MOUSEDOWN [a-z]+( window [A-Za-z]+)?|active=[a-z]+' | tr '\n' ' '); closed by Escape: $closed)"
 }
-menu_press() { # the same menu, opened through Accessibility instead of a click
-    local r
+menu_press() { # $1 = screenshot name; the same menu, opened through Accessibility instead of a click
+    local r ix
+    ix=$("$D" windows Notchy | awk '{split($5,w,"="); split($6,h,"="); if (h[2]>0 && h[2]<=40 && w[2]<60) print}' | head -1 | sed -E 's/.* x=([0-9]+).*/\1/')
     ( lim 4 "$D" status-press $BID >/dev/null 2>&1 & )
     r=$(wait_menu)
+    [ -n "$ix" ] && lim 10 screencapture -x -R "$((ix - 220)),0,320,260" "$OUT/shots/$1.png"
     "$D" key escape; sleep 0.6
+    menu_open && { "$D" key escape; sleep 0.6; }   # never leave a menu open for the next case
     echo "$r"
 }
 if [ "$INPUT" = yes ]; then
@@ -509,13 +524,32 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
         CLOSED=untested
         FOCUSED=$(grep -o 'SETTINGS focused=[a-z]*' "$LOG" | tail -1 | cut -d= -f2)
         if [ "$INPUT" = yes ]; then
-            "$D" key cmd-w; sleep 0.8
-            "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID" && CLOSED=no || CLOSED=yes
+            finder_windows() { "$D" windows Finder | awk '{split($2,l,"="); if (l[2]==0) n++} END {print n+0}'; }
+            settings_open() { "$D" windows Notchy | awk '{split($1,i,"="); print i[2]}' | grep -qx "$SW_ID"; }
+            F0=$(finder_windows)
+            mark "$LOG"; "$D" key cmd-w; sleep 0.8
+            settings_open && CLOSED=no || CLOSED=yes
+            if [ $CLOSED = no ]; then
+                # Where did it go? Then once more, after clicking the window like a person would.
+                WENT="Notchy got it: $(after "$LOG" | grep -c ' KEY w '); Finder windows ${F0}→$(finder_windows)"
+                WIN=$("$D" windows Notchy | grep "id=$SW_ID ")
+                WX=$(echo "$WIN" | sed -E 's/.* x=([0-9]+).*/\1/'); WY=$(echo "$WIN" | sed -E 's/.* y=([0-9]+).*/\1/'); WW=$(echo "$WIN" | sed -E 's/.* w=([0-9]+).*/\1/')
+                "$D" click $((WX + WW / 2)) $((WY + 12)); sleep 0.4
+                mark "$LOG"; "$D" key cmd-w; sleep 0.8
+                if settings_open; then
+                    # The VM sometimes drops synthetic key presses before any app gets them (the
+                    # trace shows Notchy never received one). Hand ⌘W straight to Notchy instead.
+                    mark "$LOG"; "$D" key cmd-w "$NOTCHY_PID"; sleep 0.8
+                    settings_open && CLOSED=no || CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                else
+                    CLOSED="after clicking the window (the first press went astray: $WENT)"
+                fi
+            fi
         fi
         if [ "$CLOSED" != no ]; then
             pass QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown and focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)); closed by ⌘W: $CLOSED"
         else
-            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it"
+            fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "window shown, focused=${FOCUSED:-?} ([shot](shots/qa24-settings.png)), but ⌘W did not close it, even after clicking it; ${WENT:-}; front: $(front_app); trace: $(after "$LOG" | grep -E 'KEY|SETTINGS|MENU' | sed -E 's/^QA [0-9.]+ //' | tail -6 | tr '\n' ';')"
         fi
     else
         fail QA-24 "Settings window opens; ⌘W closes it (FR-S2)" "no settings window on screen"
@@ -524,12 +558,19 @@ else
     fail QA-24 "Settings window opens (FR-S2)" "notchy://settings not handled"
 fi
 
-# Diagnostic D1: the same click after Notchy has been the active app (Settings focused, closed).
-DIAG=""
-if [ "$INPUT" = yes ]; then
+# The menu still opens after Settings was used (Notchy has been the active app). Opened through
+# Accessibility, as VoiceOver would: on the CI machine only the first synthetic click on a menu bar
+# item in a session opens its menu, for a fresh Notchy that was never active too, so a second click
+# proves nothing either way.
+if [ "$AX" = yes ]; then
     open -a Finder; sleep 1
-    DIAG="D1 click after Settings was focused and closed: $(menu_click d1-after-settings)"
-    [ "$AX" = yes ] && DIAG="$DIAG; D1b the same, opened through Accessibility: $(menu_press)"
+    if [ "$(menu_press qa32-menu-after-settings)" = yes ]; then
+        pass QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "menu window on screen ([shot](shots/qa32-menu-after-settings.png))"
+    else
+        fail QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "no menu window ([shot](shots/qa32-menu-after-settings.png))"
+    fi
+else
+    skip QA-32 "Menu bar menu still opens after Settings was used (FR-S1)" "driver has no Accessibility permission"
 fi
 
 # ---------------------------------------------------------------- resilience
@@ -577,6 +618,64 @@ else
     skip QA-31 "CPU with music paused and the island idle (NFR-1)" "precondition not met"
 fi
 
+# ---------------------------------------------------------------- menu bar clearance
+# The compact island must never cover an app menu or a menu bar icon next to the notch.
+echo "== menu bar clearance"
+island_span() { "$D" dark-run "$OUT/shots/$1.png" 3 | awk '{print $1, $1 + $2}'; }
+notch_max=$((CX + NW / 2))
+first_icon() { "$D" status-items | awk -v n=$notch_max '$2 >= n - 2 {print $2}' | sort -n | head -1; }
+menus_end() { [ "$AX" = yes ] && lim 8 "$D" menu-extent 2>/dev/null | awk '{print $2}'; }
+clear_check() { # $1 = screenshot; prints "ok|overlap" and the evidence
+    local span a b icon menus fit verdict=ok
+    span=$(island_span "$1"); a=${span% *}; b=${span#* }
+    icon=$(first_icon); menus=$(menus_end)
+    fit=$(grep -E 'STATE compact' "$LOG" | tail -1 | grep -oE 'fit=[a-z]+:[0-9]+/[0-9]+')
+    if [ $((b - a)) -lt 20 ]; then echo "ok nothing drawn over the menu bar, first icon at ${icon:-none}, ${fit}"; return; fi
+    [ -n "$icon" ] && [ "${b:-0}" -gt $((icon - 1)) ] && verdict=overlap
+    [ -n "$menus" ] && [ "${menus:-0}" -gt 0 ] && [ "${a:-0}" -lt $((menus + 1)) ] && verdict=overlap
+    echo "$verdict island ${a}–${b} pt, app menus end at ${menus:-?}, first icon at ${icon:-none}, ${fit}"
+}
+sleep 2.5
+if [ "$(last_state | cut -d' ' -f1)" = compact:nowPlaying ]; then
+    shot qa35-clear
+    C=$(clear_check qa35-clear)
+    FIT0=$(echo "$C" | grep -oE 'fit=[a-z]+')
+    SEEN=$(grep MENUBAR "$LOG" | tail -1 | sed -E 's/.*MENUBAR //')
+    if [ "${C%% *}" = ok ]; then
+        pass QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C#ok }; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+    else
+        fail QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "${C}; Notchy measured ${SEEN} ([shot](shots/qa35-clear.png))"
+    fi
+
+    # Crowd the menu bar: a wide icon right next to the notch, like the Wi-Fi icon in the bug report.
+    ICON0=$(first_icon)
+    ROOM=$(( ${ICON0:-0} - notch_max - 12 ))
+    if [ -n "$ICON0" ] && [ "$ROOM" -gt 30 ] && ! echo "$FIT0" | grep -qE 'folded|left'; then
+        echo "$ROOM" > "$OUT/crowd-width"
+        mark "$LOG"; kill -HUP "$FP_PID"
+        if wait_for "$LOG" "STATE compact:nowPlaying .*fit=(folded|left|hidden)" 6; then
+            sleep 1; shot qa36-crowded
+            C2=$(clear_check qa36-crowded)
+            mark "$LOG"; kill -HUP "$FP_PID"
+            BACK=no; wait_for "$LOG" "STATE compact:nowPlaying .*${FIT0}" 6 && BACK=yes
+            if [ "${C2%% *}" = ok ] && [ $BACK = yes ]; then
+                pass QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "${ROOM} pt icon added: ${C2#ok }; back to ${FIT0#fit=} when it went away ([shot](shots/qa36-crowded.png))"
+            else
+                fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "${C2}; back when removed: ${BACK} ([shot](shots/qa36-crowded.png))"
+            fi
+        else
+            shot qa36-crowded
+            fail QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "no re-fit after a ${ROOM} pt icon appeared; $(last_state); $(grep -hE 'CROWD' "$FPLOG" | tail -2 | sed -E 's/^.*CROWD/CROWD/' | tr '\n' ';') icons: $("$D" status-items | tr '\n' ',') ([shot](shots/qa36-crowded.png))"
+            kill -HUP "$FP_PID"
+        fi
+    else
+        skip QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "the menu bar is already full next to the notch (first icon at ${ICON0:-none}, ${FIT0})"
+    fi
+else
+    skip QA-35 "Compact island keeps clear of menus and menu bar icons (FR-W9)" "not in compact:nowPlaying ($(last_state))"
+    skip QA-36 "A crowded menu bar moves or folds the island instead of being covered (FR-W9)" "precondition not met"
+fi
+
 quit_notchy; sleep 1
 if pgrep -f "mediaremote-adapter.pl" >/dev/null; then
     fail QA-28 "Quitting stops the Now Playing helper (NFR-4)" "perl adapter still running"
@@ -597,13 +696,173 @@ else
     quit_notchy
 fi
 
-# Diagnostic D3: a fresh Notchy that has never been active, second menu click of the session.
-if [ "$INPUT" = yes ]; then
-    defaults write "$BID" nonNotchMode whenActive
-    launch_notchy; sleep 2; open -a Finder; sleep 1.5
-    DIAG="$DIAG; D3 fresh launch, never active: $(menu_click d3-fresh)"
-    quit_notchy
+# ---------------------------------------------------------------- updates
+# Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub
+# (a test-only Info.plist key; shipped builds always ask GitHub). It offers 9.9.9. Covers the
+# download, every check before installing, the swap in place and the relaunch.
+echo "== updates"
+UPD="$OUT/update"; rm -rf "$UPD"; mkdir -p "$UPD/feed"
+PB=/usr/libexec/PlistBuddy
+make_copy() { # dir version identity("-" = ad-hoc)
+    rm -rf "$1"; mkdir -p "$1"; ditto "$APP" "$1/Notchy.app"
+    local plist="$1/Notchy.app/Contents/Info.plist"
+    $PB -c "Set :CFBundleShortVersionString $2" "$plist"
+    $PB -c "Add :NotchyUpdateFeed string http://127.0.0.1:8765/latest.json" "$plist"
+    # Plain HTTP to the local stand-in (App Transport Security otherwise insists on HTTPS).
+    $PB -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
+    codesign --force --timestamp=none --options runtime --sign "$3" "$1/Notchy.app/Contents/Frameworks/MediaRemoteAdapter.framework" 2>> "$UPD/codesign.log"
+    codesign --force --timestamp=none --options runtime --entitlements "$SRC/Resources/Notchy.entitlements" --sign "$3" "$1/Notchy.app" 2>> "$UPD/codesign.log"
+}
+publish() { # app dir to offer as 9.9.9 ["bad" checksum]
+    rm -f "$UPD/feed/Notchy.zip"
+    (cd "$1" && ditto -c -k --keepParent Notchy.app "$UPD/feed/Notchy.zip")
+    (cd "$UPD/feed" && shasum -a 256 Notchy.zip > Notchy.zip.sha256)
+    [ "${2:-}" = bad ] && echo "0000000000000000000000000000000000000000000000000000000000000000  Notchy.zip" > "$UPD/feed/Notchy.zip.sha256"
+    cat > "$UPD/feed/latest.json" <<JSON
+{"tag_name": "v9.9.9", "html_url": "https://github.com/samidun26/dynamic-island-mac/releases/tag/v9.9.9",
+ "body": "- QA release", "draft": false, "prerelease": false,
+ "assets": [{"name": "Notchy.zip", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip", "size": $(stat -f %z "$UPD/feed/Notchy.zip")},
+            {"name": "Notchy.zip.sha256", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip.sha256", "size": 77}]}
+JSON
+}
+UPD_RESULT="" RELAUNCHED=""
+try_update() { # installed dir: sets UPD_RESULT and RELAUNCHED
+    local exe="$1/Notchy.app/Contents/MacOS/Notchy" pid
+    mark "$LOG"
+    NOTCHY_QA_LOG=1 NOTCHY_QA_UPDATE=install "$exe" >> "$LOG" 2>&1 &
+    pid=$!
+    if wait_for "$LOG" "UPDATE (installed|failed)" 45; then
+        UPD_RESULT=$(after "$LOG" | grep -E 'UPDATE (installed|failed)' | tail -1 | sed -E 's/.*UPDATE //; s/ at \/.*//')
+    else
+        UPD_RESULT="timeout: $(after "$LOG" | grep UPDATE | tail -2 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    # An installed update quits this copy and opens the new one (without the test trace).
+    RELAUNCHED=""
+    for _ in $(seq 1 25); do
+        RELAUNCHED=$(pgrep -f "$exe" | grep -vx "$pid" | head -1)
+        [ -n "$RELAUNCHED" ] && break
+        echo "$UPD_RESULT" | grep -q '^installed' || break
+        sleep 0.4
+    done
+    kill "$pid" 2>/dev/null; pkill -f "$exe" 2>/dev/null; sleep 1
+}
+disk_version() { $PB -c 'Print CFBundleShortVersionString' "$1/Notchy.app/Contents/Info.plist" 2>/dev/null; }
+
+python3 -m http.server 8765 --bind 127.0.0.1 --directory "$UPD/feed" > "$UPD/http.log" 2>&1 &
+HTTP_PID=$!
+# Wait until the stand-in actually answers (a cold runner can take a while to start Python).
+for _ in $(seq 1 60); do curl -s -o /dev/null --max-time 2 http://127.0.0.1:8765/ && break; sleep 0.5; done
+
+# QA-37: the usual case today: ad-hoc signed copy, ad-hoc signed release.
+make_copy "$UPD/installed" 1.0.0 -
+make_copy "$UPD/new" 9.9.9 -
+publish "$UPD/new"
+try_update "$UPD/installed"
+V=$(disk_version "$UPD/installed")
+if echo "$UPD_RESULT" | grep -q '^installed 9.9.9' && [ "$V" = 9.9.9 ] && [ -n "$RELAUNCHED" ] && codesign --verify --deep --strict "$UPD/installed/Notchy.app" 2>/dev/null; then
+    pass QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "1.0.0 → 9.9.9 from the release feed; signature valid; new copy running (pid $RELAUNCHED)"
+else
+    fail QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "result: $UPD_RESULT; on disk: ${V:-?}; relaunched: ${RELAUNCHED:-no}"
 fi
+
+# QA-38: a download that doesn't match the published checksum.
+make_copy "$UPD/installed" 1.0.0 -
+publish "$UPD/new" bad
+try_update "$UPD/installed"
+V=$(disk_version "$UPD/installed")
+if echo "$UPD_RESULT" | grep -q "^failed: .*checksum" && [ "$V" = 1.0.0 ] && [ -z "$RELAUNCHED" ]; then
+    pass QA-38 "Update: a download that doesn't match its checksum is refused (NFR-10)" "\"${UPD_RESULT#failed: }\"; installed copy untouched (1.0.0)"
+else
+    fail QA-38 "Update: a download that doesn't match its checksum is refused (NFR-10)" "result: $UPD_RESULT; on disk: ${V:-?}"
+fi
+
+# QA-39: with a release signing identity, only updates signed with the same identity install.
+# Two throwaway identities in a temporary keychain (CI only: it changes the keychain list).
+if [ "${CI:-}" = true ]; then
+    QA_KEYCHAIN="$UPD/qa.keychain-db"
+    OLD_KEYCHAINS=$(security list-keychains -d user | tr -d '"')
+    security create-keychain -p qa "$QA_KEYCHAIN"
+    security set-keychain-settings "$QA_KEYCHAIN"
+    security unlock-keychain -p qa "$QA_KEYCHAIN"
+    LEGACY=""; openssl pkcs12 -help 2>&1 | grep -q -- '-legacy' && LEGACY="-legacy"
+    for who in A B; do
+        printf '[req]\ndistinguished_name = dn\nx509_extensions = ext\nprompt = no\n[dn]\nCN = Notchy QA %s\n[ext]\nbasicConstraints = critical, CA:false\nkeyUsage = critical, digitalSignature\nextendedKeyUsage = critical, codeSigning\n' "$who" > "$UPD/$who.cnf"
+        openssl req -x509 -newkey rsa:2048 -sha256 -days 2 -nodes -config "$UPD/$who.cnf" -keyout "$UPD/$who.key" -out "$UPD/$who.pem" 2>/dev/null
+        # shellcheck disable=SC2086
+        openssl pkcs12 -export $LEGACY -inkey "$UPD/$who.key" -in "$UPD/$who.pem" -name "Notchy QA $who" -out "$UPD/$who.p12" -passout pass:qa
+        security import "$UPD/$who.p12" -k "$QA_KEYCHAIN" -P qa -T /usr/bin/codesign >/dev/null
+    done
+    security set-key-partition-list -S apple-tool:,apple: -s -k qa "$QA_KEYCHAIN" >/dev/null
+    # shellcheck disable=SC2086
+    security list-keychains -d user -s "$QA_KEYCHAIN" $OLD_KEYCHAINS
+    IDA=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA A/ {print $2; exit}')
+    IDB=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA B/ {print $2; exit}')
+    if [ -n "$IDA" ] && [ -n "$IDB" ]; then
+        make_copy "$UPD/installed" 1.0.0 "$IDA"
+        make_copy "$UPD/new" 9.9.9 "$IDB"
+        publish "$UPD/new"
+        try_update "$UPD/installed"
+        R_OTHER=$UPD_RESULT; V_OTHER=$(disk_version "$UPD/installed")
+        make_copy "$UPD/new" 9.9.9 "$IDA"
+        publish "$UPD/new"
+        try_update "$UPD/installed"
+        R_SAME=$UPD_RESULT; V_SAME=$(disk_version "$UPD/installed")
+        if echo "$R_OTHER" | grep -q '^failed: .*same developer' && [ "$V_OTHER" = 1.0.0 ] && echo "$R_SAME" | grep -q '^installed 9.9.9' && [ "$V_SAME" = 9.9.9 ]; then
+            pass QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "signed by another identity: \"${R_OTHER#failed: }\"; same identity: installed 9.9.9"
+        else
+            fail QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "other identity: $R_OTHER (disk ${V_OTHER:-?}); same identity: $R_SAME (disk ${V_SAME:-?}); $(tail -2 "$UPD/codesign.log" | tr '\n' ' ')"
+        fi
+    else
+        fail QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "could not create the test identities: $(security find-identity -p codesigning "$QA_KEYCHAIN" | tr '\n' ' ')"
+    fi
+else
+    skip QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "needs a throwaway keychain; runs on CI"
+fi
+kill "$HTTP_PID" 2>/dev/null; HTTP_PID=""
+
+# ---------------------------------------------------------------- security
+# Another program running as the user must not be able to borrow Notchy's permissions
+# (Accessibility, Calendars, Automation) by starting it with an environment that loads its code:
+# DYLD_INSERT_LIBRARIES into Notchy, or PERL5OPT/PERL5LIB into its Now Playing helper (perl).
+# Each attack is first shown to work on an unprotected program, then tried on Notchy.
+echo "== security: code injection through the launch environment"
+SEC="$OUT/sec"; rm -rf "$SEC"; mkdir -p "$SEC/perl"
+printf '#include <stdio.h>\n#include <stdlib.h>\n#include <unistd.h>\n__attribute__((constructor)) static void injected(void) { FILE *f = fopen("%s", "a"); if (f) { fprintf(f, "%%s(%%d) ", getprogname(), getpid()); fclose(f); } }\n' "$SEC/marker-dylib" > "$SEC/inject.c"
+printf 'int main(void) { return 0; }\n' > "$SEC/plain.c"
+printf 'package QAInject;\nif (open(my $o, ">>", "%s")) { print $o "injected\\n"; close $o; }\n1;\n' "$SEC/marker-perl" > "$SEC/perl/QAInject.pm"
+clang -dynamiclib -o "$SEC/inject.dylib" "$SEC/inject.c" 2>> "$OUT/harness-build.log"
+clang -o "$SEC/plain" "$SEC/plain.c" 2>> "$OUT/harness-build.log"
+DYLD_INSERT_LIBRARIES="$SEC/inject.dylib" "$SEC/plain"
+PERL5LIB="$SEC/perl" PERL5OPT=-MQAInject /usr/bin/perl -e 1
+CTRL_DYLIB=no; [ -s "$SEC/marker-dylib" ] && CTRL_DYLIB=yes
+CTRL_PERL=no; [ -s "$SEC/marker-perl" ] && CTRL_PERL=yes
+rm -f "$SEC/marker-dylib" "$SEC/marker-perl"
+note "attacks work on unprotected programs: dylib $CTRL_DYLIB, perl $CTRL_PERL"
+
+defaults write "$BID" nonNotchMode whenActive
+mark "$LOG"
+DYLD_INSERT_LIBRARIES="$SEC/inject.dylib" PERL5LIB="$SEC/perl" PERL5OPT=-MQAInject NOTCHY_QA_LOG=1 \
+    "$APP/Contents/MacOS/Notchy" >> "$LOG" 2>&1 &
+NOTCHY_PID=$!
+STARTED=no; wait_for "$LOG" "LAUNCH" 15 && STARTED=yes
+ADAPTER=no; wait_for "$LOG" "NOWPLAYING title=QA" 10 && ADAPTER=yes
+sleep 1
+FLAGS=$(codesign -dv "$APP" 2>&1 | grep -o 'flags=[^ ]*')
+if [ $CTRL_DYLIB = no ]; then
+    skip QA-33 "Libraries injected at launch are refused (NFR-10)" "the injection does not work here even on an unprotected program"
+elif [ $STARTED = yes ] && [ ! -e "$SEC/marker-dylib" ] && echo "$FLAGS" | grep -q runtime; then
+    pass QA-33 "Libraries injected at launch are refused (NFR-10)" "DYLD_INSERT_LIBRARIES ran in a plain program, not in Notchy ($FLAGS, __RESTRICT segment)"
+else
+    fail QA-33 "Libraries injected at launch are refused (NFR-10)" "started=$STARTED, injected into: $(cat "$SEC/marker-dylib" 2>/dev/null || echo nothing); $FLAGS; restrict segment: $(otool -l "$APP/Contents/MacOS/Notchy" | grep -c __RESTRICT)"
+fi
+if [ $CTRL_PERL = no ]; then
+    skip QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT has no effect here even on plain perl"
+elif [ $ADAPTER = yes ] && [ ! -e "$SEC/marker-perl" ]; then
+    pass QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "PERL5OPT/PERL5LIB ran code in plain perl, not in the helper; Now Playing still works"
+else
+    fail QA-34 "The Now Playing helper ignores Perl injection variables (NFR-10)" "adapter running=$ADAPTER, injected=$([ -e "$SEC/marker-perl" ] && echo yes || echo no)"
+fi
+quit_notchy
 
 # ---------------------------------------------------------------- downloaded copy (Gatekeeper)
 # Last, because the system dialog it triggers stays on screen.
@@ -644,7 +903,6 @@ $LSREG -u "$DL/a/Notchy.app" 2>/dev/null; $LSREG -u "$DL/b/Notchy.app" 2>/dev/nu
     echo "CPU of Notchy (average of three 2 s samples, on a CI virtual machine; expect less on real hardware): idle ${CPU}% · music playing in the compact wings ${CPU_COMPACT:-?}% · expanded Now Playing ${CPU_EXPANDED:-?}% · music paused, island idle ${CPU_PAUSED:-?}%."
     echo
     echo "Input synthesis: $INPUT. Accessibility for the driver: $AX. Screen: ${SW} pt wide, menu bar ${MB} pt, notch: $([ "${HASNOTCH:-no}" = yes ] && echo "${NW}×${NH} pt" || echo none)."
-    [ -n "${DIAG:-}" ] && { echo; echo "Diagnostics (status menu): ${DIAG}"; }
 } >> "$REPORT"
 echo "== $PASS passed, $FAIL failed, $SKIP skipped"
 [ "$FAIL" -eq 0 ]

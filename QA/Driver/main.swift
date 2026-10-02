@@ -224,9 +224,19 @@ case "key":
     let code: CGKeyCode = arg(1) == "return" ? 36 : arg(1) == "cmd-w" ? 13 : 53
     let down = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true)
     let up = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false)
-    if arg(1).hasPrefix("cmd-") { down?.flags = .maskCommand; up?.flags = .maskCommand }
-    post(down)
-    post(up)
+    // Always set the flags: an event from this source otherwise inherits modifiers from earlier
+    // ones (an Escape after ⌘W arrived as ⌘Escape, which does not close a menu).
+    let flags: CGEventFlags = arg(1).hasPrefix("cmd-") ? .maskCommand : []
+    down?.flags = flags
+    up?.flags = flags
+    if args.count > 2, let pid = pid_t(arg(2)) {
+        // Straight to one process, past the window server's keyboard focus.
+        down?.postToPid(pid)
+        up?.postToPid(pid)
+    } else {
+        post(down)
+        post(up)
+    }
 case "windows":
     let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
     for w in list where (w[kCGWindowOwnerName as String] as? String) == arg(1) {
@@ -268,6 +278,26 @@ case "ax-frame":
 case "ax-press":
     guard let e = find(arg(1), arg(2), region(at: 3)) else { fail("not found: \(arg(2))") }
     print(AXUIElementPerformAction(e, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
+case "status-items":
+    // Every menu bar icon on screen (status-level windows), whoever owns it: "owner x width".
+    let level = Int(CGWindowLevelForKey(.statusWindow))
+    let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+    for w in list where (w[kCGWindowLayer as String] as? Int) == level {
+        let b = w[kCGWindowBounds as String] as? [String: Double] ?? [:]
+        let owner = (w[kCGWindowOwnerName as String] as? String ?? "?").replacingOccurrences(of: " ", with: "_")
+        print("\(owner) \(Int(b["X"] ?? 0)) \(Int(b["Width"] ?? 0))")
+    }
+case "menu-extent":
+    // Right edge of the frontmost app's menus (Accessibility): "app maxX".
+    guard let app = NSWorkspace.shared.menuBarOwningApplication else { fail("no menu bar owner") }
+    let el = AXUIElementCreateApplication(app.processIdentifier)
+    var end = 0.0
+    if let bar = attr(el, kAXMenuBarAttribute) {
+        for item in (attr(bar as! AXUIElement, kAXChildrenAttribute) as? [AXUIElement]) ?? [] {
+            if let f = frame(item), f.width > 0 { end = max(end, Double(f.maxX)) }
+        }
+    }
+    print("\((app.localizedName ?? "?").replacingOccurrences(of: " ", with: "_")) \(Int(end))")
 case "status-press":
     // Press the app's menu bar item the way VoiceOver would (AXExtrasMenuBar → first item).
     // The call can block while the menu is open, so callers run it under a time limit.

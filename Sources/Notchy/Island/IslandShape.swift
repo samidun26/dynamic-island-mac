@@ -3,35 +3,40 @@ import NotchyCore
 
 /// The island outline: a flat top flush with the screen edge, concave "ears" at the top corners
 /// that flare into the bezel the way the physical notch does, and continuous convex bottom
-/// corners. The body is centred horizontally and top-aligned in whatever rect it is given, so the
-/// view's frame never has to change: width, height and both radii animate as one value.
+/// corners. The body is top-aligned and centred horizontally (plus `offsetX`) in whatever rect it
+/// is given, so the view's frame never has to change: width, height, both radii and the offset
+/// animate as one value.
 struct IslandShape: Shape {
     var width: CGFloat
     var height: CGFloat
     var bottomRadius: CGFloat
     var earRadius: CGFloat
+    var offsetX: CGFloat
 
-    init(_ g: IslandGeometry) {
+    /// `centred` ignores the geometry's offset (for clipping content that is itself offset).
+    init(_ g: IslandGeometry, centred: Bool = false) {
         width = g.size.width
         height = g.size.height
         bottomRadius = g.bottomRadius
         earRadius = g.earRadius
+        offsetX = centred ? 0 : g.offsetX
     }
 
-    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
-        get { AnimatablePair(AnimatablePair(width, height), AnimatablePair(bottomRadius, earRadius)) }
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat>> {
+        get { AnimatablePair(AnimatablePair(width, height), AnimatablePair(AnimatablePair(bottomRadius, earRadius), offsetX)) }
         set {
             width = newValue.first.first
             height = newValue.first.second
-            bottomRadius = newValue.second.first
-            earRadius = newValue.second.second
+            bottomRadius = newValue.second.first.first
+            earRadius = newValue.second.first.second
+            offsetX = newValue.second.second
         }
     }
 
     func path(in rect: CGRect) -> Path {
         let w = max(0, width), h = max(0, height)
         guard w > 0.5, h > 0.5 else { return Path() }
-        let x0 = rect.midX - w / 2, x1 = rect.midX + w / 2
+        let x0 = rect.midX + offsetX - w / 2, x1 = rect.midX + offsetX + w / 2
         let y0 = rect.minY, y1 = rect.minY + h
         // Keep the corners inside the body however small it gets mid-animation.
         let r = max(0, min(bottomRadius, w / 2, h * 0.75))

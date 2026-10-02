@@ -42,8 +42,12 @@ final class AppSettings {
     var haptics: Bool { didSet { save(haptics, "haptics") } }
     var hideFromScreenSharing: Bool { didSet { save(hideFromScreenSharing, "hideFromScreenSharing") } }
     var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, "showMenuBarIcon") } }
+    /// Look for a newer release on GitHub after launch and every 6 hours.
+    var checkForUpdates: Bool { didSet { save(checkForUpdates, "checkForUpdates") } }
 
     // Display
+    /// Fit the compact wings into the free menu bar space instead of covering menus and icons.
+    var keepClearOfMenuBar: Bool { didSet { save(keepClearOfMenuBar, "keepClearOfMenuBar") } }
     var screenChoice: ScreenChoice { didSet { save(screenChoice.rawValue, "screenChoice") } }
     var nonNotchMode: NonNotchMode { didSet { save(nonNotchMode.rawValue, "nonNotchMode") } }
 
@@ -76,6 +80,8 @@ final class AppSettings {
         haptics = bool("haptics", true)
         hideFromScreenSharing = bool("hideFromScreenSharing", true)
         showMenuBarIcon = bool("showMenuBarIcon", true)
+        checkForUpdates = bool("checkForUpdates", true)
+        keepClearOfMenuBar = bool("keepClearOfMenuBar", true)
         screenChoice = ScreenChoice(rawValue: defaults.string(forKey: "screenChoice") ?? "") ?? .notched
         nonNotchMode = NonNotchMode(rawValue: defaults.string(forKey: "nonNotchMode") ?? "") ?? .whenActive
         nowPlayingEnabled = bool("nowPlayingEnabled", true)

@@ -19,13 +19,18 @@ final class IslandModel {
     let battery = BatteryModel()
     let calendar = CalendarModel()
     let hud = HUDModel()
+    let menuBar = MenuBarSpace()
 
-    var metrics: NotchMetrics
+    var metrics: NotchMetrics {
+        didSet { menuBar.update(metrics: metrics) }
+    }
 
     // Presentation (derived)
     private(set) var state = IslandState.idle
     private(set) var geometry: IslandGeometry
     private(set) var secondaries: [ActivityKind] = []
+    /// How the compact activity sits beside the notch (see `fit(for:secondaries:)`).
+    private(set) var compactFit = WingFit(arrangement: .split, left: 0, right: 0)
     private(set) var pages: [Page] = [.home]
     /// +1 when the last page change moved forward, -1 backward (drives the slide direction).
     private(set) var pageDirection = 1
@@ -65,6 +70,7 @@ final class IslandModel {
         var state: IslandState
         var geometry: IslandGeometry
         var secondaries: [ActivityKind]
+        var fit: WingFit
         var pages: [Page]
     }
 
@@ -91,7 +97,7 @@ final class IslandModel {
     }
 
     private func commit(_ next: Presentation) {
-        let current = Presentation(state: state, geometry: geometry, secondaries: secondaries, pages: pages)
+        let current = Presentation(state: state, geometry: geometry, secondaries: secondaries, fit: compactFit, pages: pages)
         guard next != current else { return }
         let area = { (g: IslandGeometry) in g.size.width * g.size.height }
         let growing = area(next.geometry) >= area(current.geometry)
@@ -100,9 +106,12 @@ final class IslandModel {
             state = next.state
             geometry = next.geometry
             secondaries = next.secondaries
+            compactFit = next.fit
             pages = next.pages
         }
-        QALog.log("STATE \(QALog.describe(next.state)) \(Int(next.geometry.size.width))x\(Int(next.geometry.size.height)) secondaries=\(next.secondaries.map(\.rawValue)) pages=\(next.pages.count)")
+        let fit = next.state.isCompact ? " fit=\(next.fit.arrangement.rawValue):\(Int(next.fit.left))/\(Int(next.fit.right)) x=\(Int(metrics.islandRect(next.geometry).minX - metrics.screenFrame.minX))" : ""
+        QALog.log("STATE \(QALog.describe(next.state)) \(Int(next.geometry.size.width))x\(Int(next.geometry.size.height)) secondaries=\(next.secondaries.map(\.rawValue)) pages=\(next.pages.count)\(fit)")
+        menuBar.setWatching(next.state.isCompact)
         onPresentationChange?(old, next.state)
     }
 
@@ -147,27 +156,46 @@ final class IslandModel {
             state = .idle
         }
         let secondaries = state.isOpen ? [] : Array(queue.secondaries.prefix(2))
-        return Presentation(state: state, geometry: layout(for: state, secondaries: secondaries.count), secondaries: secondaries, pages: pages)
+        var fit = compactFit
+        if case .compact(let kind) = state { fit = self.fit(for: kind, secondaries: secondaries.count) }
+        return Presentation(state: state, geometry: layout(for: state, fit: fit), secondaries: secondaries, fit: fit, pages: pages)
     }
 
     /// Hidden when idle on screens without a notch, unless the user wants a permanent fake notch.
     var hidesWhenIdle: Bool { !metrics.hasNotch && settings.nonNotchMode != .always }
 
-    private func layout(for state: IslandState, secondaries: Int) -> IslandGeometry {
+    private func layout(for state: IslandState, fit: WingFit) -> IslandGeometry {
         let bump = hovering && !settings.openOnHover
+        // Fitted between menu bar items, the hover nudge only grows downward.
+        let widen = !settings.keepClearOfMenuBar
         switch state {
         case .idle:
-            if bump { return metrics.bumped(metrics.idle()) }
+            if bump { return metrics.bumped(metrics.idle(), widen: widen) }
             return metrics.idle(hidden: hidesWhenIdle)
-        case .compact(let kind):
-            let g = metrics.compact(wing: wing(for: kind) + CGFloat(secondaries) * Self.minimalSlot)
-            return bump ? metrics.bumped(g) : g
+        case .compact:
+            let g = switch fit.arrangement {
+            case .folded: metrics.folded()
+            case .hidden: metrics.idle(hidden: true)
+            case .split, .left, .right: metrics.compact(left: fit.left, right: fit.right)
+            }
+            return bump && fit.arrangement != .hidden ? metrics.bumped(g, widen: widen) : g
         case .expanded, .peek:
             return metrics.expanded()
         }
     }
 
     static let minimalSlot: CGFloat = 22
+
+    /// Where the compact activity goes so it covers no menu or menu bar icon: both wings when
+    /// there is room, everything on one side when only one side is free, or a slim lip under the
+    /// notch when neither is. With "Keep clear of the menu bar" off, it always uses both wings.
+    func fit(for kind: ActivityKind, secondaries: Int) -> WingFit {
+        let base = wing(for: kind)
+        let extra = CGFloat(secondaries) * Self.minimalSlot
+        let clearance = settings.keepClearOfMenuBar ? menuBar.clearance : .unlimited
+        return WingFit.fit(wing: base + extra, minWing: (base * 0.78).rounded() + extra,
+                           single: (base * 1.55).rounded() + extra, clearance: clearance)
+    }
 
     /// Width of each compact wing for an activity, scaled to the notch height.
     func wing(for kind: ActivityKind) -> CGFloat {
@@ -274,6 +302,10 @@ final class IslandModel {
             if v.0 { self?.hud.enableKeys(brightness: v.1) } else { self?.hud.disableKeys() }
         }
         hud.startVolumeMirror()
+        observeChanges({ s.keepClearOfMenuBar }) { [weak self] on in
+            guard let self else { return }
+            if on { self.menuBar.start(metrics: self.metrics) } else { self.menuBar.stop() }
+        }
     }
 }
 

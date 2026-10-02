@@ -1,6 +1,6 @@
 # Notchy
 
-A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry, no network use of its own.
+A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry; it only goes online to check GitHub for its own updates.
 
 **Docs:** [Install & user guide](docs/USER_GUIDE.md) · [Requirements](docs/REQUIREMENTS.md) · [Product requirements (PRD)](docs/PRD.md)
 
@@ -10,7 +10,7 @@ A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.
 |---|---|---|
 | ![](docs/screenshots/notch-compact.png) | ![](docs/screenshots/notch-multi.png) | ![](docs/screenshots/notch-home.png) |
 
-All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
+All states: [notched display](docs/screenshots/sheet-notch.png) · [display without a notch](docs/screenshots/sheet-nonotch.png) · [crowded menu bars](docs/screenshots/sheet-menubar.png) · open animation [frame by frame](docs/screenshots/filmstrip-open.png) · [close](docs/screenshots/filmstrip-close.png) · [the real panel, captured live](docs/screenshots/live-expanded.png)
 
 <sub>Screenshots are rendered by the app itself on CI (`Notchy --snapshot`), over a fake wallpaper and menu bar with 14" MacBook Pro notch geometry.</sub>
 
@@ -21,7 +21,7 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 - **One priority queue, like iOS.** The most important activity owns the wings; others shrink to a small glyph next to it. Swipe sideways on the island to bring another one to the front.
 - **Expands on hover, click or swipe down.** Album art, title, a scrubbable progress bar, previous / play-pause / next, and a volume slider. Swipe sideways between pages: Now Playing, Timer, Up Next, and Home (clock, next event, one-click timers).
 - **Moves like the iPhone island.** The shape is one animatable outline (width, height, bottom corners and the small concave "ears" that fuse it into the bezel) driven by springs. Content fades in with a blur a beat after the shape starts, and leaves before it shrinks. Reversing mid-animation never snaps.
-- **Stays out of the way.** The window never takes focus, clicks outside the island go straight through to the menu bar and other apps, sweeping the pointer across the notch to reach the menu bar does not open it, and it is hidden from screen sharing by default.
+- **Stays out of the way.** Live activities only use free menu bar space: they never cover an app's menus or the icons next to the notch, moving to the free side or shrinking to a thin line under the notch when there's no room ([see how](docs/screenshots/sheet-menubar.png)). The window never takes focus, clicks outside the island go straight through to the menu bar and other apps, sweeping the pointer across the notch to reach the menu bar does not open it, and it is hidden from screen sharing by default.
 
 ### Activities
 
@@ -37,7 +37,7 @@ All states: [notched display](docs/screenshots/sheet-notch.png) · [display with
 
 Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-step instructions, first launch and troubleshooting: [user guide](docs/USER_GUIDE.md).
 
-- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
+- **Download:** get `Notchy.zip` from [Releases](https://github.com/samidun26/dynamic-island-mac/releases) (or the **Notchy-app** artifact of the latest green run on the [Actions tab](https://github.com/samidun26/dynamic-island-mac/actions)), check it with `shasum -a 256 -c Notchy.zip.sha256`, unzip, move **Notchy.app** to Applications. It is not notarized, so allow it once in *System Settings → Privacy & Security → Open Anyway*, or run `xattr -dr com.apple.quarantine /Applications/Notchy.app`.
 - **Build:** needs Xcode 16 or later (the Command Line Tools are enough for a single-architecture build).
 
   ```sh
@@ -47,7 +47,8 @@ Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-
   open build/Notchy.app     # or copy it to /Applications first
   ```
 
-- **Release (maintainers):** push a tag such as `v1.0.0`; CI builds the universal app and attaches `Notchy.zip` to a GitHub Release.
+- **Updates:** Notchy checks GitHub for a new release and offers to install it (Settings → About, or the dot on its menu bar icon). It verifies the download before replacing itself. See [Updating](docs/USER_GUIDE.md#8-updating).
+- **Releases (maintainers):** automatic. Every app change merged into `main` publishes the next release (`VERSION` + a running number) with `Notchy.zip` and its checksum; installed copies pick it up. Run `scripts/setup-signing.sh` once so updates keep people's permissions ([details](docs/USER_GUIDE.md#d-publish-a-release-maintainers)).
 
 ## Using it
 
@@ -118,12 +119,14 @@ Built and checked on GitHub's macOS runners (see `.github/workflows/build.yml`):
 - Every state renders (the screenshots above are produced by `Notchy --snapshot` on CI).
 - Idle with every service running (Now Playing stream, battery, calendar) and nothing playing: Notchy at 0.0% CPU, 0 idle wake-ups/s, 12 MB; the adapter's `perl` process at 0.0% CPU, 14 MB. A 3-second `sample` shows the main thread parked in the run loop for every sample. The adapter process exits with the app (also on `kill`).
 - The real panel renders on screen, centred and flush with the top edge over the menu bar ([window](docs/screenshots/live-expanded.png), [compact on the runner's screen](docs/screenshots/live-screen-compact.png), [expanded](docs/screenshots/live-screen-expanded.png)).
+- **End-to-end QA** ([report](docs/QA_REPORT.md), [latest results](docs/qa/results.md)): installed from this repository as the user guide says, then used with real mouse, click, key and trackpad events and a test music app that publishes to the system Now Playing. Covered: hover and fast sweeps, click-through, pin and dismiss, swipes, Now Playing detection, artwork, play/pause, next and seek reaching the player, timers, Settings, the menu bar menu, helper restart and shutdown, Gatekeeper on a downloaded copy, CPU.
+- **Security review** ([report](docs/SECURITY_REVIEW.md)): no high or critical issues and no secrets in the repository or its history; the issues found are fixed, and the two attack tests (library and Perl injection) run in every QA run.
 
 Not verified, because it needs real hardware and a person:
 
 - Pixel alignment over a real notch. The geometry comes from `NSScreen.safeAreaInsets` and `auxiliaryTopLeftArea/RightArea`, and the CI screenshots use 14" MacBook Pro values, but the runners have no notch.
-- Hover, click, swipe and haptics feel; the springs were tuned by reasoning and rendered frames, not by hand on a trackpad.
-- Real playback through the adapter (no audio on CI), the Music/Spotify fallback, calendar permission prompts, the Accessibility flow and media keys, charging events.
+- How hover, click, swipe and haptics *feel*; the springs were tuned by reasoning and rendered frames, not by hand on a trackpad. (The mechanics are covered by QA.)
+- Real players (Music, Spotify, browsers), the Music/Spotify fallback, calendar permission prompts, the Accessibility flow and media keys, charging events. The [QA report](docs/QA_REPORT.md#manual-checklist-macbook-with-a-notch) has a checklist for these.
 - Multi-display hot-plug and full-screen Spaces.
 
 Not possible or deliberately not done:
