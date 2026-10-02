@@ -6,6 +6,7 @@ import SwiftUI
 /// (`--demo <scenario>` for a live panel, `--snapshot <dir>` for PNGs).
 enum DemoScenario: String, CaseIterable {
     case idle, compact, expanded, peek, multi, timer, timerExpanded, hud, battery, calendar, calendarExpanded, home
+    case pomodoro, pomodoroExpanded, shelf, clipboard
 }
 
 @MainActor
@@ -40,6 +41,13 @@ enum Demo {
         ]
     }
 
+    /// Files on the shelf: real paths that exist on every Mac, so Finder icons render.
+    static let shelfFiles = ["/Applications/Safari.app", "/System/Library/CoreServices/Finder.app",
+                             "/Library/Desktop Pictures", "/etc/hosts", "/usr/share/dict/words"].map { URL(fileURLWithPath: $0) }
+
+    static let clips = ["https://github.com/samidun26/dynamic-island-mac", "#FF6B54", "Meeting moved to 3:30, same room",
+                        "hello@example.com", "let island = IslandModel(settings: settings, metrics: metrics)"]
+
     static func apply(_ scenario: DemoScenario, to model: IslandModel) {
         let art = artwork()
         let tint = Color(red: 0.99, green: 0.5, blue: 0.6)
@@ -64,6 +72,16 @@ enum Demo {
         case .calendar: calendar(true)
         case .calendarExpanded: calendar(true); model.click()
         case .home: calendar(false); model.click()
+        case .pomodoro: music(); model.timer.showDemo(remaining: 1104, total: 1500, pomodoro: .focus(round: 2))
+        case .pomodoroExpanded: model.timer.showDemo(remaining: 1104, total: 1500, pomodoro: .focus(round: 2)); model.click()
+        case .shelf:
+            model.shelf.showDemo(shelfFiles)
+            model.clipboard.showDemo(clips, pinned: ["#FF6B54"])
+            model.openShelf(.files)
+        case .clipboard:
+            model.shelf.showDemo(shelfFiles)
+            model.clipboard.showDemo(clips, pinned: ["#FF6B54"])
+            model.openShelf(.clipboard)
         }
         model.refresh()
     }
@@ -83,8 +101,12 @@ enum Snapshots {
     /// start, this far from the notch.
     nonisolated static let roomy = MenuBarClearance(left: 90, right: 90)
 
-    static func model(_ metrics: NotchMetrics, _ scenario: DemoScenario, clearance: MenuBarClearance = roomy) -> IslandModel {
-        let m = IslandModel(settings: .ephemeral(), metrics: metrics)
+    static func model(_ metrics: NotchMetrics, _ scenario: DemoScenario, clearance: MenuBarClearance = roomy,
+                      style: IslandStyle = .classic, phosphor: Phosphor = .color) -> IslandModel {
+        let settings = AppSettings.ephemeral()
+        settings.islandStyle = style
+        settings.phosphor = phosphor
+        let m = IslandModel(settings: settings, metrics: metrics)
         m.menuBar.showDemo(clearance)
         Demo.apply(scenario, to: m)
         return m
@@ -129,6 +151,34 @@ enum Snapshots {
             menuRows.append((title, scene))
         }
         write(Sheet(rows: menuRows), "\(dir)/sheet-menubar.png")
+
+        // Retro style: every state in full colour, then the one-colour screens.
+        var retroRows: [(String, AnyView)] = []
+        let retroCases: [(String, DemoScenario, MenuBarClearance, Phosphor)] = [
+            ("retro · compact", .compact, roomy, .color),
+            ("retro · now playing", .expanded, roomy, .color),
+            ("retro · timer with music", .multi, roomy, .color),
+            ("retro · timer", .timerExpanded, roomy, .color),
+            ("retro · up next", .calendarExpanded, roomy, .color),
+            ("retro · home", .home, roomy, .color),
+            ("retro · pomodoro", .pomodoroExpanded, roomy, .color),
+            ("retro · shelf", .shelf, roomy, .color),
+            ("retro · clipboard", .clipboard, roomy, .color),
+            ("retro · volume", .hud, roomy, .color),
+            ("retro · no room beside the notch", .compact, MenuBarClearance(left: 8, right: 10), .color),
+            ("retro · green screen", .expanded, roomy, .green),
+            ("retro · amber screen", .expanded, roomy, .amber),
+            ("retro · amber, compact", .compact, roomy, .amber),
+        ]
+        for (title, scenario, clearance, phosphor) in retroCases {
+            let m = model(notched, scenario, clearance: clearance, style: .retro, phosphor: phosphor)
+            let scene = AnyView(SnapshotScene(metrics: notched, clearance: clearance) { IslandCanvas(model: m, state: m.state, geometry: m.geometry) })
+            retroRows.append((title, scene))
+            if title == "retro · compact" { write(scene, "\(dir)/retro-compact.png") }
+            if title == "retro · now playing" { write(scene, "\(dir)/retro-expanded.png") }
+            if title == "retro · green screen" { write(scene, "\(dir)/retro-green.png") }
+        }
+        write(Sheet(rows: retroRows), "\(dir)/sheet-retro.png")
         filmstrip(opening: true, to: "\(dir)/filmstrip-open.png")
         filmstrip(opening: false, to: "\(dir)/filmstrip-close.png")
         write(AppIcon.IconView().frame(width: 256, height: 256), "\(dir)/app-icon.png")
@@ -158,7 +208,7 @@ enum Snapshots {
     }
 
     static func write<V: View>(_ view: V, _ path: String) {
-        let r = ImageRenderer(content: view.environment(\.colorScheme, .dark))
+        let r = ImageRenderer(content: view.environment(\.colorScheme, .dark).environment(\.staticRender, true))
         r.scale = 2
         guard let cg = r.cgImage,
               let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else {

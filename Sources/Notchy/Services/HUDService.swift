@@ -27,7 +27,9 @@ final class HUDModel {
     /// Mirrors the output device, for the expanded Now Playing slider.
     private(set) var volume: Double = 0.5
     private(set) var muted = false
+    /// Built-in display brightness, for the island's slider and the brightness keys.
     private(set) var brightnessAvailable = false
+    private(set) var brightnessLevel: Double = 0.5
 
     @ObservationIgnored let audio = SystemAudio()
     @ObservationIgnored private var tap: MediaKeyTap?
@@ -53,12 +55,31 @@ final class HUDModel {
         syncVolume()
     }
 
+    // MARK: Brightness
+
+    func setBrightnessEnabled(_ on: Bool) {
+        brightness = on ? (brightness ?? DisplayBrightness()) : nil
+        brightnessAvailable = brightness?.isAvailable ?? false
+        syncBrightness()
+        QALog.log("BRIGHTNESS available=\(brightnessAvailable)")
+    }
+
+    /// There is no change notification for brightness: read it when the control appears.
+    func syncBrightness() {
+        if let v = brightness?.level() { brightnessLevel = v }
+    }
+
+    /// Brightness set from the island's own slider: no HUD (the slider is the feedback).
+    func setBrightness(_ v: Double) {
+        guard let b = brightness, b.isAvailable else { return }
+        b.setLevel(v)
+        brightnessLevel = min(1, max(0, v))
+    }
+
     // MARK: Key tap
 
-    func enableKeys(brightness useBrightness: Bool) {
+    func enableKeys() {
         wantsTap = true
-        brightness = useBrightness ? (brightness ?? DisplayBrightness()) : nil
-        brightnessAvailable = brightness?.isAvailable ?? false
         if tap == nil { installTap(prompt: true) }
     }
 
@@ -132,6 +153,7 @@ final class HUDModel {
             if down {
                 let nv = stepped(v, code == MediaKey.brightnessUp)
                 b.setLevel(nv)
+                brightnessLevel = nv
                 show(.brightness, level: nv, muted: false)
             }
             return true

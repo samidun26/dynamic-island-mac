@@ -143,10 +143,11 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 | ID | Requirement | Pri | Status | Verified |
 |---|---|---|---|---|
-| FR-T1 | Start from Home (1/5/10/25 min), the menu bar (1/5/10/15/25/60 min) or `notchy://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R, Q |
+| FR-T1 | Start from Home (1/5/10 min), the menu bar (1/5/10/15/25/60 min) or `notchy://timer?minutes=N` / `?seconds=N`. | P0 | ✅ | T (URLs), R, Q |
 | FR-T2 | Compact countdown; expanded ring, big countdown, +1 min, pause/resume, cancel. | P0 | ✅ | R, Q |
 | FR-T3 | On completion: "Glass" sound (toggle), peek, then dismiss itself after 8 s. | P0 | ✅ | Q, H (sound) |
 | FR-T4 | App Intent for Shortcuts and Spotlight. | P2 | ⛔ | (see §9) |
+| FR-T5 | Pomodoro: focus and breaks in turn (25/5 min by default, a 15 min long break after every 4th focus; lengths in Settings), each phase starting the next with a sound and a peek. Started from Home ("Focus"), the menu bar or `notchy://pomodoro`; Skip moves to the next phase. Focus and break have their own colours and icons. | P1 | ✅ | T, R, Q |
 
 ### 7.7 Battery
 
@@ -173,7 +174,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-H1 | Volume up/down/mute shown in the island instead of the system HUD (needs Accessibility; consumes the key and applies the change via CoreAudio). Option+Shift for quarter steps. | P1 | ✅ | H |
 | FR-H2 | Devices without software volume, or no permission: pass the key through untouched. | P0 | ✅ | H |
 | FR-H3 | While the island is open, show the level in the header. | P2 | ✅ | H |
-| FR-H4 | Brightness keys (private DisplayServices). | P2 | 🧪 | H |
+| FR-H4 | Brightness like volume: keys shown in the island instead of the system HUD, and a slider under the volume slider in Now Playing. Built-in display, private DisplayServices; on by default, its own switch; keys pass through when unavailable. | P1 | ✅ | H |
 | FR-H5 | Keyboard backlight keys. | P2 | ⛔ | — |
 
 ### 7.10 App, settings and distribution
@@ -183,13 +184,23 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-S1 | Menu bar icon (can be hidden; reopening the app shows Settings). | P1 | ✅ | L, Q |
 | FR-S2 | Settings window with General, Activities, Motion and About tabs (see the user guide). | P0 | ✅ | Q |
 | FR-S3 | Launch at login (`SMAppService`). | P1 | ✅ | H |
-| FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `open`, `settings`. | P1 | ✅ | T, Q |
+| FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `pomodoro`, `shelf`, `clipboard`, `open`, `settings`, `update`. | P1 | ✅ | T, Q |
 | FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L, Q |
 | FR-S6 | CI builds, tests and renders every state on each push; every app change on `main` publishes a numbered GitHub Release with its SHA-256. | P1 | ✅ | L |
 | FR-S7 | `--demo <scenario>` and `--snapshot <dir>` for verification without a mouse. | P1 | ✅ | L |
+| FR-S9 | Style: Classic (system font, smooth shapes) or Retro (bundled OFL pixel fonts Pixelify Sans and VT323, pixel-stepped corners, block meters, pixel-art covers), with a full-colour, green or amber screen and optional scanlines. | P2 | ✅ | R, Q |
 | FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. | P1 | ✅ | T, Q |
 
-### 7.11 Explicitly out (see §9)
+### 7.11 Shelf and clipboard
+
+| ID | Requirement | Pri | Status | Verified |
+|---|---|---|---|---|
+| FR-F1 | Files dragged to the notch open the island on the shelf, with a drop zone; dropping keeps them there (references only, never copies), and the shelf stays open to show them. | P1 | ✅ | R, Q |
+| FR-F2 | Shelf files drag out to any app, open on double-click, and have Show in Finder / Remove; the list survives relaunches (bookmarks that follow moved files), up to 40. | P1 | ✅ | H |
+| FR-CB1 | Clipboard history: the last 30 copied texts, newest first; click to copy back, pin to keep (pins survive relaunches), links open, colours show a swatch. | P1 | ✅ | T, R, Q |
+| FR-CB2 | Privacy: history lives in memory only (only pins are saved); copies that apps mark private or temporary (the nspasteboard.org markers that password managers use) are never recorded; turning history off clears it; the QA trace never logs contents. | P0 | ✅ | T, Q |
+
+### 7.12 Explicitly out (see §9)
 
 | ID | Requirement | Status |
 |---|---|---|
@@ -216,7 +227,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 
 - **Now Playing on macOS 15.4+** works only because Apple's own `/usr/bin/perl` is still allowed to use MediaRemote. Apple could close this; Notchy then degrades to Music and Spotify.
 - **System HUD suppression** is possible only by consuming the media key in an active event tap (Accessibility permission), and Notchy must then apply the change itself.
-- **Brightness** has no public API on Apple silicon: it uses private DisplayServices, so it is opt-in and labelled experimental. **Keyboard backlight**: not implemented.
+- **Brightness** has no public API on Apple silicon: it uses private DisplayServices, loaded with `dlopen`, built-in display only, with its own switch. **Keyboard backlight**: not implemented.
 - **Focus:** `INFocusStatusCenter` needs a provisioned entitlement and only says yes or no; the alternative needs Full Disk Access. Not implemented.
 - **Notifications and lock screen** need private SkyLight/CGS APIs or notification-database access. They would break with OS updates and are not App Store eligible, so they are not implemented.
 - **App Intents** need Xcode's metadata extraction, which the SwiftPM build does not run. The `notchy://` URL from Shortcuts' "Open URLs" action covers the use case.

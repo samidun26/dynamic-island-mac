@@ -96,6 +96,24 @@ private struct GeneralTab: View {
                 Toggle("Hide from screen sharing and recordings", isOn: $settings.hideFromScreenSharing)
             }
             Section {
+                Picker("Style", selection: $settings.islandStyle) {
+                    ForEach(IslandStyle.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                if settings.islandStyle == .retro {
+                    Picker("Screen", selection: $settings.phosphor) {
+                        ForEach(Phosphor.allCases) { Text($0.title).tag($0) }
+                    }
+                    Toggle("Scanlines", isOn: $settings.scanlines)
+                }
+            } header: {
+                Text("Style")
+            } footer: {
+                Text(settings.islandStyle == .retro
+                     ? "Pixel type, stepped corners, block meters and pixel-art covers. Green and amber turn the island into a one-colour monitor."
+                     : "The system font and smooth shapes, like the iPhone.")
+            }
+            Section {
                 Picker("Show the island on", selection: $settings.screenChoice) {
                     ForEach(AppSettings.ScreenChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -157,8 +175,22 @@ private struct ActivitiesTab: View {
             Section {
                 Toggle("Timer", isOn: $settings.timerEnabled)
                 Toggle("Play a sound when it ends", isOn: $settings.timerSound).disabled(!settings.timerEnabled)
+                LabeledContent("Pomodoro") {
+                    HStack(spacing: 10) {
+                        Stepper("Focus \(settings.pomodoroFocus) min", value: $settings.pomodoroFocus, in: 5...90, step: 5)
+                        Stepper("Break \(settings.pomodoroBreak) min", value: $settings.pomodoroBreak, in: 1...30)
+                    }
+                    .fixedSize()
+                }
+                .disabled(!settings.timerEnabled)
             } footer: {
-                Text("Start one from the island, the menu bar, or a URL: open notchy://timer?minutes=5")
+                Text("Start one from the island, the menu bar, or a URL: open notchy://timer?minutes=5 or notchy://pomodoro. A pomodoro runs focus and breaks in turn, with a long break after every fourth focus.")
+            }
+            Section {
+                Toggle("Shelf", isOn: $settings.shelfEnabled)
+                Toggle("Clipboard history", isOn: $settings.clipboardHistory).disabled(!settings.shelfEnabled)
+            } footer: {
+                Text("Drag files onto the notch to keep them on the shelf, then drag them out wherever you need them. Clipboard history holds the last 30 copied texts in memory only; pinned items are saved. Copies that password managers mark as private are never kept.")
             }
             Section {
                 Toggle("Charging and low battery", isOn: $settings.batteryEnabled)
@@ -182,7 +214,7 @@ private struct ActivitiesTab: View {
                 Text("Shows the next event, counts down from 15 minutes before it, and alerts you at 5.")
             }
             Section {
-                Toggle("Volume HUD in the island", isOn: $settings.hudEnabled)
+                Toggle("Volume and brightness keys in the island", isOn: $settings.hudEnabled)
                 if settings.hudEnabled {
                     switch model.hud.tapState {
                     case .active: LabeledContent("Media keys", value: "Active")
@@ -191,10 +223,10 @@ private struct ActivitiesTab: View {
                             Button("Grant Accessibility…") { model.hud.openAccessibilitySettings() }
                         }
                     }
-                    Toggle("Brightness keys too (experimental)", isOn: $settings.hudBrightnessExperimental)
                 }
+                Toggle("Brightness in the island", isOn: $settings.brightnessEnabled)
             } footer: {
-                Text("Replacing the system HUD means intercepting the media keys, which needs Accessibility access. Volume uses public CoreAudio. Brightness uses Apple's private DisplayServices framework and may break with any macOS update. Keyboard backlight keys are left to macOS.")
+                Text("Replacing the system HUD means intercepting the volume and brightness keys, which needs Accessibility access. Brightness also gets a slider under the volume one in Now Playing. Volume uses public CoreAudio; brightness works on the built-in display through Apple's private DisplayServices framework (there is no public way), so a macOS update could break it, and then the keys go back to macOS. Keyboard backlight keys are left to macOS.")
             }
         }
         .formStyle(.grouped)
@@ -268,6 +300,8 @@ private struct AboutTab: View {
             Text("A Dynamic Island for the Mac notch. No accounts or telemetry; the only request Notchy makes on its own is the update check on GitHub.")
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
+            Text("Retro style fonts: Pixelify Sans (The Pixelify Sans Project Authors) and VT323 (The VT323 Project Authors), SIL Open Font License 1.1.")
+                .font(.caption).foregroundStyle(.secondary)
             Text("Includes mediaremote-adapter").font(.headline)
             Text("Copyright (c) 2025 Jonas van den Berg and contributors. BSD 3-Clause License. github.com/ungive/mediaremote-adapter")
                 .font(.caption).foregroundStyle(.secondary)

@@ -75,18 +75,22 @@ struct PillButton: View {
     var symbol: String?
     var tint: Color = .white
     let action: () -> Void
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 if let symbol { Image(systemName: symbol).font(.system(size: 10, weight: .bold)) }
-                Text(title).font(.system(size: 11.5, weight: .semibold))
+                Text(title).islandFont(11.5, .semibold)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .foregroundStyle(tint)
-            .background(Capsule().fill(tint.opacity(0.16)))
-            .contentShape(Capsule())
+            .background(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 20, style: .continuous).fill(tint.opacity(0.16)))
+            .overlay {
+                if theme.isRetro { Rectangle().strokeBorder(tint.opacity(0.55), lineWidth: 1) }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(IslandButtonStyle())
     }
@@ -99,11 +103,15 @@ struct ArtworkView: View {
     var fallback: NSImage?
     let side: CGFloat
     var glow: Color?
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
+        let radius = theme.isRetro ? 0 : side * 0.22
         ZStack {
             if let image {
-                Image(nsImage: image).resizable().interpolation(.high).aspectRatio(contentMode: .fill)
+                // Retro: the cover as pixel art, a few points per pixel.
+                let shown = theme.isRetro ? Pixelate.image(image, cells: max(8, Int(side / 3))) : image
+                Image(nsImage: shown).resizable().interpolation(theme.isRetro ? .none : .high).aspectRatio(contentMode: .fill)
                     .transition(.opacity)
                     .id(ObjectIdentifier(image))
             } else {
@@ -116,8 +124,8 @@ struct ArtworkView: View {
             }
         }
         .frame(width: side, height: side)
-        .clipShape(RoundedRectangle(cornerRadius: side * 0.22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: side * 0.22, style: .continuous).strokeBorder(.white.opacity(0.08), lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(.white.opacity(theme.isRetro ? 0.3 : 0.08), lineWidth: theme.isRetro ? 1 : 0.5))
         .shadow(color: (glow ?? .clear).opacity(0.35), radius: side * 0.16, y: side * 0.04)
         .animation(.easeInOut(duration: 0.3), value: image.map(ObjectIdentifier.init))
     }
@@ -135,16 +143,30 @@ struct AudioBars: View {
     var height: CGFloat = 14
     var barWidth: CGFloat = 3
     var count = 4
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         let gap = barWidth * 0.8
-        TimelineView(.animation(minimumInterval: 1 / 20, paused: !playing)) { ctx in
+        let retro = theme.isRetro
+        TimelineView(.animation(minimumInterval: retro ? 1 / 10 : 1 / 20, paused: !playing)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate
             Canvas { gc, size in
                 for i in 0..<count {
-                    let h = playing ? max(barWidth, level(i, t) * size.height) : barWidth
-                    let r = CGRect(x: CGFloat(i) * (barWidth + gap), y: (size.height - h) / 2, width: barWidth, height: h)
-                    gc.fill(Path(roundedRect: r, cornerRadius: barWidth / 2), with: .color(tint))
+                    let x = CGFloat(i) * (barWidth + gap)
+                    if retro {
+                        // A hi-fi VU meter: lit blocks from the bottom up.
+                        let block = barWidth, step = block + 1
+                        let rows = max(1, Int((size.height + 1) / step))
+                        let lit = playing ? max(1, Int((level(i, t) * CGFloat(rows)).rounded())) : 1
+                        for row in 0..<rows {
+                            let r = CGRect(x: x, y: size.height - CGFloat(row + 1) * step + 1, width: block, height: block)
+                            gc.fill(Path(r), with: .color(row < lit ? tint : tint.opacity(0.18)))
+                        }
+                    } else {
+                        let h = playing ? max(barWidth, level(i, t) * size.height) : barWidth
+                        let r = CGRect(x: x, y: (size.height - h) / 2, width: barWidth, height: h)
+                        gc.fill(Path(roundedRect: r, cornerRadius: barWidth / 2), with: .color(tint))
+                    }
                 }
             }
         }
@@ -175,10 +197,7 @@ struct Scrubber: View {
                 Text(formatDuration(elapsed)).frame(width: 34, alignment: .trailing)
                 GeometryReader { g in
                     let barHeight: CGFloat = drag == nil ? 5 : 8
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.16))
-                        Capsule().fill(tint).frame(width: max(barHeight, g.size.width * p))
-                    }
+                    MeterBar(fraction: p, tint: tint, minFill: barHeight)
                     .frame(height: barHeight)
                     .frame(maxHeight: .infinity)
                     .contentShape(Rectangle())
@@ -206,7 +225,7 @@ struct Scrubber: View {
                 }
                 Text("-" + formatDuration(max(0, duration - elapsed))).frame(width: 38, alignment: .leading)
             }
-            .font(.system(size: 10, weight: .medium).monospacedDigit())
+            .islandFont(10, .medium, digits: true)
             .foregroundStyle(.white.opacity(0.5))
             .opacity(duration > 0 ? 1 : 0.4)
         }
@@ -224,10 +243,7 @@ struct LevelSlider: View {
     var body: some View {
         GeometryReader { g in
             let v = drag ?? value
-            ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.16))
-                Capsule().fill(tint).frame(width: max(4, g.size.width * v))
-            }
+            MeterBar(fraction: v, tint: tint, minFill: 4)
             .frame(height: drag == nil ? 4 : 6)
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -260,12 +276,15 @@ struct Ring: View {
     var progress: Double
     var tint: Color
     var lineWidth: CGFloat = 2.5
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
+        // Retro: a ring of separate segments, like an LED dial.
+        let dash: [CGFloat] = theme.isRetro ? [lineWidth * 1.2, lineWidth * 0.8] : []
         ZStack {
-            Circle().stroke(tint.opacity(0.25), lineWidth: lineWidth)
+            Circle().stroke(tint.opacity(0.25), style: StrokeStyle(lineWidth: lineWidth, dash: dash))
             Circle().trim(from: 0, to: max(0.001, progress))
-                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: theme.isRetro ? .butt : .round, dash: dash))
                 .rotationEffect(.degrees(-90))
         }
         .padding(lineWidth / 2)
@@ -276,14 +295,16 @@ struct BatteryGlyph: View {
     var level: Int
     var tint: Color
     var width: CGFloat = 24
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         let h = width * 0.48
+        let square = theme.isRetro
         HStack(spacing: 1) {
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: h * 0.3, style: .continuous)
+                RoundedRectangle(cornerRadius: square ? 0 : h * 0.3, style: .continuous)
                     .strokeBorder(.white.opacity(0.4), lineWidth: 1)
-                RoundedRectangle(cornerRadius: h * 0.18, style: .continuous)
+                RoundedRectangle(cornerRadius: square ? 0 : h * 0.18, style: .continuous)
                     .fill(tint)
                     .frame(width: max(2, (width - 4) * CGFloat(min(100, max(0, level))) / 100))
                     .padding(2)
@@ -295,8 +316,67 @@ struct BatteryGlyph: View {
 }
 
 extension View {
-    /// Monospaced digits in the rounded system face, for countdowns.
+    /// Monospaced digits for countdowns: the rounded system face, or terminal digits in Retro.
     func countdownFont(_ size: CGFloat, weight: Font.Weight = .semibold) -> some View {
-        font(.system(size: size, weight: weight, design: .rounded).monospacedDigit())
+        islandFont(size, weight, digits: true, rounded: true)
+    }
+}
+
+/// A progress or level bar: a capsule, or in Retro a row of blocks.
+struct MeterBar: View {
+    var fraction: Double
+    var tint: Color
+    var minFill: CGFloat = 4
+    @Environment(\.islandTheme) private var theme
+
+    var body: some View {
+        if theme.isRetro {
+            Canvas { gc, size in
+                let block: CGFloat = 3, step = block + 1
+                let count = max(1, Int((size.width + 1) / step))
+                let lit = Int((min(1, max(0, fraction)) * Double(count)).rounded())
+                for i in 0..<count {
+                    let r = CGRect(x: CGFloat(i) * step, y: 0, width: block, height: size.height)
+                    gc.fill(Path(r), with: .color(i < lit ? tint : .white.opacity(0.16)))
+                }
+            }
+        } else {
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.16))
+                    Capsule().fill(tint).frame(width: max(minFill, g.size.width * fraction))
+                }
+            }
+        }
+    }
+}
+
+/// Album art as pixel art: scaled down to a few cells, then shown without smoothing.
+@MainActor
+enum Pixelate {
+    private final class Entry {
+        weak var source: NSImage?
+        let cells: Int
+        let image: NSImage
+        init(_ source: NSImage, _ cells: Int, _ image: NSImage) { self.source = source; self.cells = cells; self.image = image }
+    }
+    private static var cache: [ObjectIdentifier: Entry] = [:]
+
+    static func image(_ source: NSImage, cells: Int) -> NSImage {
+        let key = ObjectIdentifier(source)
+        if let hit = cache[key], hit.source === source, hit.cells == cells { return hit.image }
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: cells, pixelsHigh: cells, bitsPerSample: 8,
+                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                         bytesPerRow: 0, bitsPerPixel: 0) else { return source }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSGraphicsContext.current?.imageInterpolation = .medium
+        source.draw(in: NSRect(x: 0, y: 0, width: cells, height: cells), from: .zero, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        let image = NSImage(size: NSSize(width: cells, height: cells))
+        image.addRepresentation(rep)
+        if cache.count > 8 { cache.removeAll() }
+        cache[key] = Entry(source, cells, image)
+        return image
     }
 }

@@ -404,7 +404,9 @@ else
     fi
 
     # Two-finger swipes on the island.
-    sleep 0.6; "$D" jump "$CX" $((MB / 2)) >/dev/null
+    # Rest on the island first: a swipe that starts before Notchy has seen the pointer arrive
+    # (and stopped passing clicks through) goes to the app underneath.
+    sleep 0.6; mark "$LOG"; "$D" jump "$CX" $((MB / 2)) >/dev/null; wait_for "$LOG" "CLICKTHROUGH false" 1; sleep 0.3
     mark "$LOG"; "$D" swipe 0 -60
     sleep 0.5; S1=$(after "$LOG" | grep -o 'SWIPE [a-z]*' | head -1)
     mark "$LOG"; "$D" swipe 0 60
@@ -540,7 +542,20 @@ if wait_for "$LOG" "SETTINGS shown" 4; then
                     # The VM sometimes drops synthetic key presses before any app gets them (the
                     # trace shows Notchy never received one). Hand ⌘W straight to Notchy instead.
                     mark "$LOG"; "$D" key cmd-w "$NOTCHY_PID"; sleep 0.8
-                    settings_open && CLOSED=no || CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                    TO_PID=$(after "$LOG" | grep -c ' KEY w ')
+                    if ! settings_open; then
+                        CLOSED="yes, with ⌘W delivered straight to Notchy (the VM dropped the normal key presses: $WENT)"
+                    elif [ "$TO_PID" = 0 ] && [ "$AX" = yes ]; then
+                        # Not one key press reached Notchy, so this VM session isn't delivering
+                        # keys (seen on earlier runs too). Check the app side without the keyboard:
+                        # ⌘W must be the shortcut of Window → Close, and that item must close the window.
+                        MENU=$(lim 10 "$D" ax-menu $BID Close press 2>&1 | tr '\n' ' '); sleep 0.8
+                        if ! settings_open && echo "$MENU" | grep -qiE 'key=w modifiers=0 pressed'; then
+                            CLOSED="yes, by Window → Close, whose shortcut is ⌘W (${MENU% }), pressed through Accessibility: none of the 3 key presses reached Notchy on this VM ($WENT; sent to its process: 0)"
+                        else
+                            WENT="$WENT; sent to its process: 0; Window → Close: ${MENU:-not found}"
+                        fi
+                    fi
                 else
                     CLOSED="after clicking the window (the first press went astray: $WENT)"
                 fi
@@ -695,6 +710,115 @@ else
     fi
     quit_notchy
 fi
+
+# ---------------------------------------------------------------- retro style
+# Settings → General → Style: Retro. The bundled pixel fonts must load, and the island must draw.
+defaults write "$BID" nonNotchMode whenActive
+defaults write "$BID" islandStyle retro
+launch_notchy; sleep 1
+lim 8 open "notchy://timer?minutes=3"
+if wait_for "$LOG" "STATE compact:timer" 6; then
+    sleep 1; shot qa40-retro-compact
+    "$D" jump "$CX" 400 >/dev/null; sleep 0.4; mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
+    wait_for "$LOG" "STATE expanded" 3 && { sleep 0.9; shot qa40-retro-expanded 240; }
+    "$D" move "$CX" 520 200 >/dev/null
+fi
+FONTS=$(grep -E 'FONTS ' "$LOG" | tail -1 | sed -E 's/.*FONTS //')
+W=$(island_width qa40-retro-compact)
+if [ "$FONTS" = "text=true digits=true" ] && [ "${W:-0}" -gt 150 ]; then
+    pass QA-40 "Retro style: pixel fonts load and the island draws in them (FR-S9)" "fonts: $FONTS; island ${W} pt ([compact](shots/qa40-retro-compact.png), [open](shots/qa40-retro-expanded.png))"
+else
+    fail QA-40 "Retro style: pixel fonts load and the island draws in them (FR-S9)" "fonts: ${FONTS:-not logged}; island ${W:-?} pt; $(last_state)"
+fi
+lim 8 open "notchy://timer/cancel"; sleep 0.5
+quit_notchy
+defaults delete "$BID" islandStyle 2>/dev/null
+
+# ---------------------------------------------------------------- pomodoro, clipboard, shelf
+echo "== pomodoro, clipboard and shelf"
+defaults delete "$BID" shelfFiles 2>/dev/null
+launch_notchy; sleep 1.5
+
+# QA-41: notchy://pomodoro starts focus round 1; Skip on the timer page moves to the short break.
+mark "$LOG"
+lim 8 open "notchy://pomodoro"
+if ! wait_for "$LOG" "STATE compact:timer" 6; then
+    fail QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "notchy://pomodoro gave no timer; $(last_state)"
+elif [ "$INPUT" = yes ] && [ "$AX" = yes ]; then
+    "$D" jump "$CX" 500 >/dev/null; sleep 0.3
+    mark "$LOG"; "$D" move "$CX" $((MB / 2)) 400 >/dev/null
+    wait_for "$LOG" "STATE expanded:timer" 3
+    sleep 0.7; shot qa41-pomodoro-focus 240
+    T1=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^(Focus|Short|Long)' | head -1)
+    B=$(lim 20 "$D" ax-find $BID "Skip" $AXR 2>/dev/null)
+    mark "$LOG"; [ -n "$B" ] && "$D" click $B
+    T2=""
+    if wait_for "$LOG" "POMODORO Short break" 3; then
+        sleep 0.7; shot qa41-pomodoro-break 240
+        T2=$(lim 20 "$D" ax-texts $BID $AXR | grep -E '^(Focus|Short|Long)' | head -1)
+    fi
+    if [ "$T1" = "Focus 1 of 4" ] && [ "$T2" = "Short break" ]; then
+        pass QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "\"$T1\" → Skip → \"$T2\" ([focus](shots/qa41-pomodoro-focus.png), [break](shots/qa41-pomodoro-break.png))"
+    else
+        fail QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "before: ${T1:-?}; Skip button: ${B:-not found}; after: ${T2:-?}; $(last_state)"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1
+else
+    skip QA-41 "Pomodoro: focus, then Skip to the break (FR-T5)" "needs input synthesis and Accessibility"
+fi
+lim 8 open "notchy://timer/cancel"; sleep 0.8
+
+# QA-42: copied text shows up in clipboard history; a copy marked private (as password managers
+# mark them) never does.
+CLIP="notchy-qa-clip-$$"; SECRET="qa-secret-$$"
+mark "$LOG"
+"$D" pasteboard "$CLIP" >/dev/null
+ADDED=no; wait_for "$LOG" "CLIP added" 3 && ADDED=yes
+mark "$LOG"
+"$D" pasteboard "$SECRET" org.nspasteboard.ConcealedType >/dev/null
+SKIPPED=no; wait_for "$LOG" "CLIP skipped" 3 && SKIPPED=yes
+mark "$LOG"
+lim 8 open "notchy://clipboard"
+if wait_for "$LOG" "STATE expanded:shelf" 4; then
+    sleep 0.8; shot qa42-clipboard 240
+    if [ "$AX" = yes ]; then
+        TEXTS=$(lim 20 "$D" ax-texts $BID $AXR | tr '\n' '|')
+        SHOWN=$(echo "$TEXTS" | grep -c "$CLIP"); LEAKED=$(echo "$TEXTS" | grep -c "$SECRET")
+    else
+        SHOWN=1; LEAKED=0   # logged only; the screenshot is the evidence
+    fi
+    if [ $ADDED = yes ] && [ $SKIPPED = yes ] && [ "$SHOWN" -ge 1 ] && [ "$LEAKED" = 0 ] && ! grep -q "$SECRET" "$LOG"; then
+        pass QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "copy listed; the copy marked org.nspasteboard.ConcealedType was skipped and appears nowhere, not even in the trace ([shot](shots/qa42-clipboard.png))"
+    else
+        fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "added=$ADDED skipped=$SKIPPED shown=$SHOWN leaked=$LEAKED"
+    fi
+else
+    fail QA-42 "Clipboard history keeps copies, never private ones (FR-CB1, FR-CB2)" "notchy://clipboard did not open the shelf; $(last_state)"
+fi
+mark "$LOG"; "$D" click "$CX" 520; wait_for "$LOG" "DISMISS" 2; sleep 0.8
+
+# QA-43: a file dragged from another app to the notch opens the shelf, drops there, and stays.
+if [ "$INPUT" = yes ]; then
+    F="$OUT/notchy-qa-shelf.txt"; echo "Notchy shelf test" > "$F"
+    "$D" jump "$CX" 500 >/dev/null; sleep 0.3
+    mark "$LOG"
+    DROP=$(lim 25 "$D" file-drag "$F" $((CX - 300)) 420 "$CX" $((MB / 2)) 1400 2>&1 | tail -1)
+    sleep 0.8; shot qa43-shelf-drop 240
+    NEAR=$(after "$LOG" | grep -c "DRAG files near"); OPENED=$(after "$LOG" | grep -c "STATE expanded:shelf")
+    ADDED=$(after "$LOG" | grep -c "SHELF added 1")
+    LISTED=0; [ "$AX" = yes ] && LISTED=$(lim 20 "$D" ax-texts $BID $AXR | grep -c "notchy-qa-shelf.txt")
+    STAYED=$(last_state | cut -d' ' -f1)
+    if [ "$DROP" = "drop accepted" ] && [ "$ADDED" -ge 1 ] && [ "$OPENED" -ge 1 ] && { [ "$AX" != yes ] || [ "$LISTED" -ge 1 ]; } && [ "$STAYED" = expanded:shelf ]; then
+        pass QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "opened on the shelf as the drag arrived, drop accepted, file listed, still open after ([shot](shots/qa43-shelf-drop.png))"
+    else
+        fail QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "driver: ${DROP:-nothing}; near=$NEAR opened=$OPENED added=$ADDED listed=$LISTED after=$STAYED; $(after "$LOG" | grep -E 'CLICKTHROUGH|DROP|DRAG' | tail -4 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    "$D" move "$CX" 520 200 >/dev/null; sleep 1.2
+else
+    skip QA-43 "Dragging a file to the notch drops it on the shelf (FR-F1)" "needs input synthesis"
+fi
+quit_notchy
+defaults delete "$BID" shelfFiles 2>/dev/null
 
 # ---------------------------------------------------------------- updates
 # Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub

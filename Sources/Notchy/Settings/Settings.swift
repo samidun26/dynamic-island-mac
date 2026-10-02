@@ -1,4 +1,5 @@
 import Foundation
+import NotchyCore
 import Observation
 
 /// User preferences, persisted in UserDefaults. Every property writes through on change.
@@ -30,7 +31,7 @@ final class AppSettings {
 
     @ObservationIgnored private let defaults: UserDefaults
     /// False for demo/snapshot instances: they must never write to disk.
-    @ObservationIgnored private let persists: Bool
+    @ObservationIgnored let persists: Bool
 
     private func save(_ value: Any, _ key: String) {
         if persists { defaults.set(value, forKey: key) }
@@ -45,6 +46,12 @@ final class AppSettings {
     /// Look for a newer release on GitHub after launch and every 6 hours.
     var checkForUpdates: Bool { didSet { save(checkForUpdates, "checkForUpdates") } }
 
+    // Style
+    var islandStyle: IslandStyle { didSet { save(islandStyle.rawValue, "islandStyle") } }
+    var phosphor: Phosphor { didSet { save(phosphor.rawValue, "phosphor") } }
+    var scanlines: Bool { didSet { save(scanlines, "scanlines") } }
+    var theme: IslandTheme { IslandTheme(style: islandStyle, phosphor: phosphor, scanlines: scanlines) }
+
     // Display
     /// Fit the compact wings into the free menu bar space instead of covering menus and icons.
     var keepClearOfMenuBar: Bool { didSet { save(keepClearOfMenuBar, "keepClearOfMenuBar") } }
@@ -56,11 +63,23 @@ final class AppSettings {
     var peekOnTrackChange: Bool { didSet { save(peekOnTrackChange, "peekOnTrackChange") } }
     var timerEnabled: Bool { didSet { save(timerEnabled, "timerEnabled") } }
     var timerSound: Bool { didSet { save(timerSound, "timerSound") } }
+    /// Pomodoro lengths, in minutes.
+    var pomodoroFocus: Int { didSet { save(pomodoroFocus, "pomodoroFocus") } }
+    var pomodoroBreak: Int { didSet { save(pomodoroBreak, "pomodoroBreak") } }
+    var pomodoroLongBreak: Int { didSet { save(pomodoroLongBreak, "pomodoroLongBreak") } }
+    var pomodoroPlan: PomodoroPlan {
+        PomodoroPlan(focus: TimeInterval(pomodoroFocus * 60), shortBreak: TimeInterval(pomodoroBreak * 60),
+                     longBreak: TimeInterval(pomodoroLongBreak * 60), rounds: 4)
+    }
+    /// Shelf page: files dropped on the notch, and clipboard history.
+    var shelfEnabled: Bool { didSet { save(shelfEnabled, "shelfEnabled") } }
+    var clipboardHistory: Bool { didSet { save(clipboardHistory, "clipboardHistory") } }
     var batteryEnabled: Bool { didSet { save(batteryEnabled, "batteryEnabled") } }
     var calendarEnabled: Bool { didSet { save(calendarEnabled, "calendarEnabled") } }
     var hudEnabled: Bool { didSet { save(hudEnabled, "hudEnabled") } }
-    /// Brightness keys need the private DisplayServices framework. Off unless the user opts in.
-    var hudBrightnessExperimental: Bool { didSet { save(hudBrightnessExperimental, "hudBrightnessExperimental") } }
+    /// Brightness like volume: keys shown in the island and a slider. Built-in display only, through
+    /// the private DisplayServices framework (the only way on Apple silicon).
+    var brightnessEnabled: Bool { didSet { save(brightnessEnabled, "brightnessEnabled") } }
 
     // Motion (tunable from the Settings window's Motion section)
     var openResponse: Double { didSet { save(openResponse, "openResponse") } }
@@ -75,12 +94,16 @@ final class AppSettings {
         self.persists = persists
         func bool(_ k: String, _ d: Bool) -> Bool { defaults.object(forKey: k) as? Bool ?? d }
         func double(_ k: String, _ d: Double) -> Double { defaults.object(forKey: k) as? Double ?? d }
+        func int(_ k: String, _ d: Int) -> Int { defaults.object(forKey: k) as? Int ?? d }
         openOnHover = bool("openOnHover", true)
         hoverDelay = double("hoverDelay", 0.12)
         haptics = bool("haptics", true)
         hideFromScreenSharing = bool("hideFromScreenSharing", true)
         showMenuBarIcon = bool("showMenuBarIcon", true)
         checkForUpdates = bool("checkForUpdates", true)
+        islandStyle = IslandStyle(rawValue: defaults.string(forKey: "islandStyle") ?? "") ?? .classic
+        phosphor = Phosphor(rawValue: defaults.string(forKey: "phosphor") ?? "") ?? .color
+        scanlines = bool("scanlines", true)
         keepClearOfMenuBar = bool("keepClearOfMenuBar", true)
         screenChoice = ScreenChoice(rawValue: defaults.string(forKey: "screenChoice") ?? "") ?? .notched
         nonNotchMode = NonNotchMode(rawValue: defaults.string(forKey: "nonNotchMode") ?? "") ?? .whenActive
@@ -88,10 +111,15 @@ final class AppSettings {
         peekOnTrackChange = bool("peekOnTrackChange", true)
         timerEnabled = bool("timerEnabled", true)
         timerSound = bool("timerSound", true)
+        pomodoroFocus = int("pomodoroFocus", 25)
+        pomodoroBreak = int("pomodoroBreak", 5)
+        pomodoroLongBreak = int("pomodoroLongBreak", 15)
+        shelfEnabled = bool("shelfEnabled", true)
+        clipboardHistory = bool("clipboardHistory", true)
         batteryEnabled = bool("batteryEnabled", true)
         calendarEnabled = bool("calendarEnabled", true)
         hudEnabled = bool("hudEnabled", false)
-        hudBrightnessExperimental = bool("hudBrightnessExperimental", false)
+        brightnessEnabled = bool("brightnessEnabled", true)
         openResponse = double("openResponse", Self.motionDefaults.openResponse)
         openDamping = double("openDamping", Self.motionDefaults.openDamping)
         closeResponse = double("closeResponse", Self.motionDefaults.closeResponse)

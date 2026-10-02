@@ -16,6 +16,12 @@
 //   qa-driver ax-at X Y                    the element under a point (what VoiceOver would hit)
 //   qa-driver ax-press BUNDLE_ID LABEL     AXPress it
 //   qa-driver ax-texts BUNDLE_ID [X Y W H] every static text value
+//   qa-driver ax-menu BUNDLE_ID TITLE [press]  an item of the app's own menus: its shortcut ("key=W
+//                                          modifiers=0" is ⌘W), and AXPress it with "press"
+//   qa-driver pasteboard TEXT [TYPE…]      put TEXT on the clipboard, with extra (empty) marker types
+//   qa-driver file-drag PATH X1 Y1 X2 Y2 [HOLD_MS]
+//                                          drag PATH from a small window at X1,Y1 and drop it at X2,Y2,
+//                                          as from Finder (a real drag session); prints the drop result
 //   qa-driver pixel PNG X Y                "dark" or "light" and the RGB at a point (points)
 //   qa-driver dark-run PNG Y               longest run of near-black pixels on row Y (points): "x width"
 //   qa-driver dark-box PNG                 bounding box of the near-black blob touching the top centre: "x y w h"
@@ -195,6 +201,80 @@ func isDark(_ px: [UInt8], _ w: Int, _ x: Int, _ y: Int) -> Bool {
     return Int(px[i]) + Int(px[i + 1]) + Int(px[i + 2]) < 3 * 22
 }
 
+// MARK: File drag
+
+/// A small window holding one file; scripted mouse events drag it out with a real drag session,
+/// the way Finder would, so the destination sees an ordinary file drop.
+final class DragSource: NSView, NSDraggingSource {
+    let url: URL
+    var started = false
+    var ended: ((NSDragOperation) -> Void)?
+
+    init(url: URL, frame: NSRect) {
+        self.url = url
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.systemBlue.setFill()
+        bounds.fill()
+    }
+    override func mouseDown(with event: NSEvent) {}
+    override func mouseDragged(with event: NSEvent) {
+        guard !started else { return }
+        started = true
+        let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+        item.setDraggingFrame(bounds, contents: NSWorkspace.shared.icon(forFile: url.path))
+        beginDraggingSession(with: [item], event: event, source: self)
+        print("drag started")
+    }
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) { ended?(operation) }
+}
+
+@MainActor func fileDrag(path: String, from a: CGPoint, to b: CGPoint, hold: Double) -> Never {
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    let side: CGFloat = 64
+    let top = NSScreen.screens[0].frame.maxY   // CoreGraphics y runs down from the top of the main display
+    let window = NSWindow(contentRect: NSRect(x: a.x - side / 2, y: top - a.y - side / 2, width: side, height: side),
+                          styleMask: [.borderless], backing: .buffered, defer: false)
+    window.level = .floating
+    let view = DragSource(url: URL(fileURLWithPath: path), frame: NSRect(x: 0, y: 0, width: side, height: side))
+    view.ended = { op in
+        print("drop \(op.isEmpty ? "refused" : "accepted")")
+        exit(op.isEmpty ? 3 : 0)
+    }
+    window.contentView = view
+    window.orderFrontRegardless()
+    DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+        glide(to: a, ms: 150)
+        usleep(100_000)
+        button(.leftMouseDown, a)
+        usleep(200_000)
+        // A small step first: the drag starts on the first dragged event.
+        glide(to: CGPoint(x: a.x + 12, y: a.y - 12), ms: 120, dragging: true)
+        glide(to: b, ms: 700, dragging: true)
+        // Wiggle in place while holding, as a hand does, so the destination keeps getting updates.
+        let steps = max(1, Int(hold / 50))
+        for i in 0..<steps {
+            moveEvent(CGPoint(x: b.x + (i % 2 == 0 ? 1 : -1), y: b.y), dragging: true)
+            usleep(50_000)
+        }
+        button(.leftMouseUp, b)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            MainActor.assumeIsolated { print(view.started ? "drop: no answer from the drag session" : "drag never started") }
+            exit(4)
+        }
+    }
+    app.run()
+    exit(0)
+}
+
 // MARK: Commands
 
 switch arg(0) {
@@ -341,6 +421,36 @@ case "dark-box":
     }
     if maxX < 0 { print("0 0 0 0") } else {
         print("\(Int(Double(minX) / scale)) \(Int(Double(minY) / scale)) \(Int(Double(maxX - minX + 1) / scale)) \(Int(Double(maxY - minY + 1) / scale))")
+    }
+case "ax-menu":
+    guard let bar = attr(appElement(arg(1)), kAXMenuBarAttribute) else { fail("no menu bar") }
+    var found: AXUIElement?
+    func search(_ e: AXUIElement, _ depth: Int) {
+        guard found == nil, depth < 6 else { return }
+        if (attr(e, kAXRoleAttribute) as? String) == kAXMenuItemRole, (attr(e, kAXTitleAttribute) as? String) == arg(2) {
+            found = e
+            return
+        }
+        for c in (attr(e, kAXChildrenAttribute) as? [AXUIElement]) ?? [] { search(c, depth + 1) }
+    }
+    search(bar as! AXUIElement, 0)
+    guard let item = found else { fail("no menu item \(arg(2))") }
+    let key = attr(item, kAXMenuItemCmdCharAttribute) as? String ?? "-"
+    let mods = (attr(item, kAXMenuItemCmdModifiersAttribute) as? Int) ?? -1
+    print("key=\(key) modifiers=\(mods)")
+    if arg(3) == "press" {
+        print(AXUIElementPerformAction(item, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
+    }
+case "pasteboard":
+    let pb = NSPasteboard.general
+    pb.clearContents()
+    pb.declareTypes([.string] + args.dropFirst(2).map { NSPasteboard.PasteboardType($0) }, owner: nil)
+    pb.setString(arg(1), forType: .string)
+    for t in args.dropFirst(2) { pb.setData(Data(), forType: NSPasteboard.PasteboardType(t)) }
+    print("changeCount=\(pb.changeCount)")
+case "file-drag":
+    MainActor.assumeIsolated {
+        fileDrag(path: arg(1), from: CGPoint(x: num(2), y: num(3)), to: CGPoint(x: num(4), y: num(5)), hold: num(6, 1200))
     }
 default:
     fail("unknown command \(arg(0)); see the header of QA/Driver/main.swift")

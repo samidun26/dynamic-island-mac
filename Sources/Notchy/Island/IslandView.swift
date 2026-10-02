@@ -21,17 +21,21 @@ struct IslandCanvas: View {
     var body: some View {
         let canvas = model.metrics.canvasSize
         let open = state.isOpen
+        let theme = model.settings.theme
         ZStack(alignment: .top) {
-            IslandShape(geometry)
+            IslandShape(geometry, pixel: theme.pixel)
                 .fill(Color.black)
                 .shadow(color: .black.opacity(open ? 0.55 : 0), radius: open ? 20 : 0, y: open ? 10 : 0)
             content
+                .modifier(RetroScreen(theme: theme))
                 .frame(width: max(1, geometry.size.width), height: max(1, geometry.size.height), alignment: .top)
-                .clipShape(IslandShape(geometry, centred: true))
+                .clipShape(IslandShape(geometry, centred: true, pixel: theme.pixel))
                 .offset(x: geometry.offsetX)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
+        .modifier(ShelfDropTarget(model: model))
         .environment(\.colorScheme, .dark)
+        .environment(\.islandTheme, theme)
         .ignoresSafeArea()
     }
 
@@ -182,7 +186,7 @@ struct CompactLip: View {
         case .nowPlaying:
             // Streams and radio have no duration: a full line.
             (model.nowPlaying.info.map { ($0.duration ?? 0) > 0 ? $0.progress(at: date) : 1 } ?? 1, model.nowPlaying.tint)
-        case .timer: (model.timer.progress(at: date), .orange)
+        case .timer: (model.timer.progress(at: date), model.timer.accent)
         case .calendar: (1, model.calendar.phase.event?.color ?? .red)
         case .hud: (model.hud.current.map { $0.muted ? 0 : $0.level } ?? 0, .white)
         case .battery: (Double(model.battery.level ?? 100) / 100, .green)
@@ -223,6 +227,7 @@ struct ExpandedContent: View {
         case .activity(.timer): TimerPage(timer: model.timer)
         case .activity(.calendar): CalendarPage(calendar: model.calendar)
         case .activity(.battery), .activity(.hud), .home: HomePage(model: model)
+        case .shelf: ShelfPage(model: model)
         }
     }
 }
@@ -253,7 +258,7 @@ struct ExpandedHeader: View {
                 }
                 if let level = model.battery.level {
                     HStack(spacing: 4) {
-                        Text("\(level)%").font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        Text("\(level)%").islandFont(11, .semibold, digits: true)
                             .foregroundStyle(.white.opacity(0.7))
                         BatteryGlyph(level: level, tint: batteryTint(level), width: 21)
                     }
@@ -282,18 +287,21 @@ struct ExpandedHeader: View {
                 }
                 Text(model.nowPlaying.appName.isEmpty ? "Now Playing" : model.nowPlaying.appName)
             case .activity(.timer):
-                Image(systemName: "timer").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange)
-                Text("Timer")
+                Image(systemName: model.timer.symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(model.timer.accent)
+                Text(model.timer.pomodoro == nil ? "Timer" : "Pomodoro")
             case .activity(.calendar):
                 Image(systemName: "calendar").font(.system(size: 11, weight: .bold)).foregroundStyle(.red)
                 Text("Up Next")
+            case .shelf:
+                Image(systemName: "tray.full.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(.cyan)
+                Text("Shelf")
             default:
                 TimelineView(.everyMinute) { ctx in
                     Text(ctx.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
                 }
             }
         }
-        .font(.system(size: 11.5, weight: .semibold))
+        .islandFont(11.5, .semibold)
         .foregroundStyle(.white.opacity(0.75))
     }
 }
@@ -301,11 +309,12 @@ struct ExpandedHeader: View {
 struct PageDots: View {
     let model: IslandModel
     let current: Page
+    @Environment(\.islandTheme) private var theme
 
     var body: some View {
         HStack(spacing: 5) {
             ForEach(model.pages, id: \.self) { p in
-                Capsule()
+                RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 2.5, style: .continuous)
                     .fill(.white.opacity(p == current ? 0.95 : 0.3))
                     .frame(width: p == current ? 12 : 5, height: 5)
                     .contentShape(Rectangle().inset(by: -4))

@@ -3,7 +3,7 @@
 End-to-end QA of Notchy, installed from this repository the way the [user guide](USER_GUIDE.md) describes and then used on a real macOS session: a script moves the pointer, clicks, scrolls and swipes like a person would, plays music from a test app, and checks what happens on screen, in the accessibility tree, and in the music app.
 
 - **Latest run:** [docs/qa/results.md](qa/results.md), with [screenshots](qa/shots/), Notchy's [test trace](qa/notchy-trace.log) and the [test player's log](qa/fakeplayer.log).
-- **Result:** **39 of 39 cases pass** (macOS 15.7.9, commit `124a57f`). Nine bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
+- **Result:** **43 of 43 cases pass** (macOS 15.7.9, commit `7ae7599`, which adds Retro style, Pomodoro, the file shelf and clipboard history). Ten bugs and security issues were found along the way and fixed; each fix was re-tested by the next run.
 - **Re-run it:** see [How to run it](#how-to-run-it). It runs on every push to a working branch, and on demand from the Actions tab.
 
 ## Environment
@@ -43,6 +43,10 @@ Grouped by area. Every case's evidence (numbers, screenshots, trace excerpts) is
 | Controls | QA-12, QA-13, QA-14, QA-15 | Title and artist readable by VoiceOver; play/pause, next and dragging the progress bar reach the player (seek landed at 140 s of 187, as aimed) |
 | Timer | QA-21, QA-22, QA-23 | `notchy://timer` starts it in the wings with the music as a glyph; finishing peeks then clears; +1 min, pause and cancel work |
 | Settings and menu | QA-24, QA-26, QA-32 | Settings opens focused and ⌘W closes it; the menu bar menu opens, and still opens after Settings was used |
+| Style | QA-40 | Retro: the bundled pixel fonts load (text and digits) and the island draws in them, compact and open |
+| Pomodoro | QA-41 | `notchy://pomodoro` starts "Focus 1 of 4" in the wings; on the timer page, **Skip** moves to "Short break" (read from the accessibility tree) |
+| Clipboard | QA-42 | A copied text appears in the shelf's Clipboard tab. A text copied with the `org.nspasteboard.ConcealedType` marker (as password managers do) is skipped: it is not in the island, the accessibility tree or the trace |
+| File shelf | QA-43 | A file dragged from another app with a real drag session (as from Finder) opens the island on the shelf as it reaches the notch; the drop is accepted, the file is listed, and the shelf stays open afterwards |
 | Shutdown | QA-28 | Quitting stops the Now Playing helper |
 | Updates | QA-37, QA-38, QA-39 | A copy that thinks it is 1.0.0 is offered 9.9.9 by a local stand-in for GitHub's release API: it downloads, verifies, swaps itself in place and relaunches as 9.9.9. A download that doesn't match its checksum is refused, and so is an update signed by a different identity (with two throwaway signing identities in a temporary keychain), while the same identity installs. The installed copy is untouched whenever an update is refused. The main QA copy also asks the real GitHub API and correctly finds no release yet |
 | Security | QA-33, QA-34 | Code injection through the launch environment is refused, both into Notchy and into its helper; see the [security review](SECURITY_REVIEW.md) |
@@ -75,6 +79,8 @@ Each of these was found by the QA run, fixed, and re-tested by the next run.
 | 8 | Security review | Two ways another program could borrow Notchy's permissions, and three smaller issues. | Fixed; see the [security review](SECURITY_REVIEW.md). QA-33 and QA-34 test the two injection attacks on every run. |
 | 9 | Your screenshot; QA-35, QA-36 | The compact wings had a fixed width and covered whatever was next to the notch: the end of the app's menus (Help) and menu bar icons (Wi‑Fi), which then couldn't be seen or clicked. | Notchy measures the free menu bar each side of the notch (icons from the window list; menus through Accessibility when allowed) and fits the activity into it: both wings, everything on the free side, or a thin progress line under the notch. While building it, QA also caught a 0.3 s widen while an app was still activating, slow menu reads holding up the icon check, and icons under a fake notch on displays without one; all fixed. |
 
+| 10 | QA-24, QA-20, the QA workflow (test) | Three test-only problems. On some runs the virtual Mac delivers no key presses at all, not even ones sent straight to Notchy's process (the trace shows none arrive), so QA-24 could not press ⌘W. QA-20 swiped the instant the pointer arrived, before Notchy had taken the island out of click-through. And two QA runs for back-to-back pushes published their reports over each other; a cancelled run even published an empty one. | QA-24 tries the keyboard three ways first; only if not one press reaches Notchy does it read Window → Close's shortcut from Notchy's menu (it must be ⌘W), press that item through Accessibility and check the window closed, and the report says which way it went. QA-20 waits for the island to take the pointer. One QA run per branch at a time, only finished runs publish, and the report is committed on top of the branch as it is. |
+
 The QA harness itself needed several rounds (time limits around anything that can wait on a system dialog, hit-testing the accessibility tree because an overlay panel's windows can't be enumerated, measuring widths along the island's top edge so content doesn't interfere). Those changes are in `QA/` only.
 
 ## Not covered by this run
@@ -91,7 +97,7 @@ Install as in the [user guide](USER_GUIDE.md), then:
 - [ ] **Real players.** Music, Spotify, Safari (YouTube), Chrome, Firefox, VLC, Podcasts: title, artist, artwork, play/pause, next and previous, scrubbing. Also quitting the player while it plays.
 - [ ] **Calendar.** Turn on Calendar in Settings → Activities, allow access when asked, and check the next event on the Home page; for a meeting with a Zoom/Meet/Teams link, the **Join** button opens it, and the island peeks before it starts.
 - [ ] **Volume keys.** Turn on "Replace the volume HUD", grant Accessibility when asked: the volume keys show the level in the island and the system HUD doesn't appear; mute works. With Accessibility denied, macOS shows its own HUD and nothing breaks.
-- [ ] **Brightness keys** (experimental switch): the level shows in the island; with it off, macOS handles the keys.
+- [ ] **Brightness.** With the HUD on, the brightness keys show a sun and a level in the island and the system HUD doesn't appear; the brightness slider in Now Playing changes the screen and follows the keys. With *Brightness in the island* off, macOS handles the keys and the slider is gone.
 - [ ] **Battery.** Plug in and unplug: the charging banner appears briefly; below 20% the low battery banner appears once.
 - [ ] **Displays.** Connect and disconnect an external display, change resolution, close the lid with an external display: the island stays on the chosen display and re-aligns.
 - [ ] **Spaces and full screen.** Switch Spaces and use a full-screen app: the island stays above it and keeps working.
@@ -99,6 +105,11 @@ Install as in the [user guide](USER_GUIDE.md), then:
 - [ ] **Launch at login.** Turn it on, log out and in: Notchy starts. Turn it off: it doesn't.
 - [ ] **Reduce Motion** (System Settings → Accessibility → Display): opening and closing become short crossfades.
 - [ ] **VoiceOver.** The expanded island's buttons and sliders are read with their names and values, and the sliders can be adjusted.
+- [ ] **Retro style.** Settings → General → Style → Retro: the pixel fonts are crisp at your display's scale, the stepped corners line up with the notch, and Green and Amber turn the whole island one colour. Switch back to Classic: everything returns to normal without a relaunch.
+- [ ] **Shelf from Finder.** Drag one file, then several at once, from Finder and from the desktop to the notch: the island opens on the drop zone before you reach it, the files land, and the shelf stays open until you move away. Drag one out to the desktop, into Mail and into a Finder window. Quit and reopen Notchy: the files are still there; move one in Finder: it still opens.
+- [ ] **Not a drop target by accident.** Drag a window by its title bar, select text by dragging, and drag a file to somewhere else near the top of the screen: the island never opens for these.
+- [ ] **Clipboard with a real password manager.** Copy a password from 1Password, Bitwarden or Keychain Access: it never appears in the shelf's Clipboard tab. Copy ordinary text: it does. Pin an item, quit and reopen: only the pin is left.
+- [ ] **Pomodoro end to end.** Set focus to 5 min and break to 1 min, start Focus from Home, and let it run: a sound and a peek at each change, the colour and icon switch between focus and break, and after the fourth focus the break is the long one.
 - [ ] **Menu bar icon.** Click it several times, including after opening and closing Settings: the menu opens every time. (CI can only check this once per session with a real click; see bug 7.)
 
 ## How it was installed, used and tested

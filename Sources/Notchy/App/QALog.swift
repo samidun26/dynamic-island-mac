@@ -17,6 +17,7 @@ enum QALog {
         case .idle: "idle"
         case .compact(let k): "compact:\(k.rawValue)"
         case .expanded(.home): "expanded:home"
+        case .expanded(.shelf): "expanded:shelf"
         case .expanded(.activity(let k)): "expanded:\(k.rawValue)"
         case .peek(let k): "peek:\(k.rawValue)"
         }

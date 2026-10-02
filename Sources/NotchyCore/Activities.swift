@@ -28,10 +28,12 @@ public enum IslandState: Equatable, Sendable {
     }
 }
 
-/// A page in the expanded island. `home` (clock, next event, quick timers) is always last.
+/// A page in the expanded island: one per activity, then `home` (clock, next event, quick
+/// timers), then the `shelf` (files and clipboard) when it is on.
 public enum Page: Hashable, Sendable {
     case activity(ActivityKind)
     case home
+    case shelf
 }
 
 public struct ActivityEntry: Equatable, Sendable {
@@ -74,10 +76,13 @@ public struct ActivityQueue: Equatable, Sendable {
     public var entries: [ActivityEntry]
     /// Set by a swipe: the user wants this one in front (transients still win).
     public var preferred: ActivityKind?
+    /// The shelf page (files and clipboard) is on.
+    public var shelf: Bool
 
-    public init(entries: [ActivityEntry], preferred: ActivityKind? = nil) {
+    public init(entries: [ActivityEntry], preferred: ActivityKind? = nil, shelf: Bool = false) {
         self.entries = entries
         self.preferred = preferred
+        self.shelf = shelf
     }
 
     private func ranked(_ list: [ActivityEntry]) -> [ActivityEntry] {
@@ -106,9 +111,9 @@ public struct ActivityQueue: Equatable, Sendable {
         return compactOrder.dropFirst().filter { !transients.contains($0) }
     }
 
-    /// Expanded pages in display order, `home` last.
+    /// Expanded pages in display order: activities, `home`, then the shelf.
     public var pages: [Page] {
-        ranked(entries.filter { $0.hasPage && !$0.transient }).map { .activity($0.kind) } + [.home]
+        ranked(entries.filter { $0.hasPage && !$0.transient }).map { .activity($0.kind) } + [.home] + (shelf ? [.shelf] : [])
     }
 
     /// Next non-transient compact activity after the current primary, wrapping around.
