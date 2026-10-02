@@ -199,6 +199,8 @@ struct CompactLip: View {
 struct ExpandedContent: View {
     let model: IslandModel
     let page: Page
+    /// Space around a page, below the header band.
+    static let inset = EdgeInsets(top: 8, leading: 22, bottom: 16, trailing: 22)
 
     var body: some View {
         let m = model.metrics
@@ -212,9 +214,9 @@ struct ExpandedContent: View {
                     .transition(model.reduceMotion ? .opacity : .page(model.pageDirection))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 22)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
+            .padding(.horizontal, ExpandedContent.inset.leading)
+            .padding(.top, ExpandedContent.inset.top)
+            .padding(.bottom, ExpandedContent.inset.bottom)
         }
         .frame(width: size.width, height: size.height)
         .foregroundStyle(.white)

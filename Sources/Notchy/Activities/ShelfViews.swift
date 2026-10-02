@@ -89,23 +89,24 @@ private struct FilesShelf: View {
     }
 }
 
+enum ShelfDropZone { case keep, copy }
+
 /// While something is dragged to the notch: drop it on the left to keep it on the shelf, or on
 /// Copy to put it on the clipboard (a screenshot then pastes straight into a chat or document).
+/// One drop target covers the island (`ShelfDropDelegate`); where the pointer is picks the action.
 private struct DropZones: View {
     let model: IslandModel
-    @State private var copyTargeted = false
-    @Environment(\.staticRender) private var staticRender
 
     var body: some View {
-        let keep = model.dropTargeted && !copyTargeted
+        let over = model.dropTargeted
+        let keep = over && model.dropZone == .keep, copy = over && model.dropZone == .copy
         HStack(spacing: 8) {
             DropZone(symbol: "tray.and.arrow.down.fill", title: keep ? "Let go to keep it" : "Keep on Shelf", tint: .cyan, targeted: keep)
-            DropZone(symbol: "doc.on.clipboard.fill", title: copyTargeted ? "Let go to copy" : "Copy", tint: .orange, targeted: copyTargeted)
-                .frame(width: 140)
-                .modifier(CopyDropTarget(model: model, targeted: $copyTargeted, enabled: !staticRender))
+            DropZone(symbol: "doc.on.clipboard.fill", title: copy ? "Let go to copy" : "Copy", tint: .orange, targeted: copy)
+                .frame(width: IslandModel.copyZoneWidth)
         }
         .animation(.easeOut(duration: 0.15), value: keep)
-        .animation(.easeOut(duration: 0.15), value: copyTargeted)
+        .animation(.easeOut(duration: 0.15), value: copy)
     }
 }
 
@@ -130,27 +131,6 @@ private struct DropZone: View {
             shape.strokeBorder(tint.opacity(targeted ? 0.9 : 0.45), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
         }
         .contentShape(Rectangle())
-    }
-}
-
-private struct CopyDropTarget: ViewModifier {
-    let model: IslandModel
-    @Binding var targeted: Bool
-    let enabled: Bool
-
-    @ViewBuilder func body(content: Content) -> some View {
-        if enabled {
-            content.onDrop(of: ShelfDrop.utTypes, isTargeted: $targeted) { providers in
-                QALog.log("DROP copy")
-                Task { @MainActor in
-                    let urls = await ShelfDrop.files(from: providers, storage: model.shelf.storage)
-                    model.droppedForCopy(urls)
-                }
-                return true
-            }
-        } else {
-            content
-        }
     }
 }
 
@@ -374,13 +354,51 @@ struct ShelfDropTarget: ViewModifier {
     }
 
     private func dropTarget(_ content: Content) -> some View {
-        content.onDrop(of: ShelfDrop.utTypes, isTargeted: Binding(get: { model.dropTargeted }, set: { model.setDropTargeted($0) })) { providers in
-            guard model.settings.shelfEnabled else { return false }
-            Task { @MainActor in
-                let urls = await ShelfDrop.files(from: providers, storage: model.shelf.storage)
-                if !urls.isEmpty { model.droppedOnShelf(urls) }
-            }
-            return true
+        content.onDrop(of: ShelfDrop.utTypes, delegate: ShelfDropDelegate(model: model))
+    }
+}
+
+/// The island's one drop target. Over the Copy area (`IslandModel.copyZone`) a drop goes on the
+/// clipboard; anywhere else it's kept on the shelf.
+private struct ShelfDropDelegate: DropDelegate {
+    let model: IslandModel
+
+    func validateDrop(info: DropInfo) -> Bool {
+        model.settings.shelfEnabled && info.hasItemsConforming(to: ShelfDrop.utTypes)
+    }
+
+    func dropEntered(info: DropInfo) {
+        model.setDropTargeted(true)
+        track(info)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        track(info)
+        return DropProposal(operation: .copy)
+    }
+
+    func dropExited(info: DropInfo) {
+        model.setDropTargeted(false)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let zone = zone(at: info.location)
+        let providers = info.itemProviders(for: ShelfDrop.utTypes)
+        model.setDropTargeted(false)
+        QALog.log("DROP \(zone == .copy ? "copy" : "keep") items=\(providers.count)")
+        Task { @MainActor in
+            let urls = await ShelfDrop.files(from: providers, storage: model.shelf.storage)
+            guard !urls.isEmpty else { QALog.log("DROP nothing usable"); return }
+            if zone == .copy { model.droppedForCopy(urls) } else { model.droppedOnShelf(urls) }
         }
+        return true
+    }
+
+    private func track(_ info: DropInfo) {
+        model.setDropZone(zone(at: info.location))
+    }
+
+    private func zone(at p: CGPoint) -> ShelfDropZone {
+        model.copyZone().contains(p) ? .copy : .keep
     }
 }

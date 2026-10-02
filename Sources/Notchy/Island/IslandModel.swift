@@ -46,6 +46,8 @@ final class IslandModel {
     private(set) var fileDragNear = false
     /// …and are over the island, where letting go drops them on the shelf.
     private(set) var dropTargeted = false
+    /// Which drop target the pointer is over while dragging: keep on the shelf, or copy.
+    private(set) var dropZone = ShelfDropZone.keep
     /// Which half of the shelf is showing.
     var shelfTab = ShelfTab.files
     /// A short confirmation on the shelf ("Copied to clipboard").
@@ -272,6 +274,22 @@ final class IslandModel {
             selectedPage = .shelf
             shelfTab = .files
         }
+    }
+
+    func setDropZone(_ zone: ShelfDropZone) {
+        if dropZone != zone { dropZone = zone }
+    }
+
+    static let copyZoneWidth: CGFloat = 140
+
+    /// The Copy target in the panel's coordinates: the right end of the expanded island's page
+    /// (see `DropZones`), where letting go copies instead of keeping.
+    func copyZone() -> CGRect {
+        let canvas = metrics.canvasSize, size = metrics.expandedSize()
+        let inset = ExpandedContent.inset
+        let right = (canvas.width + size.width) / 2 - inset.trailing
+        let top = metrics.notchSize.height + inset.top
+        return CGRect(x: right - Self.copyZoneWidth, y: top, width: Self.copyZoneWidth, height: size.height - inset.bottom - top)
     }
 
     func setDropTargeted(_ on: Bool) {
