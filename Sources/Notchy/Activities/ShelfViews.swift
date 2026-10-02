@@ -180,17 +180,20 @@ private struct FileTile: View {
 
     var body: some View {
         VStack(spacing: 3) {
+            let smoothing: Image.Interpolation = theme.isRetro ? .none : .high
             Group {
                 if let thumbnail {
                     Image(decorative: thumbnail, scale: 2)
+                        .interpolation(smoothing)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 4, style: .continuous))
                 } else {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path)).resizable()
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path))
+                        .interpolation(smoothing)
+                        .resizable()
                 }
             }
-            .interpolation(theme.isRetro ? .none : .high)
             .frame(width: 34, height: 34)
             .task(id: file.url) { thumbnail = await Thumbnails.make(for: file.url, side: 34) }
             Text(file.name)
