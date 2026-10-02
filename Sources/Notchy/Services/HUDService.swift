@@ -105,7 +105,9 @@ final class HUDModel {
     private func installTap(prompt: Bool) {
         let trusted = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": prompt] as CFDictionary)
         let t = MediaKeyTap { [weak self] code, down, isRepeat, mods in
-            self?.handleKey(code, down: down, isRepeat: isRepeat, mods: mods) ?? false
+            let handled = self?.handleKey(code, down: down, isRepeat: isRepeat, mods: mods) ?? false
+            if down, !isRepeat { QALog.log("HUD key=\(code) handled=\(handled)") }
+            return handled
         }
         if trusted, t.start() {
             tap = t

@@ -714,29 +714,54 @@ else
     quit_notchy
 fi
 
-# ---------------------------------------------------------------- first launch: volume and brightness
-# QA-45: volume and brightness in the notch are on by default and need Accessibility, which the
-# app doesn't have here. The first launch opens Settings on Activities to ask, once.
+# ---------------------------------------------------------------- volume and brightness in the notch
+# QA-45: volume and brightness in the notch are on by default and need Accessibility. Opened the
+# way people open it (Finder, `open`), ponyhub has no Accessibility here, so the first launch
+# opens Settings on Activities to ask, once per version. (Started from the test's shell, it
+# inherits the shell's Accessibility instead: that is QA-46.)
 quit_notchy
 defaults delete "$BID" hudOnboardedVersion 2>/dev/null
-launch_notchy
+open_app() { : > "$1"; lim 10 open -n --env NOTCHY_QA_LOG=1 --stdout "$1" "$APP"; }
+quit_opened() { pkill -TERM -f "$APP/Contents/MacOS/ponyhub" 2>/dev/null; for _ in $(seq 1 25); do pgrep -f "$APP/Contents/MacOS/ponyhub" >/dev/null || break; sleep 0.2; done; }
+in_file() { for _ in $(seq 1 $(($3 * 5))); do grep -q "$2" "$1" 2>/dev/null && return 0; sleep 0.2; done; return 1; }
+L1="$OUT/qa45-first.log"; L2="$OUT/qa45-second.log"
+open_app "$L1"
 ONB=no; SWIN=""; ASK=0
-if wait_for "$LOG" "ONBOARDING hud" 5; then
+if in_file "$L1" "ONBOARDING hud" 8; then
     ONB=yes; sleep 1.5
     SWIN=$("$D" windows ponyhub | awk '{split($2,l,"="); split($5,w,"="); if (l[2]==0 && w[2]>=400) {split($1,i,"="); print i[2]}}' | head -1)
     [ -n "$SWIN" ] && lim 10 screencapture -x -o -l "$SWIN" "$OUT/shots/qa45-onboarding.png"
     [ "$AX" = yes ] && ASK=$(lim 20 "$D" ax-texts $BID | grep -c "Needs Accessibility")
 fi
-quit_notchy
-launch_notchy; sleep 1.5
-AGAIN=$(after "$LOG" | grep -c "ONBOARDING hud")
-quit_notchy
+TAP1=$(grep -o 'HUD tap=[a-zA-Z]*' "$L1" | tail -1)
+quit_opened
+open_app "$L2"; in_file "$L2" "LAUNCH" 8; sleep 1.5
+AGAIN=$(grep -c "ONBOARDING hud" "$L2")
+quit_opened
 if [ $ONB = yes ] && [ -n "$SWIN" ] && { [ "$AX" != yes ] || [ "$ASK" -ge 1 ]; } && [ "$AGAIN" = 0 ]; then
-    pass QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "Settings opened on Activities with \"Needs Accessibility\" and Allow…; not again on the next launch ([shot](shots/qa45-onboarding.png))"
+    pass QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "${TAP1:-tap state not logged}; Settings opened on Activities with \"Needs Accessibility\" and Allow…; not again on the next launch ([shot](shots/qa45-onboarding.png))"
 else
-    fail QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "onboarding: $ONB; settings window: ${SWIN:-none}; permission row: $ASK; shown again on relaunch: $AGAIN"
+    fail QA-45 "First launch asks once for Accessibility for volume and brightness in the notch (FR-H1)" "${TAP1:-tap state not logged}; onboarding: $ONB; settings window: ${SWIN:-none}; permission row: $ASK; shown again on relaunch: $AGAIN"
 fi
 defaults write "$BID" hudOnboardedVersion "$(app_version)"
+
+# QA-46: with Accessibility, the volume key shows its level in the notch and is kept from macOS
+# (so its own pop-up doesn't appear).
+launch_notchy
+if grep -q "HUD tap=active" <(after "$LOG"); then
+    mark "$LOG"; "$D" media-key volume-up >/dev/null
+    K=$(wait_for "$LOG" "HUD key=0 handled=" 3 && after "$LOG" | grep -o 'HUD key=0 handled=[a-z]*' | head -1)
+    HUDST=no; wait_for "$LOG" "STATE compact:hud" 2 && { HUDST=yes; sleep 0.3; shot qa46-volume; }
+    "$D" media-key volume-down >/dev/null; sleep 2
+    if [ "$K" = "HUD key=0 handled=true" ] && [ $HUDST = yes ]; then
+        pass QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "key taken by ponyhub ($K), island showed the volume HUD ([shot](shots/qa46-volume.png))"
+    else
+        fail QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "${K:-the key never reached ponyhub}; HUD in the island: $HUDST; $(last_state)"
+    fi
+else
+    skip QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "no Accessibility for ponyhub on this machine ($(after "$LOG" | grep -o 'HUD tap=[a-zA-Z]*' | tail -1))"
+fi
+quit_notchy
 
 # ---------------------------------------------------------------- retro style
 # Settings → General → Style: Retro. The bundled pixel fonts must load, and the island must draw.

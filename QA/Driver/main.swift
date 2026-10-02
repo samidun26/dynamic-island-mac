@@ -18,6 +18,8 @@
 //   qa-driver ax-texts BUNDLE_ID [X Y W H] every static text value
 //   qa-driver ax-menu BUNDLE_ID TITLE [press]  an item of the app's own menus: its shortcut ("key=W
 //                                          modifiers=0" is ⌘W), and AXPress it with "press"
+//   qa-driver media-key volume-up|volume-down|mute|brightness-up|brightness-down
+//                                          press a media key (a system-defined event, as the keyboard sends)
 //   qa-driver pasteboard TEXT [TYPE…]      put TEXT on the clipboard, with extra (empty) marker types
 //   qa-driver file-drag PATH X1 Y1 X2 Y2 [HOLD_MS]
 //                                          drag PATH from a small window at X1,Y1 and drop it at X2,Y2,
@@ -441,6 +443,18 @@ case "ax-menu":
     if arg(3) == "press" {
         print(AXUIElementPerformAction(item, kAXPressAction as CFString) == .success ? "pressed" : "press failed")
     }
+case "media-key":
+    // NX_KEYTYPE_* codes; data1 = code << 16 | state (0xA down, 0xB up) << 8.
+    let codes: [String: Int] = ["volume-up": 0, "volume-down": 1, "brightness-up": 2, "brightness-down": 3, "mute": 7]
+    guard let code = codes[arg(1)] else { fail("unknown media key \(arg(1))") }
+    for state in [0xA, 0xB] {
+        let ev = NSEvent.otherEvent(with: .systemDefined, location: .zero, modifierFlags: NSEvent.ModifierFlags(rawValue: UInt(state << 8)),
+                                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil,
+                                    subtype: 8, data1: (code << 16) | (state << 8), data2: -1)
+        ev?.cgEvent?.post(tap: .cghidEventTap)
+        usleep(60_000)
+    }
+    print("pressed \(arg(1))")
 case "pasteboard":
     let pb = NSPasteboard.general
     pb.clearContents()
