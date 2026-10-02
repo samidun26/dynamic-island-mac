@@ -6,6 +6,7 @@
 #   UNIVERSAL=1 ./build.sh           # arm64 + x86_64 (needs full Xcode, not just the CLT)
 #   SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build.sh
 #                                    # hardened runtime + timestamp, ready for notarization
+#   VERSION=1.0.7 BUILD_NUMBER=7 ./build.sh   # version shown in About and used by the updater
 set -eu
 cd "$(dirname "$0")"
 
@@ -83,8 +84,11 @@ if [ "$SIGN_IDENTITY" = "-" ]; then
   codesign --force --sign - "$FW"
   codesign --force --options runtime --entitlements Resources/Notchy.entitlements --sign - "$APP"
 else
-  codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$FW"
-  codesign --force --timestamp --options runtime --entitlements Resources/Notchy.entitlements --sign "$SIGN_IDENTITY" "$APP"
+  # Developer ID signatures get a secure timestamp (needed for notarization); a self-signed
+  # release identity (scripts/setup-signing.sh) does not need one.
+  case "$SIGN_IDENTITY" in "Developer ID"*) TS=--timestamp ;; *) TS=--timestamp=none ;; esac
+  codesign --force $TS --options runtime --sign "$SIGN_IDENTITY" "$FW"
+  codesign --force $TS --options runtime --entitlements Resources/Notchy.entitlements --sign "$SIGN_IDENTITY" "$APP"
 fi
 codesign --verify --deep --strict "$APP"
 echo "==> built $APP"

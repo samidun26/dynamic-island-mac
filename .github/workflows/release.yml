@@ -1,0 +1,128 @@
+name: release
+
+# Publishes a new Notchy release whenever app code changes on main, so everyone who installed it
+# gets the update from inside the app (Settings → About, or the menu bar icon).
+#
+# Version: the major.minor in VERSION plus this workflow's run number (1.0.1, 1.0.2, …). Bump
+# VERSION for a bigger step (1.1, 2.0); the numbering continues from the run number.
+#
+# Signing: ad-hoc unless the repository has the SIGNING_CERT_P12 / SIGNING_CERT_PASSWORD secrets
+# (scripts/setup-signing.sh creates them). With them, every release carries the same identity:
+# macOS keeps the permissions people granted across updates, and the in-app updater accepts only
+# updates signed with that identity.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Resources/**"
+      - "Vendor/**"
+      - "Package.swift"
+      - "build.sh"
+      - "VERSION"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+
+      - name: Version
+        id: v
+        run: |
+          BASE=$(tr -d ' \n' < VERSION)
+          echo "version=$BASE.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Notchy $BASE.$GITHUB_RUN_NUMBER"
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tail -20
+
+      - name: Signing identity (optional)
+        id: sign
+        env:
+          P12: ${{ secrets.SIGNING_CERT_P12 }}
+          P12_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          if [ -z "$P12" ]; then
+            echo "identity=-" >> "$GITHUB_OUTPUT"
+            echo "::notice::No signing identity configured: this release is ad-hoc signed (see scripts/setup-signing.sh)."
+            exit 0
+          fi
+          KC="$RUNNER_TEMP/release.keychain-db"
+          KC_PASSWORD=$(openssl rand -hex 16)
+          security create-keychain -p "$KC_PASSWORD" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KC_PASSWORD" "$KC"
+          printf %s "$P12" | base64 --decode > "$RUNNER_TEMP/release.p12"
+          security import "$RUNNER_TEMP/release.p12" -k "$KC" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/release.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASSWORD" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          # A self-signed identity isn't "trusted", so pick it by its hash rather than by name.
+          ID=$(security find-identity -p codesigning "$KC" | awk '/\)/ {print $2; exit}')
+          [ -n "$ID" ] || { echo "::error::No code signing identity in SIGNING_CERT_P12"; exit 1; }
+          echo "identity=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build (universal)
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
+        run: |
+          set -o pipefail
+          BUILD_NUMBER=$GITHUB_RUN_NUMBER UNIVERSAL=1 ./build.sh 2>&1 | tail -15
+          codesign -dv build/Notchy.app 2>&1 | grep -E 'Identifier|Authority|Signature|flags'
+          /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' build/Notchy.app/Contents/Info.plist
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent build/Notchy.app Notchy.zip
+          shasum -a 256 Notchy.zip | tee Notchy.zip.sha256
+
+      - name: Release notes
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
+        run: |
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          {
+            echo "## What's new"
+            echo
+            git log --no-merges --format='- %s' ${PREV:+$PREV..}HEAD | grep -v -E '\[skip ci\]|^- (QA|Docs?)[: ]' | head -40
+            echo
+            echo "## Install or update"
+            echo
+            echo "Already using Notchy? It will offer this update itself (Settings → About, or the dot on its menu bar icon)."
+            echo
+            echo "New here: download **Notchy.zip**, check it with \`shasum -a 256 -c Notchy.zip.sha256\`, unzip, move Notchy to Applications, then allow it once in System Settings → Privacy & Security (it is not notarized). Full steps: [user guide](https://github.com/$GITHUB_REPOSITORY/blob/main/docs/USER_GUIDE.md)."
+            echo
+            echo "Universal (Apple silicon and Intel), macOS 14 or later. SHA-256 \`$(cut -d' ' -f1 Notchy.zip.sha256)\`. Signature: $([ "$SIGN_IDENTITY" = "-" ] && echo "ad-hoc" || echo "Notchy release identity")."
+          } > notes.md
+          cat notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          gh release create "v$VERSION" Notchy.zip Notchy.zip.sha256 \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Notchy $VERSION" --notes-file notes.md --latest

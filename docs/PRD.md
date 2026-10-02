@@ -185,8 +185,9 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | FR-S3 | Launch at login (`SMAppService`). | P1 | ✅ | H |
 | FR-S4 | `notchy://` URLs: `timer`, `timer/cancel`, `open`, `settings`. | P1 | ✅ | T, Q |
 | FR-S5 | `build.sh` produces a signed `.app` (ad-hoc by default; Developer ID with hardened runtime documented). | P0 | ✅ | L, Q |
-| FR-S6 | CI builds, tests and renders every state on each push; version tags publish a GitHub Release. | P1 | ✅ | L |
+| FR-S6 | CI builds, tests and renders every state on each push; every app change on `main` publishes a numbered GitHub Release with its SHA-256. | P1 | ✅ | L |
 | FR-S7 | `--demo <scenario>` and `--snapshot <dir>` for verification without a mouse. | P1 | ✅ | L |
+| FR-S8 | In-app updates from GitHub Releases: checks on launch and every 6 hours (toggle), offers the update in the menu bar and Settings, verifies source, checksum, version and signature (same identity when releases are signed), swaps the app atomically and relaunches. | P1 | ✅ | T, Q |
 
 ### 7.11 Explicitly out (see §9)
 
@@ -204,7 +205,7 @@ Priority values: HUD 100, timer done 90, meeting within 5 min 80, battery banner
 | NFR-2 | Memory | Small and stable. | 12 MB app + 14 MB adapter process |
 | NFR-3 | Latency | Hover-to-open ≈ dwell delay + one frame; no window resizes. | By design; H for feel |
 | NFR-4 | Reliability | Adapter restarts with backoff, falls back if fatal, never outlives the app; orphans from a crash are cleaned up at launch. | L (exits with app), Q (restart without flicker, exits on quit) |
-| NFR-5 | Privacy | No accounts, telemetry or analytics; no network use of its own (one exception: Spotify album art in fallback mode is loaded from the URL Spotify provides). Every permission is optional and requested only when its feature is on. | Code review |
+| NFR-5 | Privacy | No accounts, telemetry or analytics. Network use of its own: the update check on GitHub (can be turned off) and, in fallback mode, Spotify album art from Spotify's CDN. Every permission is optional and requested only when its feature is on. | Code review |
 | NFR-6 | Compatibility | macOS 14+, universal binary, notched and non-notched displays, multiple displays. | L (CI on macOS 15) |
 | NFR-7 | Accessibility | VoiceOver labels on controls; Reduce Motion honoured; text meets contrast on black. | Partly H |
 | NFR-8 | Code quality | Swift 6 language mode; geometry, priority, hover intent and parsing unit-tested. | T |

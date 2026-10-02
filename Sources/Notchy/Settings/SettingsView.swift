@@ -1,15 +1,26 @@
 import AppKit
+import NotchyCore
 import ServiceManagement
 import SwiftUI
+
+enum SettingsTab: Hashable { case general, activities, motion, about }
+
+/// Which tab Settings shows; lets a link or a menu item open a particular one.
+@MainActor @Observable
+final class SettingsNavigation {
+    var tab = SettingsTab.general
+}
 
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
     private var closeObserver: NSObjectProtocol?
+    private let navigation = SettingsNavigation()
 
-    func show(settings: AppSettings, model: IslandModel) {
+    func show(settings: AppSettings, model: IslandModel, updates: UpdateService, tab: SettingsTab? = nil) {
+        if let tab { navigation.tab = tab }
         if window == nil {
-            let host = NSHostingController(rootView: SettingsView(settings: settings, model: model))
+            let host = NSHostingController(rootView: SettingsView(settings: settings, model: model, updates: updates, navigation: navigation))
             let w = NSWindow(contentViewController: host)
             w.title = "Notchy Settings"
             w.styleMask = [.titled, .closable, .miniaturizable]
@@ -39,17 +50,23 @@ final class SettingsWindowController {
 struct SettingsView: View {
     @Bindable var settings: AppSettings
     let model: IslandModel
+    let updates: UpdateService
+    @Bindable var navigation: SettingsNavigation
 
     var body: some View {
-        TabView {
+        TabView(selection: $navigation.tab) {
             GeneralTab(settings: settings, model: model)
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             ActivitiesTab(settings: settings, model: model)
                 .tabItem { Label("Activities", systemImage: "square.stack.3d.up") }
+                .tag(SettingsTab.activities)
             MotionTab(settings: settings, model: model)
                 .tabItem { Label("Motion", systemImage: "wand.and.stars") }
-            AboutTab()
+                .tag(SettingsTab.motion)
+            AboutTab(settings: settings, updates: updates)
                 .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(SettingsTab.about)
         }
         .frame(width: 500, height: 470)
     }
@@ -233,17 +250,23 @@ private struct MotionTab: View {
 }
 
 private struct AboutTab: View {
+    @Bindable var settings: AppSettings
+    let updates: UpdateService
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Notchy").font(.title2.weight(.semibold))
-                    Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")")
-                        .foregroundStyle(.secondary)
+                    Text("Version \(updates.current.description)").foregroundStyle(.secondary)
                 }
+                Spacer()
+                UpdateStatus(updates: updates)
             }
-            Text("A Dynamic Island for the Mac notch. No accounts, no telemetry, and no network use of its own.")
+            Toggle("Check for updates automatically", isOn: $settings.checkForUpdates)
+            Text("A Dynamic Island for the Mac notch. No accounts or telemetry; the only request Notchy makes on its own is the update check on GitHub.")
+                .font(.callout).foregroundStyle(.secondary)
             Divider()
             Text("Includes mediaremote-adapter").font(.headline)
             Text("Copyright (c) 2025 Jonas van den Berg and contributors. BSD 3-Clause License. github.com/ungive/mediaremote-adapter")
@@ -262,5 +285,56 @@ private struct AboutTab: View {
         guard let url = Bundle.main.url(forResource: "mediaremote-adapter-LICENSE", withExtension: "txt"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return "BSD 3-Clause License (see Vendor/mediaremote-adapter/LICENSE)." }
         return text
+    }
+}
+
+/// The update check and install, at the top of the About tab.
+private struct UpdateStatus: View {
+    let updates: UpdateService
+    @State private var showNotes = false
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            switch updates.phase {
+            case .available(let release):
+                Text("Notchy \(release.version.description) is available").font(.callout.weight(.semibold))
+                HStack(spacing: 8) {
+                    Button("What's New") { showNotes = true }
+                        .popover(isPresented: $showNotes) { ReleaseNotes(release: release) }
+                    Button("Install and Relaunch") { Task { await updates.install() } }
+                        .keyboardShortcut(.defaultAction)
+                }
+            case .installing(let step):
+                HStack(spacing: 6) { ProgressView().controlSize(.small); Text(step).font(.callout) }
+            case .checking:
+                HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…").font(.callout) }
+            case .upToDate:
+                Text("Notchy is up to date").font(.callout).foregroundStyle(.secondary)
+                Button("Check Again") { Task { await updates.check(userInitiated: true) } }
+            case .failed(let message):
+                Text(message).font(.caption).foregroundStyle(.red).multilineTextAlignment(.trailing).frame(maxWidth: 230, alignment: .trailing)
+                Button("Try Again") { Task { await updates.check(userInitiated: true) } }
+            case .idle:
+                Button("Check for Updates") { Task { await updates.check(userInitiated: true) } }
+            }
+        }
+    }
+}
+
+private struct ReleaseNotes: View {
+    let release: ReleaseInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Notchy \(release.version.description)").font(.headline)
+            ScrollView {
+                Text(release.notes.isEmpty ? "No notes for this release." : release.notes)
+                    .font(.callout).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+            }
+            .frame(maxHeight: 220)
+            Link("Open on GitHub", destination: release.pageURL).font(.callout)
+        }
+        .padding(14)
+        .frame(width: 320)
     }
 }

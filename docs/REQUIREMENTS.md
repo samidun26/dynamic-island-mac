@@ -12,7 +12,7 @@ What you need to run Notchy, to build it, and to distribute it. Product requirem
 | Disk | under 10 MB |
 | Memory | about 12 MB, plus about 14 MB for the Now Playing helper process |
 | CPU | 0% when idle (measured on CI with every activity enabled) |
-| Network | Not required. Notchy makes no network requests of its own. One exception: in the Music/Spotify fallback mode, Spotify album art is loaded from the URL Spotify provides. |
+| Network | Not required. Notchy's own requests: the update check and update downloads from GitHub (on launch and every 6 hours; can be turned off), and, in the Music/Spotify fallback mode, Spotify album art from Spotify's CDN. Nothing about you is sent. |
 | Trackpad | Optional; needed only for swipe gestures and haptic feedback |
 
 ### Permissions

@@ -9,7 +9,7 @@
 
 ## Summary
 
-**No breach and no high or critical issue was found.** Nothing in the repository or its history is a secret (no tokens, keys or passwords; the workflows use only GitHub's built-in per-run token). The app has no network listener and no account, makes no network requests of its own apart from Spotify album art in fallback mode, and sends nothing anywhere.
+**No breach and no high or critical issue was found.** Nothing in the repository or its history is a secret (no tokens, keys or passwords; the workflows use only GitHub's built-in per-run token). The app has no network listener and no account, and sends nothing about you anywhere. Its own requests are the update check and downloads from GitHub (added later, reviewed in [Updates](#updates)) and Spotify album art in fallback mode.
 
 Eight issues were found: **seven are fixed** in this branch, and the eighth (releases aren't notarized) is mitigated. The two most serious (rated **medium**) were local only: another program already running on the Mac as the same user could have *borrowed the permissions you granted Notchy* (Accessibility, Calendars, Automation) by launching it with a crafted environment. macOS would not have asked you again. Both fixes are verified on macOS by the QA run. Each attack is first shown to work against an unprotected program, then shown to fail against Notchy.
 
@@ -36,6 +36,7 @@ What can feed data into Notchy, and who controls it:
 | Music and Spotify (fallback mode) | Those apps | Fixed AppleScript texts; only those two apps are ever scripted (SR-3) |
 | Spotify artwork URL (fallback mode) | Spotify | HTTPS to Spotify's CDN only, 5 s timeout (SR-4) |
 | Media keys | You | The key tap sees only media/system-defined key events, never typing |
+| Update releases | Whoever can publish a release on the repository | HTTPS from GitHub only, checksum, version and signature checks before an atomic swap (see [Updates](#updates)) |
 
 ## Findings
 
@@ -94,6 +95,21 @@ What can feed data into Notchy, and who controls it:
 
 Not a vulnerability in the app, but a test-integrity issue found during this work. The menu delegate's callback also fires when an accessibility client merely reads the menu, so a test could pass without the menu opening. The QA checks now look for the menu's own window on screen.
 
+## Updates
+
+Added after the review above, at the owner's request: Notchy updates itself from the repository's GitHub Releases, and every app change on `main` publishes a release. An updater is the most powerful thing in an app (whatever it installs runs as you, with every permission you gave Notchy), so it is built to install nothing but a genuine release.
+
+| Threat | What stops it |
+|---|---|
+| Someone on the network (café Wi‑Fi, a proxy) swaps the download | Only HTTPS, only `github.com`, `api.github.com` and `*.githubusercontent.com`, including where redirects lead; then the SHA-256 published with the release |
+| A corrupted or truncated download | SHA-256 check; size limit (100 MB); the app must unpack to a Notchy.app with Notchy's bundle ID and exactly the announced version |
+| An older release offered again (downgrade) | Only versions newer than the installed one are offered |
+| A release built by someone else | With a release signing identity (`scripts/setup-signing.sh`), the update must satisfy the installed copy's designated requirement, so only the holder of that key can sign an update. QA-39 shows an update signed by another identity being refused. Without it (ad-hoc releases), authenticity rests on the GitHub account and HTTPS |
+| A half-finished install | Unpacked and checked next to the app, then swapped with one atomic rename. Any failure leaves the installed app as it was (QA-38) |
+| Another program on the Mac redirecting the updater | The update source is fixed in the code; a test source can be set only in Info.plist, which is covered by the signature, so changing it means replacing the app. The QA install switch works only with such a test source |
+
+**Remaining risk (by design):** anyone who can publish on the repository can ship code to every installed copy. That is true of any app that updates itself. Protect it: turn on two-factor authentication for the GitHub accounts with write access, protect `main` (Settings → Branches: require a pull request), and set up the release signing identity. A verified, installed update is opened without Gatekeeper's prompt, like any self-updating Mac app.
+
 ## Informational (by design)
 
 - **Not sandboxed.** The App Sandbox doesn't allow starting `/usr/bin/perl` for the adapter or watching the pointer everywhere for hover. The hardened runtime is on, with only the Apple Events and Calendars entitlements.
@@ -110,6 +126,6 @@ Not a vulnerability in the app, but a test-integrity issue found during this wor
 
 ## Recommendations (not done here)
 
-1. Sign with a Developer ID and notarize releases (closes SR-7).
+1. Sign with a Developer ID and notarize releases (closes SR-7). Until then, run `scripts/setup-signing.sh` so updates are tied to one identity.
 2. Pin third-party GitHub Actions to commit SHAs, and move publishing steps into separate jobs that alone get `contents: write`.
 3. Re-review when the vendored adapter is updated (`Vendor/mediaremote-adapter/VENDORED.md` records the pinned upstream commit).

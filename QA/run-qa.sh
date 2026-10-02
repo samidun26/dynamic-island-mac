@@ -69,9 +69,17 @@ quit_notchy() {
     for _ in $(seq 1 30); do kill -0 "$NOTCHY_PID" 2>/dev/null || break; sleep 0.2; done
     NOTCHY_PID=""
 }
+HTTP_PID="" QA_KEYCHAIN="" OLD_KEYCHAINS=""
 cleanup() {
     quit_notchy
     [ -n "$FP_PID" ] && kill "$FP_PID" 2>/dev/null
+    [ -n "$HTTP_PID" ] && kill "$HTTP_PID" 2>/dev/null
+    pkill -f "$OUT/update/" 2>/dev/null
+    if [ -n "$QA_KEYCHAIN" ]; then
+        # shellcheck disable=SC2086
+        security list-keychains -d user -s $OLD_KEYCHAINS
+        security delete-keychain "$QA_KEYCHAIN" 2>/dev/null
+    fi
     defaults delete "$BID" >/dev/null 2>&1
     if [ -f "$OUT/defaults-backup.plist" ]; then defaults import "$BID" "$OUT/defaults-backup.plist"; fi
 }
@@ -680,6 +688,129 @@ else
     fi
     quit_notchy
 fi
+
+# ---------------------------------------------------------------- updates
+# Copies of Notchy that think they are 1.0.0 and read releases from a local stand-in for GitHub
+# (a test-only Info.plist key; shipped builds always ask GitHub). It offers 9.9.9. Covers the
+# download, every check before installing, the swap in place and the relaunch.
+echo "== updates"
+UPD="$OUT/update"; rm -rf "$UPD"; mkdir -p "$UPD/feed"
+PB=/usr/libexec/PlistBuddy
+make_copy() { # dir version identity("-" = ad-hoc)
+    rm -rf "$1"; mkdir -p "$1"; ditto "$APP" "$1/Notchy.app"
+    local plist="$1/Notchy.app/Contents/Info.plist"
+    $PB -c "Set :CFBundleShortVersionString $2" "$plist"
+    $PB -c "Add :NotchyUpdateFeed string http://127.0.0.1:8765/latest.json" "$plist"
+    # Plain HTTP to the local stand-in (App Transport Security otherwise insists on HTTPS).
+    $PB -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
+    codesign --force --timestamp=none --options runtime --sign "$3" "$1/Notchy.app/Contents/Frameworks/MediaRemoteAdapter.framework" 2>> "$UPD/codesign.log"
+    codesign --force --timestamp=none --options runtime --entitlements "$SRC/Resources/Notchy.entitlements" --sign "$3" "$1/Notchy.app" 2>> "$UPD/codesign.log"
+}
+publish() { # app dir to offer as 9.9.9 ["bad" checksum]
+    rm -f "$UPD/feed/Notchy.zip"
+    (cd "$1" && ditto -c -k --keepParent Notchy.app "$UPD/feed/Notchy.zip")
+    (cd "$UPD/feed" && shasum -a 256 Notchy.zip > Notchy.zip.sha256)
+    [ "${2:-}" = bad ] && echo "0000000000000000000000000000000000000000000000000000000000000000  Notchy.zip" > "$UPD/feed/Notchy.zip.sha256"
+    cat > "$UPD/feed/latest.json" <<JSON
+{"tag_name": "v9.9.9", "html_url": "https://github.com/samidun26/dynamic-island-mac/releases/tag/v9.9.9",
+ "body": "- QA release", "draft": false, "prerelease": false,
+ "assets": [{"name": "Notchy.zip", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip", "size": $(stat -f %z "$UPD/feed/Notchy.zip")},
+            {"name": "Notchy.zip.sha256", "browser_download_url": "http://127.0.0.1:8765/Notchy.zip.sha256", "size": 77}]}
+JSON
+}
+UPD_RESULT="" RELAUNCHED=""
+try_update() { # installed dir: sets UPD_RESULT and RELAUNCHED
+    local exe="$1/Notchy.app/Contents/MacOS/Notchy" pid
+    mark "$LOG"
+    NOTCHY_QA_LOG=1 NOTCHY_QA_UPDATE=install "$exe" >> "$LOG" 2>&1 &
+    pid=$!
+    if wait_for "$LOG" "UPDATE (installed|failed)" 45; then
+        UPD_RESULT=$(after "$LOG" | grep -E 'UPDATE (installed|failed)' | tail -1 | sed -E 's/.*UPDATE //; s/ at \/.*//')
+    else
+        UPD_RESULT="timeout: $(after "$LOG" | grep UPDATE | tail -2 | sed -E 's/^QA [0-9.]+ //' | tr '\n' ';')"
+    fi
+    # An installed update quits this copy and opens the new one (without the test trace).
+    RELAUNCHED=""
+    for _ in $(seq 1 25); do
+        RELAUNCHED=$(pgrep -f "$exe" | grep -vx "$pid" | head -1)
+        [ -n "$RELAUNCHED" ] && break
+        echo "$UPD_RESULT" | grep -q '^installed' || break
+        sleep 0.4
+    done
+    kill "$pid" 2>/dev/null; pkill -f "$exe" 2>/dev/null; sleep 1
+}
+disk_version() { $PB -c 'Print CFBundleShortVersionString' "$1/Notchy.app/Contents/Info.plist" 2>/dev/null; }
+
+python3 -m http.server 8765 --bind 127.0.0.1 --directory "$UPD/feed" >/dev/null 2>&1 &
+HTTP_PID=$!
+sleep 1
+
+# QA-37: the usual case today: ad-hoc signed copy, ad-hoc signed release.
+make_copy "$UPD/installed" 1.0.0 -
+make_copy "$UPD/new" 9.9.9 -
+publish "$UPD/new"
+try_update "$UPD/installed"
+V=$(disk_version "$UPD/installed")
+if echo "$UPD_RESULT" | grep -q '^installed 9.9.9' && [ "$V" = 9.9.9 ] && [ -n "$RELAUNCHED" ] && codesign --verify --deep --strict "$UPD/installed/Notchy.app" 2>/dev/null; then
+    pass QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "1.0.0 → 9.9.9 from the release feed; signature valid; new copy running (pid $RELAUNCHED)"
+else
+    fail QA-37 "Update: finds a newer release, verifies it, installs it in place and relaunches (FR-S8)" "result: $UPD_RESULT; on disk: ${V:-?}; relaunched: ${RELAUNCHED:-no}"
+fi
+
+# QA-38: a download that doesn't match the published checksum.
+make_copy "$UPD/installed" 1.0.0 -
+publish "$UPD/new" bad
+try_update "$UPD/installed"
+V=$(disk_version "$UPD/installed")
+if echo "$UPD_RESULT" | grep -q "^failed: .*checksum" && [ "$V" = 1.0.0 ] && [ -z "$RELAUNCHED" ]; then
+    pass QA-38 "Update: a download that doesn't match its checksum is refused (NFR-10)" "\"${UPD_RESULT#failed: }\"; installed copy untouched (1.0.0)"
+else
+    fail QA-38 "Update: a download that doesn't match its checksum is refused (NFR-10)" "result: $UPD_RESULT; on disk: ${V:-?}"
+fi
+
+# QA-39: with a release signing identity, only updates signed with the same identity install.
+# Two throwaway identities in a temporary keychain (CI only: it changes the keychain list).
+if [ "${CI:-}" = true ]; then
+    QA_KEYCHAIN="$UPD/qa.keychain-db"
+    OLD_KEYCHAINS=$(security list-keychains -d user | tr -d '"')
+    security create-keychain -p qa "$QA_KEYCHAIN"
+    security set-keychain-settings "$QA_KEYCHAIN"
+    security unlock-keychain -p qa "$QA_KEYCHAIN"
+    LEGACY=""; openssl pkcs12 -help 2>&1 | grep -q -- '-legacy' && LEGACY="-legacy"
+    for who in A B; do
+        printf '[req]\ndistinguished_name = dn\nx509_extensions = ext\nprompt = no\n[dn]\nCN = Notchy QA %s\n[ext]\nbasicConstraints = critical, CA:false\nkeyUsage = critical, digitalSignature\nextendedKeyUsage = critical, codeSigning\n' "$who" > "$UPD/$who.cnf"
+        openssl req -x509 -newkey rsa:2048 -sha256 -days 2 -nodes -config "$UPD/$who.cnf" -keyout "$UPD/$who.key" -out "$UPD/$who.pem" 2>/dev/null
+        # shellcheck disable=SC2086
+        openssl pkcs12 -export $LEGACY -inkey "$UPD/$who.key" -in "$UPD/$who.pem" -name "Notchy QA $who" -out "$UPD/$who.p12" -passout pass:qa
+        security import "$UPD/$who.p12" -k "$QA_KEYCHAIN" -P qa -T /usr/bin/codesign >/dev/null
+    done
+    security set-key-partition-list -S apple-tool:,apple: -s -k qa "$QA_KEYCHAIN" >/dev/null
+    # shellcheck disable=SC2086
+    security list-keychains -d user -s "$QA_KEYCHAIN" $OLD_KEYCHAINS
+    IDA=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA A/ {print $2; exit}')
+    IDB=$(security find-identity -p codesigning "$QA_KEYCHAIN" | awk '/Notchy QA B/ {print $2; exit}')
+    if [ -n "$IDA" ] && [ -n "$IDB" ]; then
+        make_copy "$UPD/installed" 1.0.0 "$IDA"
+        make_copy "$UPD/new" 9.9.9 "$IDB"
+        publish "$UPD/new"
+        try_update "$UPD/installed"
+        R_OTHER=$UPD_RESULT; V_OTHER=$(disk_version "$UPD/installed")
+        make_copy "$UPD/new" 9.9.9 "$IDA"
+        publish "$UPD/new"
+        try_update "$UPD/installed"
+        R_SAME=$UPD_RESULT; V_SAME=$(disk_version "$UPD/installed")
+        if echo "$R_OTHER" | grep -q '^failed: .*same developer' && [ "$V_OTHER" = 1.0.0 ] && echo "$R_SAME" | grep -q '^installed 9.9.9' && [ "$V_SAME" = 9.9.9 ]; then
+            pass QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "signed by another identity: \"${R_OTHER#failed: }\"; same identity: installed 9.9.9"
+        else
+            fail QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "other identity: $R_OTHER (disk ${V_OTHER:-?}); same identity: $R_SAME (disk ${V_SAME:-?}); $(tail -2 "$UPD/codesign.log" | tr '\n' ' ')"
+        fi
+    else
+        fail QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "could not create the test identities: $(security find-identity -p codesigning "$QA_KEYCHAIN" | tr '\n' ' ')"
+    fi
+else
+    skip QA-39 "Update: only a release signed with the same identity installs (NFR-10)" "needs a throwaway keychain; runs on CI"
+fi
+kill "$HTTP_PID" 2>/dev/null; HTTP_PID=""
 
 # ---------------------------------------------------------------- security
 # Another program running as the user must not be able to borrow Notchy's permissions

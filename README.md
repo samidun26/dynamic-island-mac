@@ -1,6 +1,6 @@
 # Notchy
 
-A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry, no network use of its own.
+A Dynamic Island for the Mac notch, in the spirit of [Alcove](https://tryalcove.com). Native Swift and SwiftUI, one small menu bar app, no accounts, no telemetry; it only goes online to check GitHub for its own updates.
 
 **Docs:** [Install & user guide](docs/USER_GUIDE.md) · [Requirements](docs/REQUIREMENTS.md) · [Product requirements (PRD)](docs/PRD.md)
 
@@ -47,7 +47,8 @@ Requires macOS 14 or later ([full requirements](docs/REQUIREMENTS.md)). Step-by-
   open build/Notchy.app     # or copy it to /Applications first
   ```
 
-- **Release (maintainers):** push a tag such as `v1.0.0`; CI builds the universal app and attaches `Notchy.zip` to a GitHub Release.
+- **Updates:** Notchy checks GitHub for a new release and offers to install it (Settings → About, or the dot on its menu bar icon). It verifies the download before replacing itself. See [Updating](docs/USER_GUIDE.md#8-updating).
+- **Releases (maintainers):** automatic. Every app change merged into `main` publishes the next release (`VERSION` + a running number) with `Notchy.zip` and its checksum; installed copies pick it up. Run `scripts/setup-signing.sh` once so updates keep people's permissions ([details](docs/USER_GUIDE.md#d-publish-a-release-maintainers)).
 
 ## Using it
 

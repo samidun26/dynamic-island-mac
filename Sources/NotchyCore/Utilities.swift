@@ -9,9 +9,10 @@ public enum DeepLink: Equatable, Sendable {
     case cancelTimer
     case open
     case settings
+    case update
 
     /// notchy://timer?minutes=5, notchy://timer?seconds=90, notchy://timer/cancel,
-    /// notchy://open, notchy://settings
+    /// notchy://open, notchy://settings, notchy://update (shows the update section and checks)
     public init?(url: URL) {
         guard url.scheme?.lowercased() == "notchy" else { return nil }
         let host = url.host?.lowercased() ?? ""
@@ -28,6 +29,7 @@ public enum DeepLink: Equatable, Sendable {
             self = .startTimer(min(seconds, 24 * 3600))
         case "open", "expand": self = .open
         case "settings", "preferences": self = .settings
+        case "update", "updates": self = .update
         default: return nil
         }
     }
