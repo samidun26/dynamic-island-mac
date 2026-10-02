@@ -749,14 +749,17 @@ defaults write "$BID" hudOnboardedVersion "$(app_version)"
 # (so its own pop-up doesn't appear).
 launch_notchy
 if grep -q "HUD tap=active" <(after "$LOG"); then
+    sleep 2   # let the panel draw its first frames
     mark "$LOG"; "$D" media-key volume-up >/dev/null
     K=$(wait_for "$LOG" "HUD key=0 handled=" 3 && after "$LOG" | grep -o 'HUD key=0 handled=[a-z]*' | head -1)
-    HUDST=no; wait_for "$LOG" "STATE compact:hud" 2 && { HUDST=yes; sleep 0.3; shot qa46-volume; }
+    HUDST=no; W=0
+    wait_for "$LOG" "STATE compact:hud" 2 && { HUDST=yes; sleep 0.6; shot qa46-volume; W=$(island_width qa46-volume); }
+    HUDW=$(after "$LOG" | grep 'STATE compact:hud' | head -1 | sed -E 's/.*compact:hud ([0-9]+)x.*/\1/')
     "$D" media-key volume-down >/dev/null; sleep 2
-    if [ "$K" = "HUD key=0 handled=true" ] && [ $HUDST = yes ]; then
-        pass QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "key taken by ponyhub ($K), island showed the volume HUD ([shot](shots/qa46-volume.png))"
+    if [ "$K" = "HUD key=0 handled=true" ] && [ $HUDST = yes ] && near "${W:-0}" "${HUDW:-0}" 12; then
+        pass QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "key taken by ponyhub ($K); the island showed the volume level, ${W} pt wide on screen ([shot](shots/qa46-volume.png))"
     else
-        fail QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "${K:-the key never reached ponyhub}; HUD in the island: $HUDST; $(last_state)"
+        fail QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "${K:-the key never reached ponyhub}; HUD state: $HUDST (${HUDW:-?} pt); on screen: ${W:-?} pt; $(last_state)"
     fi
 else
     skip QA-46 "Volume key: the level shows in the notch instead of macOS's pop-up (FR-H1)" "no Accessibility for ponyhub on this machine ($(after "$LOG" | grep -o 'HUD tap=[a-zA-Z]*' | tail -1))"
