@@ -84,7 +84,7 @@ private struct FilesShelf: View {
             } else if shelf.files.isEmpty {
                 Hint(symbol: "tray.and.arrow.down", text: "Drag files onto the notch to keep them here, then drag them out wherever you need them.")
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ShelfRow {
                     HStack(alignment: .top, spacing: 10) {
                         ForEach(shelf.files) { FileTile(file: $0, shelf: shelf) }
                     }
@@ -102,11 +102,11 @@ private struct FileTile: View {
     @Environment(\.islandTheme) private var theme
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path))
                 .resizable()
                 .interpolation(theme.isRetro ? .none : .high)
-                .frame(width: 38, height: 38)
+                .frame(width: 34, height: 34)
             Text(file.name)
                 .islandFont(10, .medium)
                 .lineLimit(2)
@@ -114,7 +114,7 @@ private struct FileTile: View {
                 .frame(width: 66)
                 .foregroundStyle(.white.opacity(0.85))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .overlay(alignment: .topTrailing) {
             if hovering {
                 IconButton(symbol: "xmark.circle.fill", label: "Remove \(file.name)", size: 13, box: 18, tint: .white.opacity(0.8)) {
@@ -151,7 +151,7 @@ private struct ClipboardShelf: View {
         } else if clipboard.history.items.isEmpty {
             Hint(symbol: "doc.on.clipboard", text: "Copy something and it shows up here. Passwords from password managers are never kept.")
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
+            ShelfRow {
                 HStack(alignment: .top, spacing: 8) {
                     ForEach(clipboard.history.items) { ClipCard(item: $0, clipboard: clipboard) }
                 }
@@ -175,7 +175,7 @@ private struct ClipCard: View {
                 }
                 Text(item.text.trimmingCharacters(in: .whitespacesAndNewlines))
                     .islandFont(11)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .foregroundStyle(.white.opacity(0.9))
             }
             Spacer(minLength: 0)
@@ -192,7 +192,8 @@ private struct ClipCard: View {
             }
         }
         .padding(8)
-        .frame(width: 132, height: 78, alignment: .topLeading)
+        // The page has about 72 pt under the tabs.
+        .frame(width: 132, height: 66, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: theme.isRetro ? 0 : 10, style: .continuous).fill(.white.opacity(0.08)))
         .overlay {
             if theme.isRetro { Rectangle().strokeBorder(.white.opacity(0.25), lineWidth: 1) }
@@ -221,6 +222,33 @@ private struct ClipCard: View {
         case .color: "Colour"
         case .text: "Click to copy"
         }
+    }
+}
+
+/// A row that scrolls sideways. Snapshots draw it clipped instead: ImageRenderer can't draw the
+/// AppKit scroll view behind ScrollView.
+private struct ShelfRow<Content: View>: View {
+    @ViewBuilder let content: Content
+    @Environment(\.staticRender) private var staticRender
+
+    var body: some View {
+        if staticRender {
+            content.fixedSize().frame(maxWidth: .infinity, alignment: .leading).clipped()
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) { content }
+        }
+    }
+}
+
+private struct StaticRenderKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Set when rendering to an image (snapshots), where only SwiftUI-drawn views appear.
+    var staticRender: Bool {
+        get { self[StaticRenderKey.self] }
+        set { self[StaticRenderKey.self] = newValue }
     }
 }
 

@@ -208,7 +208,7 @@ enum Snapshots {
     }
 
     static func write<V: View>(_ view: V, _ path: String) {
-        let r = ImageRenderer(content: view.environment(\.colorScheme, .dark))
+        let r = ImageRenderer(content: view.environment(\.colorScheme, .dark).environment(\.staticRender, true))
         r.scale = 2
         guard let cg = r.cgImage,
               let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else {
