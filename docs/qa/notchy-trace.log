@@ -1,176 +1,174 @@
-QA 308.421 SOURCE adapter
-QA 308.706 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=24
-QA 308.861 MENUBAR left=23 right=219
-QA 308.997 URL notchy://timer?seconds=30
-QA 308.999 STATE compact:timer 283x33 secondaries=[] pages=2 fit=right:0/99 x=420
-QA 309.000 MENUBAR left=23 right=181
-QA 310.396 SOURCE adapter
-QA 310.507 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
-QA 310.572 MENUBAR left=23 right=219
-QA 323.144 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 323.144 ARTWORK received
-QA 323.151 STATE peek:nowPlaying 484x161 secondaries=[] pages=2
-QA 326.404 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 326.405 MENUBAR left=23 right=148
-QA 330.594 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
-QA 330.860 UPDATE none published
-QA 338.243 CLICKTHROUGH false
-QA 338.392 HOVER open
-QA 338.393 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 346.060 MENU opened
-QA 346.060 MENU closed
-QA 347.950 MOUSEDOWN island at 431,640
-QA 348.021 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
-QA 348.327 MENU opened
-QA 348.327 MENU closed
-QA 349.693 MOUSEDOWN island at 431,640
-QA 349.822 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 350.124 MENU opened
-QA 350.124 MENU closed
-QA 351.594 MOUSEDOWN island at 465,640
-QA 351.863 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 351.863 ARTWORK received
-QA 351.999 MENU opened
-QA 351.999 MENU closed
-QA 353.293 MOUSEDOWN island at 558,674
-QA 355.271 CLICKTHROUGH true
-QA 355.535 HOVER close
-QA 355.539 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 356.910 CLICKTHROUGH false
-QA 356.939 CLICKTHROUGH true
-QA 359.188 MOUSEDOWN elsewhere at 722,648
-QA 359.850 CLICKTHROUGH false
-QA 359.981 HOVER open
-QA 359.981 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 360.428 MOUSEDOWN island at 512,756
-QA 360.428 PIN
-QA 360.752 CLICKTHROUGH true
-QA 361.044 HOVER close
-QA 362.928 MOUSEDOWN elsewhere at 512,248
-QA 362.928 DISMISS
-QA 362.928 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 363.671 CLICKTHROUGH false
-QA 363.691 SCROLL began on island
-QA 363.827 SWIPE down
-QA 363.827 PIN
-QA 363.827 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 364.591 SCROLL began on island
-QA 364.875 SWIPE up
-QA 364.875 DISMISS
-QA 364.875 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 366.251 SCROLL began on island
-QA 366.479 SWIPE down
-QA 366.479 PIN
-QA 366.479 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 367.136 SCROLL began on island
-QA 367.303 SWIPE left
-QA 367.303 STATE expanded:home 484x161 secondaries=[] pages=2
-QA 368.454 CLICKTHROUGH true
-QA 369.428 MOUSEDOWN elsewhere at 512,248
-QA 369.428 DISMISS
-QA 369.428 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 370.633 URL notchy://timer?seconds=8
-QA 370.634 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
-QA 378.749 TIMER done
-QA 378.757 STATE peek:timer 484x161 secondaries=[] pages=3
-QA 384.886 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
-QA 387.016 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 387.275 URL notchy://timer?minutes=5
-QA 387.282 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
-QA 389.938 CLICKTHROUGH false
-QA 390.063 HOVER open
-QA 390.063 STATE expanded:timer 484x161 secondaries=[] pages=3
-QA 390.986 MENU opened
-QA 390.987 MENU closed
-QA 392.257 MOUSEDOWN island at 623,675
-QA 392.945 MENU opened
-QA 392.945 MENU closed
-QA 394.055 MOUSEDOWN island at 676,675
-QA 394.814 MENU opened
-QA 394.814 MENU closed
-QA 395.979 MENU opened
-QA 395.979 MENU closed
-QA 397.100 MOUSEDOWN island at 716,675
-QA 397.247 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
-QA 397.438 CLICKTHROUGH true
-QA 397.700 HOVER close
-QA 397.700 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 400.664 MOUSEDOWN own window NSStatusBarWindow at 771,756 active=false
-QA 400.683 MENU opened
-QA 401.795 MENU closed
-QA 401.798 URL notchy://settings
-QA 401.798 SETTINGS shown
-QA 402.404 SETTINGS focused=true
-QA 403.554 KEY w cmd=true keyWindow=Notchy Settings active=true
-QA 403.574 SETTINGS closed
-QA 405.593 MENU opened
-QA 407.052 MENU closed
-QA 408.655 ARTWORK received
-QA 426.539 NOWPLAYING title=QA Track Two artist=The Testers playing=false app=dev.local.qa.fakeplayer
-QA 429.268 STATE idle 101x0 secondaries=[] pages=2
-QA 437.808 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 437.808 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 441.828 MENUBAR left=23 right=-4
-QA 441.828 STATE compact:nowPlaying 101x0 secondaries=[] pages=2 fit=hidden:0/0 x=461
-QA 443.858 MENUBAR left=23 right=148
-QA 443.859 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 443.909 NOWPLAYING title=- artist=- playing=false app=-
-QA 445.415 SOURCE adapter
-QA 445.508 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=44
-QA 445.567 MENUBAR left=23 right=186
-QA 445.615 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 445.615 ARTWORK received
-QA 445.618 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 445.619 MENUBAR left=23 right=148
-QA 447.161 NOWPLAYING title=- artist=- playing=false app=-
-QA 448.871 SOURCE adapter
-QA 448.968 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=47
-QA 448.998 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 448.999 MENUBAR left=23 right=186
-QA 449.002 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 449.002 ARTWORK received
-QA 449.019 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 449.021 MENUBAR left=23 right=148
-QA 469.255 UPDATE check failed: The request timed out.
-QA 494.852 NOWPLAYING title=- artist=- playing=false app=-
-QA 496.422 SOURCE adapter
-QA 496.637 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=49
-QA 496.728 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 496.728 MENUBAR left=23 right=186
-QA 496.730 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 496.730 ARTWORK received
-QA 496.741 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 496.743 MENUBAR left=23 right=148
-QA 496.766 UPDATE available 9.9.9
-QA 496.796 UPDATE failed: The download doesn't match the release's checksum.
-QA 497.050 NOWPLAYING title=- artist=- playing=false app=-
-QA 499.121 SOURCE adapter
-QA 499.199 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=51
-QA 499.227 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 499.227 MENUBAR left=23 right=186
-QA 499.239 UPDATE available 9.9.9
-QA 499.276 UPDATE failed: The download is not signed by the same developer.
-QA 499.293 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 499.293 ARTWORK received
-QA 499.296 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 499.296 MENUBAR left=23 right=148
-QA 499.683 NOWPLAYING title=- artist=- playing=false app=-
-QA 501.034 SOURCE adapter
-QA 501.139 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=53
-QA 501.186 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
-QA 501.186 MENUBAR left=23 right=186
-QA 501.201 UPDATE available 9.9.9
-QA 501.233 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 501.233 ARTWORK received
-QA 501.238 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 501.242 MENUBAR left=23 right=148
-QA 501.368 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/Notchy.app
-QA 501.372 NOWPLAYING title=- artist=- playing=false app=-
-QA 503.334 SOURCE adapter
-QA 503.462 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=57
-QA 503.509 MENUBAR left=23 right=186
-QA 503.600 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
-QA 503.600 ARTWORK received
-QA 503.604 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
-QA 503.605 MENUBAR left=23 right=148
-QA 504.821 NOWPLAYING title=- artist=- playing=false app=-
+QA 361.384 SOURCE adapter
+QA 361.725 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=24
+QA 361.835 MENUBAR left=23 right=219
+QA 361.989 URL notchy://timer?seconds=30
+QA 361.989 STATE compact:timer 283x33 secondaries=[] pages=2 fit=right:0/99 x=420
+QA 361.991 MENUBAR left=23 right=181
+QA 363.254 SOURCE adapter
+QA 363.346 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=29
+QA 363.382 MENUBAR left=23 right=219
+QA 376.014 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 376.014 ARTWORK received
+QA 376.021 STATE peek:nowPlaying 484x161 secondaries=[] pages=2
+QA 379.277 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 379.280 MENUBAR left=23 right=148
+QA 383.656 UPDATE checking https://api.github.com/repos/samidun26/dynamic-island-mac/releases/latest current=1.0.0
+QA 383.913 UPDATE none published
+QA 391.290 CLICKTHROUGH false
+QA 391.430 HOVER open
+QA 391.430 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 399.579 MENU opened
+QA 399.579 MENU closed
+QA 400.599 MENU opened
+QA 400.599 MENU closed
+QA 401.974 MOUSEDOWN island at 431,640
+QA 402.081 NOWPLAYING title=QA Track One artist=The Testers playing=false app=dev.local.qa.fakeplayer
+QA 402.361 MENU opened
+QA 402.361 MENU closed
+QA 403.535 MOUSEDOWN island at 431,640
+QA 403.646 NOWPLAYING title=QA Track One artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 403.947 MENU opened
+QA 403.947 MENU closed
+QA 405.145 MOUSEDOWN island at 465,640
+QA 405.424 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 405.424 ARTWORK received
+QA 405.564 MENU opened
+QA 405.564 MENU closed
+QA 406.669 MOUSEDOWN island at 558,674
+QA 408.638 CLICKTHROUGH true
+QA 408.892 HOVER close
+QA 408.893 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 410.149 CLICKTHROUGH false
+QA 410.216 CLICKTHROUGH true
+QA 412.455 MOUSEDOWN elsewhere at 722,648
+QA 413.140 CLICKTHROUGH false
+QA 413.262 HOVER open
+QA 413.262 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 413.754 MOUSEDOWN island at 512,756
+QA 413.755 PIN
+QA 414.040 CLICKTHROUGH true
+QA 414.359 HOVER close
+QA 416.261 MOUSEDOWN elsewhere at 512,248
+QA 416.261 DISMISS
+QA 416.262 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 417.022 CLICKTHROUGH false
+QA 417.046 SCROLL began on island
+QA 417.143 HOVER open
+QA 417.145 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 417.241 SWIPE down
+QA 418.092 SCROLL began on island
+QA 418.205 SWIPE up
+QA 418.205 DISMISS
+QA 418.205 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 419.479 SCROLL began on island
+QA 419.756 SWIPE down
+QA 419.756 PIN
+QA 419.757 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 420.490 SCROLL began on island
+QA 420.719 SWIPE left
+QA 420.720 STATE expanded:home 484x161 secondaries=[] pages=2
+QA 421.718 CLICKTHROUGH true
+QA 422.604 MOUSEDOWN elsewhere at 512,248
+QA 422.604 DISMISS
+QA 422.604 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 423.928 URL notchy://timer?seconds=8
+QA 423.929 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
+QA 432.095 TIMER done
+QA 432.131 STATE peek:timer 484x161 secondaries=[] pages=3
+QA 438.170 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
+QA 440.300 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 440.409 URL notchy://timer?minutes=5
+QA 440.415 STATE compact:timer 305x33 secondaries=["nowPlaying"] pages=3 fit=right:0/121 x=420
+QA 443.054 CLICKTHROUGH false
+QA 443.187 HOVER open
+QA 443.187 STATE expanded:timer 484x161 secondaries=[] pages=3
+QA 444.042 MENU opened
+QA 444.043 MENU closed
+QA 445.273 MOUSEDOWN island at 623,675
+QA 446.002 MENU opened
+QA 446.002 MENU closed
+QA 447.190 MOUSEDOWN island at 676,675
+QA 448.017 MENU opened
+QA 448.017 MENU closed
+QA 449.117 MENU opened
+QA 449.117 MENU closed
+QA 450.077 MOUSEDOWN island at 716,675
+QA 450.173 STATE expanded:nowPlaying 484x161 secondaries=[] pages=2
+QA 450.654 CLICKTHROUGH true
+QA 450.978 HOVER close
+QA 450.978 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 454.000 MOUSEDOWN own window NSStatusBarWindow at 771,756 active=false
+QA 454.055 MENU opened
+QA 454.745 MENU closed
+QA 455.073 URL notchy://settings
+QA 455.073 SETTINGS shown
+QA 455.656 SETTINGS focused=true
+QA 458.271 MOUSEDOWN own window NSWindow at 761,731 active=true
+QA 461.045 MENU opened
+QA 461.625 MENU closed
+QA 463.182 ARTWORK received
+QA 481.070 NOWPLAYING title=QA Track Two artist=The Testers playing=false app=dev.local.qa.fakeplayer
+QA 483.661 STATE idle 101x0 secondaries=[] pages=2
+QA 492.453 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 492.456 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 496.504 MENUBAR left=23 right=-4
+QA 496.505 STATE compact:nowPlaying 101x0 secondaries=[] pages=2 fit=hidden:0/0 x=461
+QA 498.651 MENUBAR left=23 right=148
+QA 498.651 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 498.743 NOWPLAYING title=- artist=- playing=false app=-
+QA 498.747 SETTINGS closed
+QA 500.359 SOURCE adapter
+QA 500.529 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=44
+QA 500.585 MENUBAR left=23 right=186
+QA 500.602 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 500.602 ARTWORK received
+QA 500.605 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 500.606 MENUBAR left=23 right=148
+QA 502.245 NOWPLAYING title=- artist=- playing=false app=-
+QA 538.618 SOURCE adapter
+QA 538.751 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=47
+QA 538.809 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 538.809 MENUBAR left=23 right=186
+QA 538.842 UPDATE available 9.9.9
+QA 538.879 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 538.879 ARTWORK received
+QA 538.882 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 538.883 MENUBAR left=23 right=148
+QA 539.022 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/Notchy.app
+QA 539.026 NOWPLAYING title=- artist=- playing=false app=-
+QA 540.754 SOURCE adapter
+QA 540.853 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=51
+QA 540.883 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 540.883 MENUBAR left=23 right=186
+QA 540.901 UPDATE available 9.9.9
+QA 540.913 UPDATE failed: The download doesn't match the release's checksum.
+QA 540.928 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 540.928 ARTWORK received
+QA 540.930 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 540.931 MENUBAR left=23 right=148
+QA 540.984 NOWPLAYING title=- artist=- playing=false app=-
+QA 542.864 SOURCE adapter
+QA 542.933 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=53
+QA 542.955 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 542.955 MENUBAR left=23 right=186
+QA 542.956 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 542.956 ARTWORK received
+QA 542.961 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 542.962 MENUBAR left=23 right=148
+QA 542.970 UPDATE available 9.9.9
+QA 542.997 UPDATE failed: The download is not signed by the same developer.
+QA 543.047 NOWPLAYING title=- artist=- playing=false app=-
+QA 544.426 SOURCE adapter
+QA 544.491 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=55
+QA 544.514 UPDATE checking http://127.0.0.1:8765/latest.json current=1.0.0
+QA 544.515 MENUBAR left=23 right=186
+QA 544.522 UPDATE available 9.9.9
+QA 544.565 UPDATE installed 9.9.9 at /Users/runner/work/dynamic-island-mac/dynamic-island-mac/qa-out/update/installed/Notchy.app
+QA 546.211 SOURCE adapter
+QA 546.282 LAUNCH screen=1024x768 hasNotch=false notchSize=184x33 panel=234,571 556x197 window=59
+QA 546.306 MENUBAR left=23 right=186
+QA 546.326 NOWPLAYING title=QA Track Two artist=The Testers playing=true app=dev.local.qa.fakeplayer
+QA 546.326 ARTWORK received
+QA 546.328 STATE compact:nowPlaying 254x33 secondaries=[] pages=2 fit=right:0/70 x=420
+QA 546.329 MENUBAR left=23 right=148
+QA 547.464 NOWPLAYING title=- artist=- playing=false app=-
