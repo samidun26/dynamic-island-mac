@@ -146,8 +146,8 @@ Prefer clicking? Turn off **Settings → General → Open when the pointer rests
 - On battery, it warns once at **20%** and once at **10%**.
 - The battery percentage is always in the expanded header.
 
-### Volume HUD (off by default)
-1. **Settings → Activities → Volume HUD in the island**.
+### Volume and brightness HUD (off by default)
+1. **Settings → Activities → Volume and brightness keys in the island**.
 2. Click **Grant Accessibility…**, switch Notchy on in *Privacy & Security → Accessibility*. Notchy picks it up automatically.
 3. The volume keys now show a level in the island instead of the big system HUD. **⌥⇧ + volume** changes in quarter steps.
 - **Brightness works the same way:** the brightness keys show a sun and a level in the island instead of the system HUD, and Now Playing has a brightness slider under the volume one. This is for the built-in display and uses a private Apple framework (there is no public way), so a macOS update could break it; the keys then go back to macOS. Turn it off with *Brightness in the island*. Keyboard backlight keys always use the system HUD.
@@ -203,7 +203,7 @@ Open with the menu bar icon → **Settings…**, or `notchy://settings`, or by o
 | | Clipboard history (memory only; private copies never kept) | On |
 | | Charging and low battery | On |
 | | Calendar (shows access status) | On |
-| | Volume HUD in the island (shows Accessibility status) | Off |
+| | Volume and brightness keys in the island (shows Accessibility status) | Off |
 | | Brightness in the island (keys and slider, built-in display) | On |
 | Motion | Open and close spring response and damping, Preview, Reset | 0.42 s / 0.80, 0.36 s / 0.90 |
 | About | Version, update status (**Check for Updates**, **What's New**, **Install and Relaunch**), credits, the mediaremote-adapter license | — |
