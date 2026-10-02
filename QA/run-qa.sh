@@ -404,7 +404,9 @@ else
     fi
 
     # Two-finger swipes on the island.
-    sleep 0.6; "$D" jump "$CX" $((MB / 2)) >/dev/null
+    # Rest on the island first: a swipe that starts before Notchy has seen the pointer arrive
+    # (and stopped passing clicks through) goes to the app underneath.
+    sleep 0.6; mark "$LOG"; "$D" jump "$CX" $((MB / 2)) >/dev/null; wait_for "$LOG" "CLICKTHROUGH false" 1; sleep 0.3
     mark "$LOG"; "$D" swipe 0 -60
     sleep 0.5; S1=$(after "$LOG" | grep -o 'SWIPE [a-z]*' | head -1)
     mark "$LOG"; "$D" swipe 0 60
