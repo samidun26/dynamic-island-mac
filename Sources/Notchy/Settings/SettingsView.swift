@@ -341,7 +341,7 @@ private struct UpdateStatus: View {
                 HStack(spacing: 8) {
                     Button("What's New") { showNotes = true }
                         .popover(isPresented: $showNotes) { ReleaseNotes(release: release) }
-                    Button("Install and Relaunch") { Task { await updates.install() } }
+                    Button("Install and Relaunch", action: install)
                         .keyboardShortcut(.defaultAction)
                 }
             case .installing(let step):
@@ -350,14 +350,26 @@ private struct UpdateStatus: View {
                 HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…").font(.callout) }
             case .upToDate:
                 Text("\(AppInfo.name) is up to date").font(.callout).foregroundStyle(.secondary)
-                Button("Check Again") { Task { await updates.check(userInitiated: true) } }
+                Button("Check Again", action: check)
             case .failed(let message):
                 Text(message).font(.caption).foregroundStyle(.red).multilineTextAlignment(.trailing).frame(maxWidth: 230, alignment: .trailing)
-                Button("Try Again") { Task { await updates.check(userInitiated: true) } }
+                Button("Try Again", action: check)
             case .idle:
-                Button("Check for Updates") { Task { await updates.check(userInitiated: true) } }
+                Button("Check for Updates", action: check)
             }
         }
+    }
+
+    // The actions live outside `body` with an explicit main-actor hop: newer Swift compilers
+    // (Xcode 27 / macOS 27 SDK) fail on `Task { await … }` written inline in this view builder.
+    private func install() {
+        let updates = updates
+        Task { @MainActor in await updates.install() }
+    }
+
+    private func check() {
+        let updates = updates
+        Task { @MainActor in await updates.check(userInitiated: true) }
     }
 }
 

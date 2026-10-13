@@ -280,7 +280,7 @@ private struct ClipCard: View {
         .onTapGesture {
             clipboard.copy(item)
             copied = true
-            Task { try? await Task.sleep(for: .seconds(1.2)); copied = false }
+            Task { @MainActor in try? await Task.sleep(for: .seconds(1.2)); copied = false }
         }
         .contextMenu {
             Button("Copy") { clipboard.copy(item) }
